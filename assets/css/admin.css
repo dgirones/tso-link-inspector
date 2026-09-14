@@ -70,8 +70,46 @@ html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector-settings #wp
 html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector-settings #wpbody-content,
 html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #wpcontent,
 html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #wpbody,
-html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #wpbody-content {
+html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #wpbody-content,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector #adminmenumain,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector #adminmenuback,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector #adminmenuwrap,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector-settings #adminmenumain,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector-settings #adminmenuback,
+html[data-tsoliin-theme="night"] body.tools_page_tso-link-inspector-settings #adminmenuwrap,
+html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #adminmenumain,
+html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #adminmenuback,
+html[data-tsoliin-theme="night"] body.admin_page_tso-link-inspector-settings #adminmenuwrap {
 	background: #12141c !important;
+}
+
+/* Undo the inline "guess it's night" background (added server-side in
+ * enqueue_assets(), before the theme-boot script runs) for the one case PHP
+ * cannot know: the visitor explicitly forced "day" via a localStorage
+ * override while it's astronomically night at the site's location. */
+html[data-tsoliin-theme="day"],
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #wpcontent,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #wpbody,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #wpbody-content,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #wpcontent,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #wpbody,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #wpbody-content,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #wpcontent,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #wpbody,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #wpbody-content,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #adminmenumain,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #adminmenuback,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector #adminmenuwrap,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #adminmenumain,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #adminmenuback,
+html[data-tsoliin-theme="day"] body.tools_page_tso-link-inspector-settings #adminmenuwrap,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #adminmenumain,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #adminmenuback,
+html[data-tsoliin-theme="day"] body.admin_page_tso-link-inspector-settings #adminmenuwrap {
+	background: #f0f0f1 !important;
 }
 
 /* Keep the Screen Options panel aligned with the plugin wrap. */
@@ -1974,6 +2012,21 @@ a.tsoliin-stat:focus-visible {
 	word-break: break-all;
 }
 
+.tsoliin-history-table-wrap {
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+@media screen and (max-width: 782px) {
+	/* Let the table keep a sane column width and scroll horizontally
+	 * instead of being crushed into unreadable, character-wrapped columns. */
+	.tsoliin-history-table-wrap .tsoliin-history-table {
+		min-width: 760px;
+	}
+}
+
 /* ── Theme switcher ────────────────────────────────────────────── */
 .tsoliin-theme-btn {
 	display: inline-flex;
@@ -2133,6 +2186,49 @@ a.tsoliin-stat:focus-visible {
 
 .tsoliin-wrap[data-theme="night"] .wp-list-table a {
 	color: #72aee6;
+}
+
+/* URL change history table (Settings → History tab): a plain
+ * <table class="widefat striped">, not .wp-list-table, so none of the
+ * night-theme rules above ever touched it — the header row kept WordPress's
+ * default light background (the "white bar" on an otherwise dark page),
+ * and the Date/Type/User cell text kept the default day-theme dark color,
+ * unreadable against the dark row background. */
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table,
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table th,
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table td {
+	background: var(--tsoliin-surface);
+	color: var(--tsoliin-text);
+	border-color: var(--tsoliin-border);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table thead th {
+	background: var(--tsoliin-surface-2);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table tbody tr:nth-child(odd) th,
+.tsoliin-wrap[data-theme="night"] .tsoliin-history-table tbody tr:nth-child(odd) td {
+	background: var(--tsoliin-table-stripe);
+}
+
+/* Mobile card view (max-width: 782px): the row itself becomes the card and
+ * needs its own night-theme background/border, since only td/th are themed
+ * above. Checkboxes also need explicit theming; color-scheme: dark alone
+ * is not reliably enough on every browser/OS. */
+.tsoliin-wrap[data-theme="night"] .wp-list-table tbody tr {
+	background: var(--tsoliin-surface);
+	border-color: var(--tsoliin-border);
+}
+
+.tsoliin-wrap[data-theme="night"] .wp-list-table tbody tr:nth-child(odd) {
+	background: var(--tsoliin-table-stripe);
+}
+
+.tsoliin-wrap[data-theme="night"] input[type="checkbox"],
+.tsoliin-wrap[data-theme="night"] input[type="radio"] {
+	accent-color: #72aee6;
+	background-color: var(--tsoliin-input-bg);
+	border-color: var(--tsoliin-border);
 }
 
 .tsoliin-wrap[data-theme="night"] .striped > tbody > :nth-child(odd),

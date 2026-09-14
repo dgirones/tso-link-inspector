@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.4.7
+Stable tag: 2.4.8
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -127,8 +127,13 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
+= 2.4.8 =
+* Fix: Mobile and web view in night mode
+* Fix: Unresolved template placeholders (e.g. `${sec.image}`, `{{state.logo}}`) are no longer scanned as broken links; a rescan clears any already-stored placeholder rows.
+
 = 2.4.7 =
 * Fix: Scan deduplication treats Jetpack Photon image URLs (`i0.wp.com`/`i1.wp.com`/`i2.wp.com`) with resize query params (`?h=&w=…`) as the same resource as the plain file URL (only one row is stored; broken duplicate no longer reappears as "Not checked" after each rescan).
+* Fix: URLs extracted from `srcset` (and the plain-regex link fallback) are HTML-entity-decoded before being stored, so `&#038;` no longer gets misread as the start of a URL fragment (`...jpg#038;w=460&ssl=1`) — this was creating extra unchecked duplicate rows for the same Jetpack Photon image on top of the dedup fix above.
 
 = 2.4.6 =
 * Improvement: Broader **Generic anchor** detection for English, Spanish, and Catalan (exact-match phrases such as “see more”, “pulsa aquí”, “fes clic aquí”); short ambiguous words like “web” / “entrar” / “visitar” are not added.
@@ -149,91 +154,15 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 * Fix: Auto theme no longer flashes night→day on refresh near dusk (boot script now uses sunrise/sunset like the UI, not a fixed 07:00–20:00 window).
 * Improvement: “Save even if…” checkbox wording matches HTTPS verification gate.
 
-= 2.4.5 =
-* Fix: Scan deduplication treats Jetpack/WordPress `?ssl=1` image URLs as the same resource as the file without that query parameter (only one row is stored).
-* Fix: Sorting the link list or reloading the page during a scan no longer auto-starts an HTTP check or stops the scan at partial progress.
-* Fix: WP-Cron and background check resume no longer start while a scan is paused or in progress.
-* Fix: Daily automatic scan continues from the saved cursor instead of restarting at page 1.
-* Fix: Manual Scan now finishes comments, menus, terms, FSE, widgets, and ACF after posts, then starts a site-wide HTTP check.
-* Fix: Background scan/check workers use a lock, a time budget, and a recovery cron event so a PHP timeout cannot leave a job stuck.
-* Fix: Stop is honored mid-batch; auto-resume uses the stored check scope, not the current list filter.
-* Fix: Opening a post's links, going back, or switching Posts/Products summary tabs no longer reloads the page during a scan or check.
-* Improvement: Discard scan / Discard check / Discard all paused buttons clear paused jobs without deleting found links or saved HTTP results (unlike Restart).
-* Improvement: Admin UI day / night / auto theme (auto follows sunrise and sunset from the site timezone).
-* Fix: Editor deep-link focus no longer runs duplicate `get_link()` queries on the same request.
-
-= 2.4.3 =
-* Fix: Opening Link Inspector no longer triggers heavy inline scan/check batches on the first progress poll (session fallback only after you click Scan/Continue/Check).
-* Fix: Legacy table cleanup and routine schema checks run on Link Inspector screens only, not on every wp-admin page load.
-* Fix: Reading background scan/check progress no longer calls `spawn_cron()` (fewer loopback requests on page load).
-* Fix: Clearer coming-soon admin notice — site-gate plugin, not WordPress core maintenance mode.
-* Fix: Only one `SHOW TABLES` for leftover `{prefix}pc_tso_link_inspector(_history)` per Link Inspector admin load when the cleanup flag is set (not two).
-* Improvement: Diagnostics panel reports background scan/check progress, pause/stop reasons, WP-Cron schedule, coming-soon gate, and ACF scan status.
-* Fix: Reopened running jobs offer an explicit Continue scan/check here action so WP-Cron fallback resumes without automatic heavy work on page load.
-* Fix: Diagnostics preserves stale heartbeats, warns about overdue cron events, and reports custom fields and ACF separately.
-* Fix: Cron self-healing also runs outside plugin screens; admin-post actions and the Dashboard widget repair missing schema when needed.
-* Improvement: Catalan and Spanish catalogs updated for all current plugin strings.
-
-= 2.4.2 =
-* Fix: Leftover `{prefix}pc_tso_link_inspector_history` is renamed or dropped on admin load (Tables Cleaner no longer lists two History tables).
-* Fix: Stop `SHOW TABLES` for leftover `{prefix}pc_tso_link_inspector(_history)` on every admin load once they are gone.
-* Fix: Leftover `{prefix}pc_tso_link_inspector(_history)` is dropped again when it reappears after manual delete (skip flag no longer blocks cleanup).
-* Fix: Late admin pass removes legacy pc_ tables recreated by other plugins/tools on the same request.
-* Fix: Background scan poll fallback runs during an active **Scan now** session (not only during Check now).
-* Fix: Long scans no longer stop after 30 minutes while posts remain unscanned (reschedule like Check now).
-* Fix: Clearer coming-soon notice — Scan now and ACF still work; only internal HTML HTTP status is skipped.
-
-= 2.4.1 =
-* Improvement: **Scan now** runs server-side in the background (close the browser; **Continue scan** / **Restart scan** when paused).
-* Fix: **Check now** / **Continue check** keep progressing when WP-Cron does not fire (admin poll fallback).
-* Fix: Long scan and check runs no longer stop after 30 minutes (heartbeat per batch).
-* Fix: Check no longer stalls at ~99% with pending links — polling resumes automatically and the server reschedules instead of marking complete too early.
-* Fix: Stale 30-minute timeout no longer stops a check while unchecked links remain.
-* Improvement: Queue chip distinguishes unchecked links from scheduled automatic rechecks.
-* Fix: Scan error bar visible after reload; uninstall removes background scan cron hook.
-* Fix: Admin poll uses a smaller HTTP batch/time budget so progress AJAX does not time out.
-* Fix: Nudge/resume only runs once per paused session (no repeated `start_bg_check` on every poll).
-* Fix: Paused checks no longer auto-resume on page load — click **Continue check** explicitly.
-* Fix: Bulk action dropdown sanitization; removed dead list-table tablenav code.
-* Fix: Main link list no longer runs transparent-redirect cleanup on every page load (cron only).
-* Fix: Background check/scan poll fallback runs only during an active admin session (avoids server overload).
-* Fix: Getting started banner shows once per admin user (not on every visit until dismissed).
-* Fix: List scroll helpers load on the dashboard so post-scope navigation keeps the table in view.
-* Fix: Dashboard no longer runs `WP_Query` for `page` ID 0 (`url_to_postid` miss) once per internal link.
-* Change: Requires WordPress 5.9+.
-
-= 2.4.0 =
-* Improvement: Filter tabs, pagination, scope tabs, and stat cards refresh the link list via AJAX (no full page reload; scroll stays on the list).
-* Fix: Quality filters (empty anchor, generic anchor, unpublished target) work with live list navigation.
-* Fix: Post-scope navigation (list icon, Back, posts summary) scrolls to the link table after load.
-* Fix: Single-post view keeps the standard plugin title in the page header (no post title breadcrumb in the H1).
-* Fix: Screen Options panel stays aligned with the plugin header instead of appearing orphaned at the top of the admin page.
-
 See changelog.txt in the plugin folder for older versions
 
 == Upgrade Notice ==
 
+= 2.4.8 =
+Fixes mobile night-mode styling (link list cards, checkboxes, History table), an F5 white-flash/Screen-Options jump in night mode, and stops unresolved template placeholders (${...}) from being scanned as broken links.
+
 = 2.4.7 =
-Fix for Jetpack Photon gallery images being scanned as duplicate/broken links.
+Fixes Jetpack Photon gallery images being scanned as duplicate/broken links (including duplicates from un-decoded &#038; entities in srcset).
 
 = 2.4.6 =
 Recommended. Richer generic-anchor phrases (EN/ES/CA), bulk-action refresh fixes, check counters aligned with the dashboard, and Edit link preview/save fixes for relative URLs and fragments.
-
-= 2.4.5 =
-Recommended. Automatic and manual scans/checks now finish instead of stopping at 99% or restarting from page 1.
-
-= 2.4.4 =
-Recommended. Day/night/auto admin theme and night-mode readability fixes.
-
-= 2.4.3 =
-Recommended. Lighter Link Inspector admin load on staging sites; scan/check poll fallback only when you explicitly resume a run.
-
-= 2.4.2 =
-Recommended. Legacy History cleanup, scan progress when WP-Cron is delayed, coming-soon scan/ACF clarity, and fewer redundant `SHOW TABLES`.
-
-= 2.4.1 =
-Recommended. Background scan, reliable check progress when WP-Cron is delayed, and fixes for long runs timing out.
-
-= 2.4.0 =
-Recommended. AJAX filter/pagination navigation, quality-filter fixes, smoother scroll when opening a post’s links, and cleaner admin header/Screen Options layout.
-

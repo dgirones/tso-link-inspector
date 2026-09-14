@@ -286,11 +286,26 @@ class TSOLIIN_Admin {
 
 		if ( $this->page_hook ) {
 			add_action( 'load-' . $this->page_hook, array( $this, 'prepare_main_screen' ) );
+			add_action( 'admin_head-' . $this->page_hook, array( $this, 'print_color_scheme_meta' ) );
 		}
 
 		if ( $this->settings_page_hook ) {
 			add_action( 'load-' . $this->settings_page_hook, array( $this, 'prepare_settings_screen' ) );
+			add_action( 'admin_head-' . $this->settings_page_hook, array( $this, 'print_color_scheme_meta' ) );
 		}
+	}
+
+	/**
+	 * Tell the browser itself (not just our CSS) which color scheme this page
+	 * uses, via <meta name="color-scheme">. Support for this is what makes the
+	 * browser paint its own default canvas background (before any stylesheet
+	 * loads) in the matching color instead of white — the remaining source of
+	 * the F5 white flash in night mode that wp_add_inline_style() cannot reach,
+	 * since that only affects the CSS cascade, not the browser's pre-CSS paint.
+	 */
+	public function print_color_scheme_meta() {
+		$scheme = TSOLIIN_Support::theme_is_daytime_now() ? 'light' : 'dark';
+		echo '<meta name="color-scheme" content="' . esc_attr( $scheme ) . '">' . "\n";
 	}
 
 	/**
@@ -398,6 +413,34 @@ class TSOLIIN_Admin {
 		$css_ver   = is_readable( $admin_css ) ? (string) filemtime( $admin_css ) : TSOLIIN_VERSION;
 		$js_ver    = is_readable( $admin_js ) ? (string) filemtime( $admin_js ) : TSOLIIN_VERSION;
 		wp_enqueue_style( 'tsoliin-admin', TSOLIIN_PLUGIN_URL . 'assets/css/admin.css', array(), $css_ver );
+
+		// Paint the WP admin chrome dark immediately, via inline CSS attached to
+		// the stylesheet above, using the same server-side day/night guess as the
+		// .tsoliin-wrap itself. WordPress prints admin_print_styles BEFORE
+		// admin_print_scripts, so this applies at CSS-parse time — before the
+		// theme-boot script below even runs — closing the white flash on a hard
+		// refresh (F5) in night mode. The boot script still runs right after and
+		// corrects this for the one case PHP cannot know: an explicit day/night
+		// override saved in localStorage (see the html[data-tsoliin-theme="day"]
+		// rule in admin.css that undoes this if the resolved theme is "day").
+		if ( ! TSOLIIN_Support::theme_is_daytime_now() ) {
+			wp_add_inline_style(
+				'tsoliin-admin',
+				'html,body.tools_page_tso-link-inspector,body.tools_page_tso-link-inspector-settings,body.admin_page_tso-link-inspector-settings,' .
+				'body.tools_page_tso-link-inspector #wpcontent,body.tools_page_tso-link-inspector #wpbody,body.tools_page_tso-link-inspector #wpbody-content,' .
+				'body.tools_page_tso-link-inspector-settings #wpcontent,body.tools_page_tso-link-inspector-settings #wpbody,body.tools_page_tso-link-inspector-settings #wpbody-content,' .
+				'body.admin_page_tso-link-inspector-settings #wpcontent,body.admin_page_tso-link-inspector-settings #wpbody,body.admin_page_tso-link-inspector-settings #wpbody-content,' .
+				// The left admin menu column (its own DOM branch, a sibling of #wpcontent,
+				// not a descendant) is the "white bar in the left margin" reported by the
+				// user: its background comes from the site's chosen admin color scheme,
+				// not from this plugin, so it was never covered by the rule above.
+				'body.tools_page_tso-link-inspector #adminmenumain,body.tools_page_tso-link-inspector #adminmenuback,body.tools_page_tso-link-inspector #adminmenuwrap,' .
+				'body.tools_page_tso-link-inspector-settings #adminmenumain,body.tools_page_tso-link-inspector-settings #adminmenuback,body.tools_page_tso-link-inspector-settings #adminmenuwrap,' .
+				'body.admin_page_tso-link-inspector-settings #adminmenumain,body.admin_page_tso-link-inspector-settings #adminmenuback,body.admin_page_tso-link-inspector-settings #adminmenuwrap' .
+				'{background:#12141c !important;}'
+			);
+		}
+
 		// Apply saved day/night theme before first paint (avoids light flash on navigation).
 		wp_register_script( 'tsoliin-theme-boot', false, array(), TSOLIIN_VERSION, false );
 		wp_enqueue_script( 'tsoliin-theme-boot' );
@@ -725,6 +768,7 @@ class TSOLIIN_Admin {
 		TSOLIIN_Support::render_donate_button();
 		echo '</div>';
 		echo '</div>';
+		$this->print_screen_meta_reposition_script();
 		echo '<hr class="wp-header-end">';
 
 		echo '<div class="tsoliin-hero">';
@@ -1255,6 +1299,31 @@ class TSOLIIN_Admin {
 	}
 
 	/**
+	 * Move WordPress' native Screen Options/Help links (and panel) next to our
+	 * page head, synchronously, before the browser paints.
+	 *
+	 * Both #screen-meta-links and #screen-meta are already printed by
+	 * wp-admin/admin-header.php earlier in the HTML stream by the time this
+	 * runs, so a plain, blocking inline <script> right here (as opposed to
+	 * moving them from a jQuery `$(document).ready()` handler, which only
+	 * fires after the browser has already laid out and painted the page
+	 * once) relocates them before first paint — no visible jump/reflow.
+	 */
+	private function print_screen_meta_reposition_script() {
+		echo '<script>(function(){';
+		echo 'var l=document.getElementById("screen-meta-links"),';
+		echo 's=document.getElementById("tsoliin-screen-meta-slot");';
+		echo 'if(l&&s&&l.parentNode!==s){s.appendChild(l);}';
+		echo 'var m=document.getElementById("screen-meta"),';
+		echo 'h=document.querySelector(".tsoliin-wrap .tsoliin-page-head");';
+		echo 'if(m&&h&&!m.dataset.tsoliinRepositioned){';
+		echo 'h.parentNode.insertBefore(m,h.nextSibling);';
+		echo 'm.dataset.tsoliinRepositioned="1";';
+		echo '}';
+		echo '})();</script>';
+	}
+
+	/**
 	 * First-visit onboarding banner (once per user; X hides it for the current page).
 	 */
 	private function render_onboarding_banner() {
@@ -1495,6 +1564,7 @@ class TSOLIIN_Admin {
 			return;
 		}
 
+		echo '<div class="tsoliin-history-table-wrap">';
 		echo '<table class="widefat striped tsoliin-history-table">';
 		echo '<thead><tr>';
 		echo '<th scope="col">' . esc_html__( 'Date', 'tso-link-inspector' ) . '</th>';
@@ -1533,7 +1603,7 @@ class TSOLIIN_Admin {
 				}
 				$edit_link = get_edit_post_link( $post_id );
 				if ( $edit_link ) {
-					$post_label = '<a href="' . esc_url( $edit_link ) . '">' . esc_html( $title ) . '</a>';
+					$post_label = '<a href="' . esc_url( $edit_link ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $title ) . '</a>';
 				} else {
 					$post_label = esc_html( $title );
 				}
@@ -1550,6 +1620,7 @@ class TSOLIIN_Admin {
 		}
 
 		echo '</tbody></table>';
+		echo '</div>';
 		echo '</div>';
 	}
 
@@ -1770,6 +1841,7 @@ class TSOLIIN_Admin {
 		TSOLIIN_Support::render_donate_button();
 		echo '</div>';
 		echo '</div>';
+		$this->print_screen_meta_reposition_script();
 
 		$this->render_settings_nav_tabs( $settings_tab );
 

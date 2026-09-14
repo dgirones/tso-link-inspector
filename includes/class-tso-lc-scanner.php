@@ -1589,10 +1589,22 @@ class TSOLIIN_Scanner {
 	/**
 	 * Sanitize a URL for storage (keep {} and accented chars, remove control chars only).
 	 *
+	 * Also decodes HTML entities (e.g. `&#038;` / `&amp;` — how WordPress/esc_url write a
+	 * literal `&` into rendered markup). Regex-based extractors (srcset, the `regex_links()`
+	 * fallback) read raw un-parsed HTML text, so without this the entity's own `#` character
+	 * gets mistaken by URL-parsing code for the start of a fragment, corrupting the stored
+	 * URL and defeating dedup (e.g. `...jpg?w=460&#038;ssl=1` → `...jpg#038;ssl=1`). A no-op
+	 * for URLs already decoded by DOMDocument (dom_extract()) — nothing left to decode there.
+	 *
 	 * @param string $url Raw URL.
 	 * @return string
 	 */
 	private function clean_url( $url ) {
+		$url = (string) $url;
+		if ( false !== strpos( $url, '&' ) ) {
+			$url = html_entity_decode( $url, ENT_QUOTES, 'UTF-8' );
+			$url = str_replace( '&amp;', '&', $url );
+		}
 		return trim( str_replace( array( "\0", "\r", "\n" ), '', $url ) );
 	}
 
@@ -1858,6 +1870,13 @@ class TSOLIIN_Scanner {
 			return true;
 		}
 		if ( '#' === $url[0] ) {
+			return true;
+		}
+		// Unresolved template placeholders (e.g. `${sec.image}`, `{{state.logo}}`) are not
+		// real URLs — they come from inline JS/HTML templates (client-side newsletter
+		// builders, etc.) whose `src="${var}"` markup is stored as literal post content
+		// before the template engine ever interpolates it. They will always 404.
+		if ( false !== strpos( $url, '${' ) || false !== strpos( $url, '{{' ) ) {
 			return true;
 		}
 		$scheme       = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
