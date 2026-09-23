@@ -26,6 +26,8 @@
 		scanSessionActive  : false,
 		scanTickBusy       : false,
 		checkTickBusy      : false,
+		scanTickTimer      : null,
+		checkTickTimer     : null,
 		scanChainCheck     : false,
 		editLinkId  : 0,
 		editOldUrl  : '',
@@ -1116,6 +1118,7 @@
 				self.scanAborted = true;
 				self.scanSessionActive = false;
 				self.scanTickBusy = false;
+				self.clearTickTimer( 'scan' );
 				self.scanning = false;
 			}
 			var willResume = ( typeof resume === 'undefined' )
@@ -1251,9 +1254,38 @@
 			return Math.max( wait, 500 );
 		},
 
+		/**
+		 * Schedule the next scan/check tick. Only one pending timer per loop, so
+		 * progress polls and button handlers can never start parallel tick chains.
+		 *
+		 * @param {string} kind 'scan' or 'check'.
+		 * @param {number} ms   Delay in milliseconds.
+		 */
+		scheduleTick: function ( kind, ms ) {
+			var self = this;
+			var key  = 'scan' === kind ? 'scanTickTimer' : 'checkTickTimer';
+			self.clearTickTimer( kind );
+			self[ key ] = setTimeout( function () {
+				self[ key ] = null;
+				if ( 'scan' === kind ) {
+					self.scanTick();
+				} else {
+					self.checkTick();
+				}
+			}, Math.max( 0, ms ) );
+		},
+
+		clearTickTimer: function ( kind ) {
+			var key = 'scan' === kind ? 'scanTickTimer' : 'checkTickTimer';
+			if ( this[ key ] ) {
+				clearTimeout( this[ key ] );
+				this[ key ] = null;
+			}
+		},
+
 		scanTick: function () {
 			var self = this;
-			if ( self.scanTickBusy || self.scanAborted || ! self.scanSessionActive ) {
+			if ( self.scanTickBusy || self.scanTickTimer || self.scanAborted || ! self.scanSessionActive ) {
 				return;
 			}
 			self.scanTickBusy = true;
@@ -1281,9 +1313,7 @@
 						return;
 					}
 					if ( scan.running && ! self.scanAborted && self.scanSessionActive ) {
-						setTimeout( function () {
-							self.scanTick();
-						}, self.tickDelay( scan ) );
+						self.scheduleTick( 'scan', self.tickDelay( scan ) );
 					}
 				},
 				error: function ( xhr ) {
@@ -1293,9 +1323,7 @@
 						return;
 					}
 					if ( ! self.scanAborted && self.scanSessionActive ) {
-						setTimeout( function () {
-							self.scanTick();
-						}, 15000 );
+						self.scheduleTick( 'scan', 15000 );
 					}
 				}
 			} );
@@ -1759,7 +1787,7 @@
 
 		checkTick: function () {
 			var self = this;
-			if ( self.checkTickBusy || ! self.checkSessionActive || self.completed ) {
+			if ( self.checkTickBusy || self.checkTickTimer || ! self.checkSessionActive || self.completed ) {
 				return;
 			}
 			self.checkTickBusy = true;
@@ -1787,9 +1815,7 @@
 						tsoliinData.bgRunning = 1;
 						self.updateCheckProgress( d.pct, d.message || tsoliinData.i18n.checking );
 						if ( self.checkSessionActive && ! self.completed ) {
-							setTimeout( function () {
-								self.checkTick();
-							}, self.tickDelay( d ) );
+							self.scheduleTick( 'check', self.tickDelay( d ) );
 						}
 						return;
 					}
@@ -1812,9 +1838,7 @@
 						return;
 					}
 					if ( self.checkSessionActive && ! self.completed ) {
-						setTimeout( function () {
-							self.checkTick();
-						}, 15000 );
+						self.scheduleTick( 'check', 15000 );
 					}
 				}
 			} );

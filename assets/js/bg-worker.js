@@ -13,7 +13,8 @@
 	var timer      = null;
 	var failMs     = 15000;
 	var hasUiTicks = parseInt( tsoliinBgWorker.hasUiTicks, 10 ) === 1;
-	var busyMs     = hasUiTicks ? 1500 : 5000;
+	// On plugin screens admin.js already drives the job; this is only a fallback.
+	var busyMs     = 5000;
 	// Outside the plugin screens, rest between batches so open tabs don't keep PHP busy non-stop.
 	var restMs     = hasUiTicks ? 0 : 10000;
 	var active     = parseInt( tsoliinBgWorker.active, 10 ) === 1;
