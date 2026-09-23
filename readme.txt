@@ -128,15 +128,10 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.1 =
-* Fix: while a background scan or check was running, every wp-admin page load could run a scan/check batch inline before rendering, freezing the admin and sometimes ending in a "Maximum execution time exceeded" fatal; page loads now only schedule the next step.
-* Fix: background workers forced PHP max_execution_time down to 60 seconds, overriding hosts configured with a higher or unlimited value; the host limit is now only ever raised, never lowered.
-* Fix: a running scan or check kept the server busy non-stop (WP-Cron re-queued the next step immediately and every open admin tab retried every 150-200 ms), causing high CPU and memory on shared hosting; only one worker runs at a time and each step is followed by a pause at least as long as the step itself.
-* Fix: the background keep-alive script polled admin-ajax every 4 seconds on every admin screen even with no job running; it now stays idle until a job is running and backs off after failures.
-* Fix: a single post, source or link that crashed PHP (timeout / out of memory) or threw an error was retried forever, so the scan or check never finished; it is now skipped after two failed attempts and the run continues.
-* Fix: the link check could loop forever re-reading the same post when a stored link was not found in its source (the rescan re-created the row as unchecked); each source is now re-read at most once per check run, and a check can no longer reschedule itself indefinitely.
-* Fix: on the plugin screen, each progress poll started an extra scan/check tick loop, so after a while the page sent 1-2 admin-ajax requests per second and ignored the server's pause between steps; only one tick loop now runs and the admin keep-alive waits at least 5 seconds while a step is busy.
-* Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned; those sources now have their own share of the bar and the label says which one is running.
-* Improvement: the new background-progress options are included in the autoload normalizer, so they can never end up autoloaded and force WordPress to reload all options on every scan/check tick.
+* Fix: the admin froze (and could hit "Maximum execution time exceeded") while a scan or check was running, because every admin page load ran a batch inline.
+* Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
+* Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
+* Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned, and it names the source being scanned.
 
 = 2.5.0 =
 * Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
