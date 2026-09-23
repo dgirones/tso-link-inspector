@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.0
+Stable tag: 2.5.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -127,7 +127,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
-= Unreleased =
+= 2.5.1 =
 * Fix: while a background scan or check was running, every wp-admin page load could run a scan/check batch inline before rendering, freezing the admin and sometimes ending in a "Maximum execution time exceeded" fatal; page loads now only schedule the next step.
 * Fix: background workers forced PHP max_execution_time down to 60 seconds, overriding hosts configured with a higher or unlimited value; the host limit is now only ever raised, never lowered.
 * Fix: a running scan or check kept the server busy non-stop (WP-Cron re-queued the next step immediately and every open admin tab retried every 150-200 ms), causing high CPU and memory on shared hosting; only one worker runs at a time and each step is followed by a pause at least as long as the step itself.
