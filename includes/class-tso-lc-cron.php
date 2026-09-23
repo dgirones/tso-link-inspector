@@ -45,6 +45,8 @@ class TSOLIIN_Cron {
 	const OPT_RESYNCED = 'tsoliin_bg_check_resynced';
 	/** Option: position inside the current post page. */
 	const OPT_SCAN_PAGE_POS = 'tsoliin_bg_scan_page_pos';
+	/** Option: highest cursor value of the extra source being scanned. */
+	const OPT_PHASE_CEILING = 'tsoliin_bg_scan_phase_ceiling';
 
 	const OPT_IMMEDIATE_QUEUE     = 'tsoliin_immediate_broken_queue';
 	const OPT_EMPTY_BATCH_RETRIES = 'tsoliin_bg_check_empty_retries';
@@ -779,6 +781,7 @@ class TSOLIIN_Cron {
 		delete_option( 'tsoliin_term_scan_after_id' );
 		delete_option( 'tsoliin_fse_scan_after_id' );
 		delete_option( self::OPT_SCAN_PAGE_POS );
+		delete_option( self::OPT_PHASE_CEILING );
 		$this->end_inflight( 'scan_post' );
 		$this->end_inflight( 'scan_phase' );
 	}
@@ -908,7 +911,11 @@ class TSOLIIN_Cron {
 		if ( 'posts' === $phase ) {
 			$pct = ( $total > 0 ) ? (int) round( ( $scanned / $total ) * $posts_weight ) : 0;
 		} else {
-			$pct = $posts_weight + (int) round( ( $position['index'] / max( 1, $position['total'] ) ) * ( 100 - $posts_weight ) );
+			// Move inside the phase too, so a long source (comments on a busy site)
+			// does not leave the bar frozen on one number for minutes.
+			$within = $this->get_bg_scan_phase_fraction( $phase );
+			$steps  = max( 1, $position['total'] );
+			$pct    = $posts_weight + (int) round( ( ( $position['index'] + $within ) / $steps ) * ( 100 - $posts_weight ) );
 		}
 		$pct = max( 0, min( 100, $pct ) );
 		if ( ! $complete && $pct >= 100 ) {
@@ -935,6 +942,68 @@ class TSOLIIN_Cron {
 			'phase_total' => $position['total'],
 			'done'        => $done,
 		);
+	}
+
+	/**
+	 * How far the current extra-source phase has got, from 0 to 1.
+	 *
+	 * Uses the phase cursor against the highest id that existed when the phase
+	 * started (captured once, so a progress poll costs no extra query).
+	 *
+	 * @param string $phase Current scan phase.
+	 * @return float
+	 */
+	private function get_bg_scan_phase_fraction( $phase ) {
+		$cursors = array(
+			'comments' => 'tsoliin_comment_scan_after_id',
+			'menus'    => 'tsoliin_menu_scan_after_id',
+			'terms'    => 'tsoliin_term_scan_after_id',
+			'fse'      => 'tsoliin_fse_scan_after_id',
+		);
+		$phase = (string) $phase;
+		if ( ! isset( $cursors[ $phase ] ) ) {
+			return 0.0;
+		}
+		$cursor = (float) get_option( $cursors[ $phase ], 0 );
+		if ( $cursor <= 0 ) {
+			return 0.0;
+		}
+		$ceilings = get_option( self::OPT_PHASE_CEILING, array() );
+		$ceilings = is_array( $ceilings ) ? $ceilings : array();
+		if ( ! isset( $ceilings[ $phase ] ) ) {
+			$ceilings[ $phase ] = $this->get_bg_scan_phase_ceiling( $phase );
+			update_option( self::OPT_PHASE_CEILING, $ceilings, false );
+		}
+		$ceiling = (float) $ceilings[ $phase ];
+		if ( $ceiling <= 0 ) {
+			return 0.0;
+		}
+		return max( 0.0, min( 1.0, $cursor / $ceiling ) );
+	}
+
+	/**
+	 * Highest id the given source can reach, for the progress estimate.
+	 *
+	 * @param string $phase Phase key.
+	 * @return int
+	 */
+	private function get_bg_scan_phase_ceiling( $phase ) {
+		global $wpdb;
+		switch ( $phase ) {
+			case 'comments':
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				return (int) $wpdb->get_var( "SELECT MAX(comment_ID) FROM {$wpdb->comments}" );
+			case 'menus':
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				return (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts} WHERE post_type = 'nav_menu_item'" );
+			case 'terms':
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				return (int) $wpdb->get_var( "SELECT MAX(term_id) FROM {$wpdb->terms}" );
+			case 'fse':
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				return (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts} WHERE post_type IN ( 'wp_template', 'wp_template_part', 'wp_block', 'wp_navigation' )" );
+		}
+		return 0;
 	}
 
 	/**

@@ -3546,3 +3546,33 @@ msgstr "Filtra per tipus d'enllaç"
 
 msgid "All types"
 msgstr "Tots els tipus"
+
+msgid "Posts scanned. Now scanning %1$s (%2$d of %3$d)…"
+msgstr "Entrades escanejades. Escanejant %1$s (%2$d de %3$d)…"
+
+msgid "Posts scanned. Now scanning %s…"
+msgstr "Entrades escanejades. Escanejant %s…"
+
+msgid "comments"
+msgstr "comentaris"
+
+msgid "menus"
+msgstr "menús"
+
+msgid "categories and tags"
+msgstr "categories i etiquetes"
+
+msgid "templates and reusable blocks"
+msgstr "plantilles i blocs reutilitzables"
+
+msgid "widgets"
+msgstr "widgets"
+
+msgid "ACF option fields"
+msgstr "camps d'opcions d'ACF"
+
+msgid "other registered sources"
+msgstr "altres fonts registrades"
+
+msgid "other sources"
+msgstr "altres fonts"

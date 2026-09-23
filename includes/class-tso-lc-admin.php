@@ -4212,22 +4212,10 @@ class TSOLIIN_Admin {
 			$message = __( 'Stopped', 'tso-link-inspector' );
 		}
 
-		if ( $scan['running'] ) {
-			$phase = isset( $scan['phase'] ) ? (string) $scan['phase'] : 'posts';
-			if ( (int) $scan['total'] > 0 && (int) $scan['scanned'] >= (int) $scan['total'] && 'posts' !== $phase && 'done' !== $phase ) {
-				$scan_message = __( 'Posts scanned. Finishing comments, menus and other sources…', 'tso-link-inspector' );
-			} else {
-				/* translators: 1: scanned count, 2: total count */
-				$scan_message = sprintf( __( 'Scanning %1$d of %2$d...', 'tso-link-inspector' ), $scan['scanned'], $scan['total'] );
-			}
-		} elseif ( ! empty( $scan['done'] ) ) {
-			$scan_message = __( 'Scan completed!', 'tso-link-inspector' );
-		} elseif ( '' !== $scan['error'] ) {
-			$scan_message = $scan['error'];
-		} elseif ( ! empty( $scan['resumable'] ) ) {
-			/* translators: 1: scanned count, 2: total count */
-			$scan_message = sprintf( __( 'Scan paused at %1$d of %2$d. Click Continue scan.', 'tso-link-inspector' ), $scan['scanned'], $scan['total'] );
-		} else {
+		// One builder for both endpoints, so the progress poll and the scan tick
+		// never overwrite each other with differently worded messages.
+		$scan_message = $this->format_scan_progress_payload( $scan )['message'];
+		if ( ! $scan['running'] && empty( $scan['done'] ) && '' === $scan['error'] && empty( $scan['resumable'] ) ) {
 			$scan_message = __( 'Stopped', 'tso-link-inspector' );
 		}
 

@@ -71,6 +71,7 @@ $tsoliin_options = array(
 	'tsoliin_bg_skipped',
 	'tsoliin_bg_check_resynced',
 	'tsoliin_bg_scan_page_pos',
+	'tsoliin_bg_scan_phase_ceiling',
 );
 foreach ( $tsoliin_options as $tsoliin_option_name ) {
 	delete_option( $tsoliin_option_name );

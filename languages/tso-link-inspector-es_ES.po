@@ -3726,3 +3726,33 @@ msgstr "Filtrar por tipo de enlace"
 
 msgid "All types"
 msgstr "Todos los tipos"
+
+msgid "Posts scanned. Now scanning %1$s (%2$d of %3$d)…"
+msgstr "Entradas escaneadas. Escaneando %1$s (%2$d de %3$d)…"
+
+msgid "Posts scanned. Now scanning %s…"
+msgstr "Entradas escaneadas. Escaneando %s…"
+
+msgid "comments"
+msgstr "comentarios"
+
+msgid "menus"
+msgstr "menús"
+
+msgid "categories and tags"
+msgstr "categorías y etiquetas"
+
+msgid "templates and reusable blocks"
+msgstr "plantillas y bloques reutilizables"
+
+msgid "widgets"
+msgstr "widgets"
+
+msgid "ACF option fields"
+msgstr "campos de opciones de ACF"
+
+msgid "other registered sources"
+msgstr "otras fuentes registradas"
+
+msgid "other sources"
+msgstr "otras fuentes"
