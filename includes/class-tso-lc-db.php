@@ -521,13 +521,23 @@ class TSOLIIN_DB {
 	 * @param string $source_key  Empty for post content; for comments e.g. c-123-author or c-123-l-<md5>.
 	 * @return int|false
 	 */
+	/**
+	 * Canonical set of link_type values stored in the DB (also used to validate
+	 * the list-table "Type" filter).
+	 *
+	 * @return string[]
+	 */
+	public static function allowed_link_types() {
+		return array( 'link', 'image', 'iframe', 'plain', 'comment', 'menu', 'widget', 'term', 'template', 'wp_block', 'acf' );
+	}
+
 	public function upsert_link( $post_id, $link_url, $anchor, $link_type = 'link', $source_key = '' ) {
 		global $wpdb;
 
 		$post_id    = absint( $post_id );
 		$link_url   = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $link_url ) );
 		$anchor     = sanitize_text_field( (string) $anchor );
-		$types      = array( 'link', 'image', 'iframe', 'plain', 'comment', 'menu', 'widget', 'term', 'template', 'wp_block', 'acf' );
+		$types      = self::allowed_link_types();
 		$link_type  = in_array( $link_type, $types, true ) ? $link_type : 'link';
 		$source_key = $this->sanitize_source_key( (string) $source_key );
 
@@ -1579,9 +1589,10 @@ class TSOLIIN_DB {
 		global $wpdb;
 
 		$defaults = array(
-			'filter'         => 'all',
-			'quality_filter' => '',
-			'scope'          => 'all',
+			'filter'           => 'all',
+			'quality_filter'   => '',
+			'link_type_filter' => '',
+			'scope'            => 'all',
 			'per_page'       => 20,
 			'paged'          => 1,
 			'orderby'        => 'date_found',
@@ -1625,6 +1636,13 @@ class TSOLIIN_DB {
 		$status_allowed = array( 'all', 'broken', 'redirect', 'ok', 'unchecked', 'http_insecure', 'manual_locked' );
 		if ( ! in_array( sanitize_key( (string) $args['filter'] ), $status_allowed, true ) ) {
 			$args['filter'] = 'all';
+		}
+
+		$link_type = sanitize_key( (string) $args['link_type_filter'] );
+		if ( '' !== $link_type && in_array( $link_type, self::allowed_link_types(), true ) ) {
+			$args['link_type_filter'] = $link_type;
+		} else {
+			$args['link_type_filter'] = '';
 		}
 
 		return $args;
@@ -1696,6 +1714,12 @@ class TSOLIIN_DB {
 		if ( ! empty( $args['post_id'] ) ) {
 			$where    .= ' AND l.post_id = %d';
 			$params[]  = absint( $args['post_id'] );
+		}
+
+		$link_type_filter = isset( $args['link_type_filter'] ) ? sanitize_key( (string) $args['link_type_filter'] ) : '';
+		if ( '' !== $link_type_filter && in_array( $link_type_filter, self::allowed_link_types(), true ) ) {
+			$where   .= ' AND l.link_type = %s';
+			$params[] = $link_type_filter;
 		}
 
 		if ( '' !== $args['search'] ) {

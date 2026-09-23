@@ -38,6 +38,9 @@ class TSOLIIN_Support {
 	 */
 	private static $inline_edit_link_cache = array();
 
+	/** @var array<string,bool> Request-scoped should_focus_link_in_post_content() results. */
+	private static $focus_in_post_content_cache = array();
+
 	/**
 	 * Ko-fi donation URL shown in the admin UI.
 	 *
@@ -598,6 +601,29 @@ class TSOLIIN_Support {
 	 * @param object|null $link DB link row.
 	 * @return string
 	 */
+	/**
+	 * The already-fetched post for this ID, from the scanner's request-scoped
+	 * cache, falling back to the bare ID. Pass the return value straight into
+	 * get_edit_post_link() / get_permalink() — both accept int|WP_Post, and
+	 * giving them the object skips their own internal get_post() lookup,
+	 * which is otherwise a fresh query every time on hosts where that isn't
+	 * cached across calls.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Post|int
+	 */
+	public static function get_cached_post_for_edit_link( $post_id ) {
+		$post_id = absint( $post_id );
+		$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
+		if ( $scanner ) {
+			$post = $scanner->get_cached_post( $post_id );
+			if ( $post ) {
+				return $post;
+			}
+		}
+		return $post_id;
+	}
+
 	public static function get_post_frontend_view_url_for_link( $link ) {
 		if ( ! $link || empty( $link->post_id ) ) {
 			return '';
@@ -615,7 +641,7 @@ class TSOLIIN_Support {
 				}
 			}
 		}
-		$permalink = get_permalink( (int) $link->post_id );
+		$permalink = get_permalink( self::get_cached_post_for_edit_link( (int) $link->post_id ) );
 		if ( ! is_string( $permalink ) || '' === $permalink ) {
 			return '';
 		}
@@ -649,12 +675,23 @@ class TSOLIIN_Support {
 		if ( empty( $link->post_id ) || empty( $link->link_url ) ) {
 			return false;
 		}
+		// This is called up to 3x per link row (title cell, view-URL builder,
+		// edit-URL builder) with the same result each time; cache it so the
+		// underlying is_url_in_post_body() content scan only runs once per row.
+		$cache_key = self::link_row_cache_key( $link );
+		if ( '' !== $cache_key && array_key_exists( $cache_key, self::$focus_in_post_content_cache ) ) {
+			return self::$focus_in_post_content_cache[ $cache_key ];
+		}
 		$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
 		if ( ! $scanner ) {
 			return true;
 		}
 		// Only deep-link when the URL is in post_content (not meta-only / stale orphan rows).
-		return $scanner->is_url_in_post_body( (int) $link->post_id, (string) $link->link_url, $type );
+		$result = $scanner->is_url_in_post_body( (int) $link->post_id, (string) $link->link_url, $type );
+		if ( '' !== $cache_key ) {
+			self::$focus_in_post_content_cache[ $cache_key ] = $result;
+		}
+		return $result;
 	}
 
 	/**
@@ -671,7 +708,7 @@ class TSOLIIN_Support {
 		if ( ! in_array( $type, array( 'link', 'image', 'iframe', 'plain', 'template', 'wp_block' ), true ) ) {
 			return '';
 		}
-		$edit = get_edit_post_link( absint( $link->post_id ) );
+		$edit = get_edit_post_link( self::get_cached_post_for_edit_link( (int) $link->post_id ) );
 		if ( ! is_string( $edit ) || '' === $edit ) {
 			return '';
 		}

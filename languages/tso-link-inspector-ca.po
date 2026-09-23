@@ -3540,3 +3540,9 @@ msgstr "La sessió d’administració ha caducat. Torna a carregar aquesta pàgi
 
 msgid "Another background task is changing state. Try again in a moment."
 msgstr "Una altra tasca en segon pla està canviant d’estat. Torna-ho a provar d’aquí a un moment."
+
+msgid "Filter by link type"
+msgstr "Filtra per tipus d'enllaç"
+
+msgid "All types"
+msgstr "Tots els tipus"

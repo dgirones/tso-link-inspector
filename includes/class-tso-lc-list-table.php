@@ -102,6 +102,22 @@ class TSOLIIN_List_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Active link-type filter (Type dropdown); empty string when none selected.
+	 * Purely orthogonal to status/quality/scope — it only narrows the SQL WHERE
+	 * with an extra "AND l.link_type = %s", same pattern as quality_filter.
+	 *
+	 * @return string
+	 */
+	private function read_request_type_filter() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list GET filter; read-only display.
+		$type_raw = isset( $_REQUEST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_REQUEST['link_type_filter'] ) ) : '';
+		if ( '' !== $type_raw && in_array( $type_raw, TSOLIIN_DB::allowed_link_types(), true ) ) {
+			return $type_raw;
+		}
+		return '';
+	}
+
+	/**
 	 * Append current quality_filter to tab URL args when active.
 	 *
 	 * @param array $args Query args (by ref).
@@ -111,6 +127,19 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$quality = $this->read_request_quality_filter();
 		if ( '' !== $quality ) {
 			$args['quality_filter'] = $quality;
+		}
+	}
+
+	/**
+	 * Append current link_type_filter to tab URL args when active.
+	 *
+	 * @param array $args Query args (by ref).
+	 * @return void
+	 */
+	private function merge_active_type_into_args( array &$args ) {
+		$type = $this->read_request_type_filter();
+		if ( '' !== $type ) {
+			$args['link_type_filter'] = $type;
 		}
 	}
 
@@ -144,6 +173,13 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			$quality = $this->read_request_quality_filter();
 			if ( '' !== $quality ) {
 				$query['quality_filter'] = $quality;
+			}
+		}
+
+		if ( ! isset( $args['link_type_filter'] ) && ! in_array( 'link_type_filter', $omit_keys, true ) ) {
+			$type = $this->read_request_type_filter();
+			if ( '' !== $type ) {
+				$query['link_type_filter'] = $type;
 			}
 		}
 
@@ -264,8 +300,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 
 	public function prepare_items() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
-		$filter  = $this->read_request_status_filter();
-		$quality = $this->read_request_quality_filter();
+		$filter    = $this->read_request_status_filter();
+		$quality   = $this->read_request_quality_filter();
+		$link_type = $this->read_request_type_filter();
 		$search  = isset( $_REQUEST['s'] )        ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) )         : '';
 		$orderby = isset( $_REQUEST['orderby'] )  ? sanitize_key( $_REQUEST['orderby'] )                        : 'date_found';
 		$order   = isset( $_REQUEST['order'] )    ? sanitize_key( $_REQUEST['order'] )                          : 'DESC';
@@ -291,9 +328,10 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$post_id = isset( $_REQUEST['post_id'] ) ? absint( $_REQUEST['post_id'] ) : 0;
 		$scope   = $this->read_request_scope();
 		$result = $this->db->get_links( array(
-			'filter'         => $filter,
-			'quality_filter' => $quality,
-			'scope'          => $scope,
+			'filter'           => $filter,
+			'quality_filter'   => $quality,
+			'link_type_filter' => $link_type,
+			'scope'            => $scope,
 			'search'   => $search,
 			'orderby'  => $orderby,
 			'order'    => $order,
@@ -328,6 +366,26 @@ class TSOLIIN_List_Table extends WP_List_Table {
 				if ( function_exists( 'update_meta_cache' ) ) {
 					update_meta_cache( 'post', $unique_post_ids );
 				}
+			}
+		}
+
+		// Batch-prime the comment cache for 'comment' type rows so per-row
+		// rendering (can_inline_edit_link()/is_url_editable_in_source() and
+		// get_post_frontend_view_url_for_link(), which each call get_comment()
+		// independently) hits the request cache instead of issuing two
+		// WP_Comment_Query lookups per comment row.
+		if ( ! empty( $this->items ) && function_exists( '_prime_comment_caches' ) ) {
+			$comment_ids = array();
+			foreach ( $this->items as $row_item ) {
+				if ( isset( $row_item->link_type ) && 'comment' === (string) $row_item->link_type ) {
+					$cid = TSOLIIN_Support::get_comment_id_from_link_row( $row_item );
+					if ( $cid > 0 ) {
+						$comment_ids[] = $cid;
+					}
+				}
+			}
+			if ( $comment_ids ) {
+				_prime_comment_caches( array_unique( $comment_ids ), false );
 			}
 		}
 		$this->set_pagination_args( array(
@@ -370,7 +428,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 				if ( empty( $item->last_checked ) ) {
 					// Legacy rows may have status_code but no last_checked; show date_found as fallback.
 					if ( ! empty( $item->status_code ) && 0 !== (int) $item->status_code && ! empty( $item->date_found ) ) {
-						return esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( (string) $item->date_found ) ) );
+						return esc_html( wp_date( 'd/m/Y H:i', strtotime( (string) $item->date_found ) ) );
 					}
 					// Has status but no fallback date available.
 					if ( ! empty( $item->status_code ) && 0 !== (int) $item->status_code ) {
@@ -378,7 +436,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 					}
 					return '<em>' . esc_html__( 'Never', 'tso-link-inspector' ) . '</em>';
 				}
-				return esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $item->last_checked ) ) );
+				return esc_html( wp_date( 'd/m/Y H:i', strtotime( $item->last_checked ) ) );
 
 			default:
 				return '';
@@ -613,7 +671,8 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			return esc_html( $title );
 		}
 
-		$edit = (string) get_edit_post_link( absint( $item->post_id ) );
+		$edit_target = TSOLIIN_Support::get_cached_post_for_edit_link( absint( $item->post_id ) );
+		$edit        = (string) get_edit_post_link( $edit_target );
 		if ( '' === $edit ) {
 			return esc_html( $title );
 		}
@@ -728,6 +787,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			// Switching tabs should reset active search terms from the query string.
 			$tab_args = array( 'filter' => $key );
 			$this->merge_active_quality_into_args( $tab_args );
+			$this->merge_active_type_into_args( $tab_args );
 			if ( $ctx['view_post_id_nav'] > 0 ) {
 				$tab_args['post_id'] = $ctx['view_post_id_nav'];
 			}
@@ -778,6 +838,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			if ( 'all' !== $current ) {
 				$tab_args['filter'] = $current;
 			}
+			$this->merge_active_type_into_args( $tab_args );
 			$omit_keys = array( 'paged', 's' );
 			if ( $quality_current !== $key ) {
 				$tab_args['quality_filter'] = $key;
@@ -832,6 +893,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 				$scope_args['filter'] = $current;
 			}
 			$this->merge_active_quality_into_args( $scope_args );
+			$this->merge_active_type_into_args( $scope_args );
 			if ( $ctx['view_post_id_nav'] > 0 ) {
 				$scope_args['post_id'] = $ctx['view_post_id_nav'];
 			}
@@ -852,6 +914,55 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			}
 			echo '<a href="' . $scope_url . '"' . $scope_active . $scope_title . '>' . esc_html( $scope_label ) . '</a> '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
+		echo '</div>';
+	}
+
+	/**
+	 * Type filter dropdown (Link, Image, Iframe, Comment, …).
+	 *
+	 * Purely orthogonal to Status/Quality/Internal-External: it only adds an
+	 * extra "AND l.link_type = %s" to the list SQL (see
+	 * TSOLIIN_DB::build_links_list_query_parts()). It never touches the
+	 * dashboard stat cards (Total/Broken/Redirect/OK/…), which are computed by
+	 * TSOLIIN_DB::get_stats()/get_stats_for_post() independently of this
+	 * filter — same behavior as the existing Quality filter.
+	 *
+	 * @return void
+	 */
+	private function render_type_filter_dropdown() {
+		$current = $this->read_request_type_filter();
+
+		$type_labels = array(
+			''         => __( 'All types', 'tso-link-inspector' ),
+			'link'     => __( 'Link', 'tso-link-inspector' ),
+			'image'    => __( 'Image', 'tso-link-inspector' ),
+			'iframe'   => __( 'Iframe', 'tso-link-inspector' ),
+			'plain'    => __( 'Plain text URL', 'tso-link-inspector' ),
+			'comment'  => __( 'Comment', 'tso-link-inspector' ),
+			'menu'     => __( 'Menu', 'tso-link-inspector' ),
+			'widget'   => __( 'Widget', 'tso-link-inspector' ),
+			'term'     => __( 'Term', 'tso-link-inspector' ),
+			'template' => __( 'Template / Navigation', 'tso-link-inspector' ),
+			'wp_block' => __( 'Reusable block', 'tso-link-inspector' ),
+			'acf'      => __( 'ACF Options', 'tso-link-inspector' ),
+		);
+
+		echo '<div class="tsoliin-type-filter">';
+		echo '<label class="screen-reader-text" for="tsoliin-type-filter-select">' . esc_html__( 'Filter by link type', 'tso-link-inspector' ) . '</label>';
+		echo '<select id="tsoliin-type-filter-select" class="tsoliin-type-filter__select" aria-label="' . esc_attr__( 'Filter by link type', 'tso-link-inspector' ) . '">';
+		foreach ( $type_labels as $key => $label ) {
+			$type_args = array();
+			$omit_keys = array( 'paged' );
+			if ( '' === $key ) {
+				$omit_keys[] = 'link_type_filter';
+			} else {
+				$type_args['link_type_filter'] = $key;
+			}
+			$option_url = esc_url( $this->list_nav_url( $type_args, $omit_keys ) );
+			$selected   = ( $current === $key ) ? ' selected="selected"' : '';
+			echo '<option value="' . $option_url . '"' . $selected . '>' . esc_html( $label ) . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $option_url from esc_url().
+		}
+		echo '</select>';
 		echo '</div>';
 	}
 
@@ -1061,6 +1172,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			$this->render_quality_filter_tabs();
 			echo '<div class="tsoliin-scope-search-row">';
 			$this->render_scope_tabs();
+			$this->render_type_filter_dropdown();
 			echo '<div class="tsoliin-scope-search-row__search">';
 			$this->render_search_controls();
 			echo '</div>';

@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.4.8
+Stable tag: 2.5.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -127,42 +127,23 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
+= 2.5.0 =
+* Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
+* Fix: on posts with many links, the list re-queried the same post's content from the database for every row that belonged to it (up to 3 times per row across the title, view, and edit links), instead of reusing the post already fetched for an earlier row; a request-level cache now keeps this to one lookup per post per page load.
+* Fix: the "Edit post" and "View post" links for each row asked WordPress for the post by ID, which re-queries the database when that post isn't already in WordPress's own cache; they now reuse the post already fetched for that row, removing another source of repeated queries.
+* Fix: some of the plugin's own background scan/check progress options could still be marked to autoload in the database from older versions, so WordPress reloaded its entire options table on every scan/check "tick" that updated them; these are now normalized to not autoload on upgrade, matching what the code already requests.
+
+= 2.4.9 =
+* Fix: link list column headers (e.g. Last checked) could drift out of alignment with their own column depending on how long that site's URLs/titles were; column widths are now fixed instead of recalculated from content.
+* Improvement: Last checked now always shows dd/mm/yyyy 24h time, instead of following each site's own date/time format setting.
+* Fix: disabling WooCommerce product scanning no longer leaves "Product" permanently and silently checked in the Content types list; products are only scanned as generic content while WooCommerce scanning is enabled.
+* Fix: the "Last checked" column header could wrap onto two lines, pushing its sort arrow below the text instead of beside it like the other columns; the column is now wide enough for the label to stay on one line.
+* Improvement: added a Type filter dropdown (Link, Image, Iframe, Comment, Menu, etc.) to the link list, independent of the Status/Quality/Internal-External filters and the dashboard stat cards.
+* Fix: enabling "Media (attachment)" under Content types scanned almost no media items, because WordPress stores attachments with post_status "inherit" (not "publish"); the scan now also accepts "inherit" for attachments.
+* Fix: an absolute server filesystem path stored in another plugin's postmeta (e.g. a backup-file path starting with "/home/.../public_html/...") could be mistaken for a site-relative URL and checked as a bogus link at the domain root (always reporting 404 even though the real file exists); such paths are now recognized and skipped.
+
 = 2.4.8 =
 * Fix: Mobile and web view in night mode
 * Fix: Unresolved template placeholders (e.g. `${sec.image}`, `{{state.logo}}`) are no longer scanned as broken links; a rescan clears any already-stored placeholder rows.
 
-= 2.4.7 =
-* Fix: Scan deduplication treats Jetpack Photon image URLs (`i0.wp.com`/`i1.wp.com`/`i2.wp.com`) with resize query params (`?h=&w=…`) as the same resource as the plain file URL (only one row is stored; broken duplicate no longer reappears as "Not checked" after each rescan).
-* Fix: URLs extracted from `srcset` (and the plain-regex link fallback) are HTML-entity-decoded before being stored, so `&#038;` no longer gets misread as the start of a URL fragment (`...jpg#038;w=460&ssl=1`) — this was creating extra unchecked duplicate rows for the same Jetpack Photon image on top of the dedup fix above.
-
-= 2.4.6 =
-* Improvement: Broader **Generic anchor** detection for English, Spanish, and Catalan (exact-match phrases such as “see more”, “pulsa aquí”, “fes clic aquí”); short ambiguous words like “web” / “entrar” / “visitar” are not added.
-* Fix: Bulk actions respect quality/scope filters when removing rows, reload the list when needed, report real delete failures, and block a second bulk run while one is in progress.
-* Fix: Check progress total follows the live link count (no inflated “X of Y”); queue chip “unchecked” matches the Unchecked card.
-* Improvement: Unlink bulk label/confirm clarified; Help documents Upgrade selected to HTTPS.
-* Fix: Edit link HTML preview updates Después when Nueva URL changes (request sequencing; failed replace fallback).
-* Fix: Edit link can save absolute↔relative spelling and #fragment-only changes (no longer “No changes to save”).
-* Fix: Ignore-domain option is disabled for relative /path URLs (never suggests ignoring the site host).
-* Fix: Post-revision setting: avoid duplicate revisions when enabled; toast only when a revision was really created; help text covers HTTPS and Unlink.
-* Fix: Convert to /path: row and bulk use the same eligibility (post/meta/custom menu only); settings copy matches behavior.
-* Fix: Preserve modified date no longer disables WordPress auto-revisions; nofollow matching tolerates spacing around href/rel.
-* Fix: Delete all plugin records also clears History, abandons paused scan/check jobs (no ghost Continue), and clears last-check timestamps / immediate email queue.
-* Fix: ACF/Meta scan: support Clone fields and Link fields returning a URL string; extract img/iframe/data-* URLs from HTML in meta; clarify SEO key exclusions.
-* Fix: Additional link sources: scan block-theme Navigation (wp_navigation); extract images/media in widgets/terms/templates; Media Image widgets; clearer Settings labels (drop “Phase 2”).
-* Fix: Stop calling attachment_url_to_postid() on every image during scan classification; prefer wp-image-ID / path lookup with request cache.
-* Fix: History enforces the 500-row cap after legacy table migration and when opening the History tab; prune only runs after a successful history insert.
-* Fix: Auto theme no longer flashes night→day on refresh near dusk (boot script now uses sunrise/sunset like the UI, not a fixed 07:00–20:00 window).
-* Improvement: “Save even if…” checkbox wording matches HTTPS verification gate.
-
 See changelog.txt in the plugin folder for older versions
-
-== Upgrade Notice ==
-
-= 2.4.8 =
-Fixes mobile night-mode styling (link list cards, checkboxes, History table), an F5 white-flash/Screen-Options jump in night mode, and stops unresolved template placeholders (${...}) from being scanned as broken links.
-
-= 2.4.7 =
-Fixes Jetpack Photon gallery images being scanned as duplicate/broken links (including duplicates from un-decoded &#038; entities in srcset).
-
-= 2.4.6 =
-Recommended. Richer generic-anchor phrases (EN/ES/CA), bulk-action refresh fixes, check counters aligned with the dashboard, and Edit link preview/save fixes for relative URLs and fragments.

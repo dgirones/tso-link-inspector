@@ -3720,3 +3720,9 @@ msgstr "La sesión de administración ha caducado. Recarga esta página para con
 
 msgid "Another background task is changing state. Try again in a moment."
 msgstr "Otra tarea en segundo plano está cambiando de estado. Inténtalo de nuevo en un momento."
+
+msgid "Filter by link type"
+msgstr "Filtrar por tipo de enlace"
+
+msgid "All types"
+msgstr "Todos los tipos"

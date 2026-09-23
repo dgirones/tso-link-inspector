@@ -2119,9 +2119,6 @@ class TSOLIIN_Admin {
 		if ( ! class_exists( 'TSOLIIN_WooCommerce', false ) || ! TSOLIIN_WooCommerce::is_plugin_active() ) {
 			$scan_woocommerce = ! empty( $current_settings['scan_woocommerce'] );
 		}
-		if ( $scan_woocommerce && class_exists( 'TSOLIIN_WooCommerce', false ) && TSOLIIN_WooCommerce::is_plugin_active() && ! in_array( 'product', $post_types, true ) ) {
-			$post_types[] = 'product';
-		}
 		$allowed_email_modes = array( 'none', 'immediate', 'confirmed', 'digest_7', 'digest_15', 'digest_30' );
 		$broken_email_mode   = 'none';
 		if ( isset( $_POST['tsoliin_broken_email_mode'] ) ) {
@@ -2536,6 +2533,14 @@ class TSOLIIN_Admin {
 		if ( '' !== $quality_val ) {
 			echo '<input type="hidden" name="quality_filter" value="' . esc_attr( $quality_val ) . '" />';
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only hidden-field mirror of the active list filter.
+		$type_val = isset( $_REQUEST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_REQUEST['link_type_filter'] ) ) : '';
+		if ( ! in_array( $type_val, TSOLIIN_DB::allowed_link_types(), true ) ) {
+			$type_val = '';
+		}
+		if ( '' !== $type_val ) {
+			echo '<input type="hidden" name="link_type_filter" value="' . esc_attr( $type_val ) . '" />';
+		}
 		if ( 'all' !== $scope_val ) {
 			echo '<input type="hidden" name="scope" value="' . esc_attr( $scope_val ) . '" />';
 		}
@@ -2564,6 +2569,11 @@ class TSOLIIN_Admin {
 			$quality = '';
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$link_type = isset( $_POST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_POST['link_type_filter'] ) ) : '';
+		if ( ! in_array( $link_type, TSOLIIN_DB::allowed_link_types(), true ) ) {
+			$link_type = '';
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$scope = isset( $_POST['scope'] ) ? $this->db->sanitize_scope_input( wp_unslash( $_POST['scope'] ) ) : 'all';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
@@ -2581,10 +2591,11 @@ class TSOLIIN_Admin {
 			$region = 'list';
 		}
 
-		$_REQUEST['s']              = $search;
-		$_REQUEST['filter']         = $filter;
-		$_REQUEST['quality_filter'] = $quality;
-		$_REQUEST['scope']          = $scope;
+		$_REQUEST['s']                = $search;
+		$_REQUEST['filter']           = $filter;
+		$_REQUEST['quality_filter']   = $quality;
+		$_REQUEST['link_type_filter'] = $link_type;
+		$_REQUEST['scope']            = $scope;
 		$_REQUEST['paged']          = $paged;
 		$_REQUEST['orderby']        = $orderby;
 		$_REQUEST['order']          = $order;
@@ -2838,9 +2849,9 @@ class TSOLIIN_Admin {
 		$redir    = (string) $link->redirect_url;
 		$verified = ! empty( $link->user_verified );
 		$checked  = $use_current_time
-			? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) )
+			? wp_date( 'd/m/Y H:i' )
 			: ( $link->last_checked
-				? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( (string) $link->last_checked ) )
+				? wp_date( 'd/m/Y H:i', strtotime( (string) $link->last_checked ) )
 				: '' );
 		return array(
 			'status_code'  => $code,

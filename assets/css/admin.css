@@ -728,6 +728,16 @@ a.tsoliin-stat:focus-visible {
 	margin: 0;
 }
 
+.tsoliin-type-filter {
+	flex: 0 0 auto;
+}
+
+.tsoliin-type-filter__select {
+	min-width: 140px;
+	max-width: 100%;
+	font-size: 12px;
+}
+
 .tsoliin-scope-search-row__search {
 	flex: 0 0 auto;
 	margin-left: auto;
@@ -910,6 +920,20 @@ a.tsoliin-stat:focus-visible {
 	margin-top: 0;
 	margin-bottom: 0;
 	clear: both;
+	/* Fixed layout: column widths come only from the CSS below (cb/link_type/
+	 * anchor_text/post_title/status_code/last_checked px widths + link_url's
+	 * 35%/420–680px range), never from cell content. Under the default
+	 * table-layout: auto, the browser recomputes every column's width from
+	 * the widest content in that column across the WHOLE table (URLs,
+	 * filenames, translated status text), so the same markup rendered the
+	 * "Última comprobación" header out of alignment with its own column by a
+	 * different amount on each site, depending on how long that site's link
+	 * URLs/titles happened to be. table-layout: fixed removes that
+	 * dependency: header and body cells always share the same column
+	 * boundaries, mobile already relies on this same rule (see the
+	 * max-width: 782px block below), so this only extends it to desktop.
+	 */
+	table-layout: fixed;
 }
 
 /* Paint checkbox (th) and every td the same, so WP scheme hover cannot show brown at the row ends. */
@@ -1074,6 +1098,24 @@ a.tsoliin-stat:focus-visible {
 .wp-list-table .column-cb            { width: 2.2em; }
 .wp-list-table .column-status_code   { width: 220px; min-width: 180px; }
 .wp-list-table .column-last_checked  { width: 130px; white-space: nowrap; }
+
+/* "Última comprobación" is the longest column header label; at the old
+ * 130px width it wrapped onto a second line, which pushed the sort arrow
+ * (.sorting-indicator) below the text instead of staying inline to its
+ * right like every other sortable column header. Widen the column so the
+ * label fits on one line, and force the header link into a row flexbox so
+ * the arrow is guaranteed to sit inline after the text regardless of how
+ * WP core renders the sortable-column markup.
+ */
+.wp-list-table .column-last_checked { width: 168px; }
+.tsoliin-wrap .wp-list-table th.column-last_checked.sortable a,
+.tsoliin-wrap .wp-list-table th.column-last_checked.sorted a {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+	overflow: visible;
+}
 .wp-list-table .column-anchor_text   { width: 130px; }
 .wp-list-table .column-post_title    { width: 200px; }
 
@@ -1653,6 +1695,15 @@ a.tsoliin-stat:focus-visible {
 	.tsoliin-scope-search-row__search {
 		margin-left: 0;
 		width: 100%;
+	}
+
+	.tsoliin-type-filter {
+		width: 100%;
+	}
+
+	.tsoliin-type-filter__select {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 
 	.tsoliin-scope-search-row__search .tsoliin-search-form {
@@ -2278,6 +2329,12 @@ a.tsoliin-stat:focus-visible {
 
 .tsoliin-wrap[data-theme="night"] .tsoliin-quality-tabs__label {
 	color: var(--tsoliin-text-muted);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-type-filter__select {
+	background-color: var(--tsoliin-surface-2);
+	color: var(--tsoliin-text);
+	border-color: var(--tsoliin-border);
 }
 
 .tsoliin-wrap[data-theme="night"] .tsoliin-stat--broken {

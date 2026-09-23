@@ -2,10 +2,9 @@
 /**
  * Plugin Name:       TSO Link Inspector
  * Description:       Find and fix broken links across your entire WordPress site without opening each post.
- * Version:           2.4.8
+ * Version:           2.5.0
  * Requires at least: 5.9
  * Requires PHP:      7.4
- * Tested up to:       7.1
  * Author:            Tu Soporte Online
  * Author URI:        https://www.tusoporteonline.es/blog
  * License:           GPL-2.0-or-later
@@ -20,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TSOLIIN_VERSION',    '2.4.8' );
+define( 'TSOLIIN_VERSION',    '2.5.0' );
 define( 'TSOLIIN_PLUGIN_FILE', __FILE__ );
 define( 'TSOLIIN_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'TSOLIIN_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -441,6 +440,7 @@ final class TSOLIIN_Link_Inspector {
 			$this->db->cleanup_attachment_permalink_rows();
 			$this->cron->schedule();
 			$this->ensure_frequent_options_autoloaded();
+			$this->ensure_progress_options_not_autoloaded();
 			update_option( 'tsoliin_version', TSOLIIN_VERSION, true );
 			return;
 		}
@@ -467,6 +467,68 @@ final class TSOLIIN_Link_Inspector {
 		$settings = get_option( 'tsoliin_settings', null );
 		if ( null !== $settings ) {
 			update_option( 'tsoliin_settings', $settings, true );
+		}
+	}
+
+	/**
+	 * Force autoload=no in the DB for options that are written on every scan/check
+	 * "tick" but never read on a normal page load.
+	 *
+	 * All the update_option() calls for these keys already pass $autoload = false,
+	 * but that only takes effect going forward: a row created by an older version
+	 * of this plugin (before that third argument existed here) can still be sitting
+	 * in the DB with autoload='yes'. WordPress invalidates its whole cached
+	 * "alloptions" set whenever an option's autoload membership actually changes,
+	 * so as long as one of these rows is still marked autoload='yes', every single
+	 * background-check tick that updates it forces a full options reload
+	 * (wp_load_alloptions() querying wp_options again) — this is what showed up in
+	 * Query Monitor as repeated wp_load_alloptions() calls "while checking links".
+	 * Running this once, here, normalizes the DB so update_option()'s existing
+	 * false stays a no-op afterwards.
+	 */
+	private function ensure_progress_options_not_autoloaded() {
+		$keys = array(
+			'tsoliin_last_check_batch',
+			'tsoliin_last_full_scan',
+			'tsoliin_total_posts_scanned',
+			'tsoliin_bg_scan_token',
+			'tsoliin_bg_scan_phase',
+			'tsoliin_bg_scan_running',
+			'tsoliin_bg_scan_page',
+			'tsoliin_bg_scan_total',
+			'tsoliin_bg_scan_scanned',
+			'tsoliin_bg_scan_complete',
+			'tsoliin_bg_scan_started',
+			'tsoliin_bg_scan_error',
+			'tsoliin_bg_check_token',
+			'tsoliin_bg_check_post_id',
+			'tsoliin_bg_check_total',
+			'tsoliin_bg_check_checked',
+			'tsoliin_bg_check_running',
+			'tsoliin_bg_check_complete',
+			'tsoliin_bg_check_started',
+			'tsoliin_bg_check_last_error',
+			TSOLIIN_Cron::OPT_IMMEDIATE_QUEUE,
+			TSOLIIN_Cron::OPT_EMPTY_BATCH_RETRIES,
+			TSOLIIN_Cron::OPT_USER_STOPPED_CHECK,
+			'tsoliin_comment_scan_after_id',
+			'tsoliin_menu_scan_after_id',
+			'tsoliin_widget_scan_after_index',
+			'tsoliin_term_scan_after_id',
+			'tsoliin_fse_scan_after_id',
+			'tsoliin_broken_digest_last_sent',
+			'tsoliin_site_gate_state',
+		);
+		foreach ( $keys as $key ) {
+			if ( function_exists( 'wp_set_option_autoload' ) ) {
+				wp_set_option_autoload( $key, false );
+				continue;
+			}
+			// WP < 6.6: only re-writing the option flips a mismatched autoload flag.
+			$value = get_option( $key, null );
+			if ( null !== $value ) {
+				update_option( $key, $value, false );
+			}
 		}
 	}
 

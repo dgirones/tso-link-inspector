@@ -37,6 +37,53 @@ class TSOLIIN_Scanner {
 	/** @var array<string,bool> Request-scoped is_url_editable_in_source() results. */
 	private $editable_source_cache = array();
 
+	/**
+	 * @var array<int,WP_Post|false> Request-scoped get_post() results for the
+	 * per-row content-lookup helpers below (is_url_editable_in_post(),
+	 * is_url_in_post_body(), post_has_unlinkable_markup()). These are called
+	 * up to 3x per link row (list-table title cell, view-URL builder, edit-URL
+	 * builder) and the same post is looked up again for every other link row
+	 * that belongs to it, so on a post with many links this repeats the same
+	 * "SELECT * FROM wp_posts WHERE ID = %d" query dozens of times per page
+	 * load even though WP_Post caching should already prevent that — keeping
+	 * our own copy guarantees at most one lookup per post per request.
+	 */
+	private $scan_post_cache = array();
+
+	/**
+	 * get_post() with a request-scoped cache, for the per-row content-lookup
+	 * helpers that are called repeatedly for the same post across link rows.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Post|false
+	 */
+	private function get_post_for_scan( $post_id ) {
+		$post_id = absint( $post_id );
+		if ( array_key_exists( $post_id, $this->scan_post_cache ) ) {
+			return $this->scan_post_cache[ $post_id ];
+		}
+		$post                              = get_post( $post_id );
+		$this->scan_post_cache[ $post_id ] = $post ? $post : false;
+		return $this->scan_post_cache[ $post_id ];
+	}
+
+	/**
+	 * Public access to the request-scoped post cache above, for callers outside
+	 * this class (list table, TSOLIIN_Support link-URL builders) that also need
+	 * this post and would otherwise hand a bare ID to get_edit_post_link() /
+	 * get_permalink() — those WordPress core functions call get_post() again
+	 * internally, which is a query of its own whenever this same core cache
+	 * fails to hold (as observed on some hosts). Passing the WP_Post object we
+	 * already have skips that internal lookup entirely.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return WP_Post|null
+	 */
+	public function get_cached_post( $post_id ) {
+		$post = $this->get_post_for_scan( $post_id );
+		return $post ? $post : null;
+	}
+
 	/** @var int|null Request cache for get_total_posts(). */
 	private $total_posts_cache = null;
 
@@ -60,6 +107,29 @@ class TSOLIIN_Scanner {
 			$t[] = 'product';
 		}
 		return $t;
+	}
+
+	/**
+	 * Post statuses to query for the given active post types.
+	 *
+	 * Attachments are almost never stored with post_status 'publish' — WordPress
+	 * defaults new media to 'inherit' (it inherits the parent post's status, or
+	 * is simply 'inherit' when unattached). A plain 'publish' filter silently
+	 * excludes virtually all media, making the "Media (attachment)" content-type
+	 * checkbox a no-op. TSOLIIN_Quality already treats 'inherit' as published
+	 * for attachments (see attachment_is_unpublished_target()); this mirrors
+	 * that here for the scan queries, only for attachment scanning so post/page/
+	 * other post types keep their existing publish-only behavior.
+	 *
+	 * @param string[] $types Active post types (from get_post_types()).
+	 * @return string[]
+	 */
+	private function get_scan_post_statuses( array $types ) {
+		$statuses = array( 'publish' );
+		if ( in_array( 'attachment', $types, true ) ) {
+			$statuses[] = 'inherit';
+		}
+		return $statuses;
 	}
 
 	/**
@@ -215,7 +285,7 @@ class TSOLIIN_Scanner {
 		$q = new WP_Query(
 			array(
 				'post_type'              => $types,
-				'post_status'            => 'publish',
+				'post_status'            => $this->get_scan_post_statuses( $types ),
 				'posts_per_page'         => 1,
 				'fields'                 => 'ids',
 				'no_found_rows'          => false,
@@ -233,9 +303,10 @@ class TSOLIIN_Scanner {
 	 * @return int[]
 	 */
 	public function get_post_ids( $page = 1, $per_page = TSOLIIN_BATCH_SIZE ) {
-		$q = new WP_Query( array(
-			'post_type'      => $this->get_post_types(),
-			'post_status'    => 'publish',
+		$types = $this->get_post_types();
+		$q     = new WP_Query( array(
+			'post_type'      => $types,
+			'post_status'    => $this->get_scan_post_statuses( $types ),
 			'posts_per_page' => max( 1, absint( $per_page ) ),
 			'paged'          => max( 1, absint( $page ) ),
 			'fields'         => 'ids',
@@ -2270,7 +2341,13 @@ class TSOLIIN_Scanner {
 		$post_id = absint( $post_id );
 		clean_post_cache( $post_id );
 		$post    = get_post( $post_id );
-		if ( ! $post || 'publish' !== $post->post_status ) {
+		// Attachments are almost always 'inherit' (not 'publish'); see
+		// get_scan_post_statuses() for why that status is valid for media.
+		$status_ok = $post && (
+			'publish' === $post->post_status
+			|| ( 'attachment' === $post->post_type && 'inherit' === $post->post_status )
+		);
+		if ( ! $status_ok ) {
 			$this->db->delete_links_for_post( $post_id );
 			return 0;
 		}
@@ -2734,6 +2811,18 @@ class TSOLIIN_Scanner {
 		}
 		if ( filter_var( $url, FILTER_VALIDATE_URL ) ) {
 			return true;
+		}
+		// A value starting with "/" is normally a site-relative URL (e.g. "/2024/post/"
+		// or "/wp-content/uploads/x.jpg"), which is what the regex below is for. But an
+		// absolute SERVER FILESYSTEM path also starts with "/" (e.g. a backup-file path
+		// another plugin stores in its own postmeta for internal bookkeeping, like
+		// "/home/user/public_html/wp-content/uploads/plugin/2026/06/file.webp"). Treating
+		// that as a domain-relative URL builds a bogus link ("your-site.com" + the whole
+		// server path) that always 404s, even though the file exists fine on disk. Reject
+		// anything that starts with this install's own ABSPATH — that is unambiguously a
+		// filesystem path, never a URL.
+		if ( defined( 'ABSPATH' ) && '' !== ABSPATH && 0 === strpos( $url, ABSPATH ) ) {
+			return false;
 		}
 		return (bool) preg_match( '#^(?:https?://|/|\./|\.\./)#i', $url );
 	}
@@ -3735,7 +3824,7 @@ class TSOLIIN_Scanner {
 		if ( $post_id <= 0 || '' === $url ) {
 			return false;
 		}
-		$post = get_post( $post_id );
+		$post = $this->get_post_for_scan( $post_id );
 		if ( ! $post || ! is_string( $post->post_content ) ) {
 			return false;
 		}
@@ -3761,7 +3850,7 @@ class TSOLIIN_Scanner {
 		if ( $post_id <= 0 || '' === $url ) {
 			return false;
 		}
-		$post = get_post( $post_id );
+		$post = $this->get_post_for_scan( $post_id );
 		if ( ! $post || ! is_string( $post->post_content ) ) {
 			return false;
 		}
@@ -3943,7 +4032,7 @@ class TSOLIIN_Scanner {
 		if ( $post_id <= 0 || '' === $url ) {
 			return false;
 		}
-		$post = get_post( $post_id );
+		$post = $this->get_post_for_scan( $post_id );
 		if ( ! $post || ! is_string( $post->post_content ) ) {
 			return false;
 		}

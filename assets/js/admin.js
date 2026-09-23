@@ -353,10 +353,11 @@
 					view = 'links';
 				}
 				return {
-					href           : url.toString(),
-					filter         : url.searchParams.get( 'filter' ) || 'all',
-					quality_filter : url.searchParams.get( 'quality_filter' ) || '',
-					scope          : url.searchParams.get( 'scope' ) || 'all',
+					href             : url.toString(),
+					filter           : url.searchParams.get( 'filter' ) || 'all',
+					quality_filter   : url.searchParams.get( 'quality_filter' ) || '',
+					link_type_filter : url.searchParams.get( 'link_type_filter' ) || '',
+					scope            : url.searchParams.get( 'scope' ) || 'all',
 					paged          : Math.max( 1, parseInt( url.searchParams.get( 'paged' ), 10 ) || 1 ),
 					s              : url.searchParams.has( 's' ) ? ( url.searchParams.get( 's' ) || '' ) : '',
 					post_id        : postId,
@@ -378,6 +379,7 @@
 		updateListNavState: function ( params, href ) {
 			tsoliinData.listFilter = params.filter || 'all';
 			tsoliinData.listQualityFilter = params.quality_filter || '';
+			tsoliinData.listTypeFilter = params.link_type_filter || '';
 			tsoliinData.listScope = params.scope || 'all';
 			tsoliinData.viewPostId = parseInt( params.post_id, 10 ) || 0;
 			tsoliinData.listView = params.view || 'links';
@@ -527,13 +529,14 @@
 				method : 'POST',
 				timeout: 60000,
 				data   : {
-					action         : 'tsoliin_search_list',
-					nonce          : tsoliinData.nonce,
-					region         : useScope ? 'scope' : 'list',
-					s              : params.s || '',
-					filter         : params.filter || tsoliinData.listFilter || 'all',
-					quality_filter : params.quality_filter !== undefined ? params.quality_filter : ( tsoliinData.listQualityFilter || '' ),
-					scope          : params.scope || tsoliinData.listScope || 'all',
+					action           : 'tsoliin_search_list',
+					nonce            : tsoliinData.nonce,
+					region           : useScope ? 'scope' : 'list',
+					s                : params.s || '',
+					filter           : params.filter || tsoliinData.listFilter || 'all',
+					quality_filter   : params.quality_filter !== undefined ? params.quality_filter : ( tsoliinData.listQualityFilter || '' ),
+					link_type_filter : params.link_type_filter !== undefined ? params.link_type_filter : ( tsoliinData.listTypeFilter || '' ),
+					scope            : params.scope || tsoliinData.listScope || 'all',
 					post_id        : params.post_id !== undefined ? params.post_id : ( parseInt( tsoliinData.viewPostId, 10 ) || 0 ),
 					view           : params.view || tsoliinData.listView || 'links',
 					paged          : params.paged || 1,
@@ -688,6 +691,16 @@
 					return;
 				}
 				e.preventDefault();
+				self.loadListNav( href );
+			} );
+
+			// Type filter dropdown: same AJAX list-nav path as the scope tabs above,
+			// just triggered by a <select> change instead of an <a> click.
+			$( document ).on( 'change', '.tsoliin-type-filter__select', function () {
+				var href = $( this ).val();
+				if ( ! href || ! $( '#tsoliin-scope-region' ).length ) {
+					return;
+				}
 				self.loadListNav( href );
 			} );
 
