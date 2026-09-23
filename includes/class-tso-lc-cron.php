@@ -301,6 +301,26 @@ class TSOLIIN_Cron {
 	}
 
 	/**
+	 * Give a worker at least $seconds to run without ever lowering the host limit.
+	 *
+	 * The old code forced max_execution_time to 60 s, overriding hosts that set a
+	 * higher (or unlimited) value.
+	 *
+	 * @param float $seconds Minimum seconds needed.
+	 */
+	private function extend_time_limit( $seconds ) {
+		if ( ! function_exists( 'set_time_limit' ) ) {
+			return;
+		}
+		$current = (int) ini_get( 'max_execution_time' );
+		if ( 0 === $current ) {
+			return; // Already unlimited.
+		}
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged -- Scan/check worker may need more than the default; never lowers the host value.
+		@set_time_limit( max( $current, (int) ceil( $seconds ) ) );
+	}
+
+	/**
 	 * Keep PHP working after the browser leaves the plugin screen.
 	 */
 	private function ignore_worker_abort() {
@@ -340,10 +360,7 @@ class TSOLIIN_Cron {
 		$this->schedule_bg_scan_recovery_event();
 
 		try {
-			if ( function_exists( 'set_time_limit' ) ) {
-				// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged -- Scan tick/cron may exceed host max_execution_time.
-				@set_time_limit( max( 60, $budget + 20 ) );
-			}
+			$this->extend_time_limit( $budget + 20 );
 
 			$start = microtime( true );
 			$page  = max( 1, (int) get_option( 'tsoliin_bg_scan_page', 1 ) );
@@ -839,10 +856,7 @@ class TSOLIIN_Cron {
 		$this->schedule_bg_check_recovery_event();
 
 		try {
-			if ( function_exists( 'set_time_limit' ) ) {
-				// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged -- Check tick/cron may exceed host max_execution_time.
-				@set_time_limit( max( 60, $budget + 20 ) );
-			}
+			$this->extend_time_limit( $budget + 20 );
 
 			$this->http->begin_bulk_timeout( 8 );
 			$batch_size = null === $batch_size ? self::BG_BATCH : max( 1, absint( $batch_size ) );
@@ -1017,10 +1031,13 @@ class TSOLIIN_Cron {
 	}
 
 	/**
-	 * Run a due/overdue background scan or check when WP-Cron did not fire
+	 * Nudge a due/overdue background scan or check when WP-Cron did not fire
 	 * (DISABLE_WP_CRON, failed loopback, or a delayed single event).
 	 *
-	 * Skips admin-ajax so the plugin tick/poll owns those requests.
+	 * Never runs scan/check work inside the admin page request itself: a slow
+	 * batch here blocked every wp-admin screen (and could hit the PHP time
+	 * limit). It only (re)schedules the step and fires a non-blocking cron
+	 * spawn; the admin-ajax keep-alive and Heartbeat do the actual work.
 	 */
 	public function maybe_run_overdue_bg_workers() {
 		if ( wp_doing_ajax() || wp_doing_cron() ) {
@@ -1029,21 +1046,21 @@ class TSOLIIN_Cron {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		if ( get_option( 'tsoliin_bg_scan_running' ) ) {
-			$phase      = (string) get_option( 'tsoliin_bg_scan_phase', 'posts' );
-			$posts_done = ( (int) get_option( 'tsoliin_bg_scan_total', 0 ) > 0
-				&& (int) get_option( 'tsoliin_bg_scan_scanned', 0 ) >= (int) get_option( 'tsoliin_bg_scan_total', 0 )
-				&& 'posts' !== $phase );
-			if ( $this->is_cron_event_overdue( self::HOOK_BG_SCAN_STEP )
-				|| $this->is_bg_heartbeat_stale( 'tsoliin_bg_scan_started', 8 ) ) {
-				$this->clear_hook_events( self::HOOK_BG_SCAN_STEP );
-				$this->run_bg_scan_step( null, false, $posts_done ? 10 : 3 );
-			}
+		$nudge = false;
+		if ( get_option( 'tsoliin_bg_scan_running' )
+			&& ( $this->is_cron_event_overdue( self::HOOK_BG_SCAN_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_scan_started', 8 ) ) ) {
+			$this->clear_hook_events( self::HOOK_BG_SCAN_STEP );
+			$this->schedule_bg_scan_step_if_needed( 0 );
+			$nudge = true;
 		}
 		if ( get_option( 'tsoliin_bg_check_running' )
 			&& ( $this->is_cron_event_overdue( self::HOOK_BG_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_check_started', 8 ) ) ) {
 			$this->clear_hook_events( self::HOOK_BG_STEP );
-			$this->run_bg_step( null, false, 3 );
+			$this->schedule_bg_check_step_if_needed( 0 );
+			$nudge = true;
+		}
+		if ( $nudge ) {
+			spawn_cron();
 		}
 	}
 

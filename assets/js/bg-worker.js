@@ -11,9 +11,9 @@
 
 	var busy       = false;
 	var timer      = null;
-	var idleMs     = 4000;
+	var failMs     = 15000;
 	var hasUiTicks = parseInt( tsoliinBgWorker.hasUiTicks, 10 ) === 1;
-	var busyMs     = hasUiTicks ? 1500 : 200;
+	var busyMs     = hasUiTicks ? 1500 : 5000;
 	var active     = parseInt( tsoliinBgWorker.active, 10 ) === 1;
 
 	function schedule( ms ) {
@@ -40,7 +40,7 @@
 			var d = ( r && r.success && r.data ) ? r.data : {};
 			active = !!( d.scan_running || d.check_running );
 			if ( ! active ) {
-				schedule( idleMs );
+				// Idle: stop polling; Heartbeat reports when a job starts.
 				return;
 			}
 			schedule( d.busy ? busyMs : 0 );
@@ -49,12 +49,17 @@
 			if ( xhr && ( xhr.status === 401 || xhr.status === 403 ) ) {
 				return;
 			}
-			schedule( active ? 400 : idleMs );
+			// Back off after a failed/timed-out worker instead of retrying at once.
+			if ( active ) {
+				schedule( failMs );
+			}
 		} );
 	}
 
 	$( function () {
-		schedule( active ? 0 : idleMs );
+		if ( active ) {
+			schedule( 0 );
+		}
 	} );
 
 	$( document ).on( 'heartbeat-send', function ( event, data ) {
