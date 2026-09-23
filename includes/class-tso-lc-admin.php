@@ -4059,6 +4059,27 @@ class TSOLIIN_Admin {
 	}
 
 	/**
+	 * Human-readable name for an extra-source scan phase.
+	 *
+	 * @param string $phase Phase key from the scan progress payload.
+	 * @return string
+	 */
+	private function get_scan_phase_label( $phase ) {
+		$key    = (string) $phase;
+		$labels = array(
+			'comments'   => __( 'comments', 'tso-link-inspector' ),
+			'menus'      => __( 'menus', 'tso-link-inspector' ),
+			'terms'      => __( 'categories and tags', 'tso-link-inspector' ),
+			'fse'        => __( 'templates and reusable blocks', 'tso-link-inspector' ),
+			'widgets'    => __( 'widgets', 'tso-link-inspector' ),
+			'acf'        => __( 'ACF option fields', 'tso-link-inspector' ),
+			'registered' => __( 'other registered sources', 'tso-link-inspector' ),
+		);
+
+		return isset( $labels[ $key ] ) ? $labels[ $key ] : __( 'other sources', 'tso-link-inspector' );
+	}
+
+	/**
 	 * Progress fields for the admin scan bar.
 	 *
 	 * @param array $scan get_bg_scan_progress() result.
@@ -4070,8 +4091,17 @@ class TSOLIIN_Admin {
 			$phase   = isset( $scan['phase'] ) ? (string) $scan['phase'] : 'posts';
 			$total   = (int) $scan['total'];
 			$scanned = (int) $scan['scanned'];
-			if ( $total > 0 && $scanned >= $total && 'posts' !== $phase && 'done' !== $phase ) {
-				$message = __( 'Posts scanned. Finishing comments, menus and other sources…', 'tso-link-inspector' );
+			if ( 'posts' !== $phase && 'done' !== $phase ) {
+				$label = $this->get_scan_phase_label( $phase );
+				$step  = (int) ( isset( $scan['phase_index'] ) ? $scan['phase_index'] : 0 ) + 1;
+				$steps = (int) ( isset( $scan['phase_total'] ) ? $scan['phase_total'] : 0 );
+				if ( $steps > 0 ) {
+					/* translators: 1: source name, 2: current source number, 3: total sources */
+					$message = sprintf( __( 'Posts scanned. Now scanning %1$s (%2$d of %3$d)…', 'tso-link-inspector' ), $label, min( $step, $steps ), $steps );
+				} else {
+					/* translators: %s: source name */
+					$message = sprintf( __( 'Posts scanned. Now scanning %s…', 'tso-link-inspector' ), $label );
+				}
 			} else {
 				/* translators: 1: scanned count, 2: total count */
 				$message = sprintf( __( 'Scanning %1$d of %2$d...', 'tso-link-inspector' ), $scanned, $total );

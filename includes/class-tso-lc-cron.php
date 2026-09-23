@@ -899,9 +899,23 @@ class TSOLIIN_Cron {
 		if ( $scanned > $total ) {
 			$scanned = $total;
 		}
-		$pct = ( $total > 0 ) ? min( 100, (int) round( ( $scanned / $total ) * 100 ) ) : 0;
+
+		// Posts are only part of the work: comments, menus, terms, templates and
+		// widgets run after them. Give the extra sources their own share of the
+		// bar so it does not sit at 99% for minutes while they run.
+		$position     = $this->get_bg_scan_phase_position( $phase );
+		$posts_weight = $position['total'] > 0 ? 70 : 100;
+		if ( 'posts' === $phase ) {
+			$pct = ( $total > 0 ) ? (int) round( ( $scanned / $total ) * $posts_weight ) : 0;
+		} else {
+			$pct = $posts_weight + (int) round( ( $position['index'] / max( 1, $position['total'] ) ) * ( 100 - $posts_weight ) );
+		}
+		$pct = max( 0, min( 100, $pct ) );
 		if ( ! $complete && $pct >= 100 ) {
 			$pct = 99;
+		}
+		if ( $complete && ! $running ) {
+			$pct = 100;
 		}
 
 		$resumable = $this->is_bg_scan_resumable();
@@ -909,15 +923,40 @@ class TSOLIIN_Cron {
 		$done = $complete && ! $running && ( ( $total > 0 && $scanned >= $total ) || 0 === $total );
 
 		return array(
-			'running'   => $running,
-			'scanned'   => $scanned,
-			'total'     => $total,
-			'pct'       => $pct,
-			'complete'  => $complete,
-			'resumable' => $resumable,
-			'error'     => $error,
-			'phase'     => $phase,
-			'done'      => $done,
+			'running'     => $running,
+			'scanned'     => $scanned,
+			'total'       => $total,
+			'pct'         => $pct,
+			'complete'    => $complete,
+			'resumable'   => $resumable,
+			'error'       => $error,
+			'phase'       => $phase,
+			'phase_index' => $position['index'],
+			'phase_total' => $position['total'],
+			'done'        => $done,
+		);
+	}
+
+	/**
+	 * Where the current phase sits among the enabled extra-source phases.
+	 *
+	 * @param string $phase Current scan phase.
+	 * @return array{index:int,total:int} index is how many extra sources are finished.
+	 */
+	public function get_bg_scan_phase_position( $phase ) {
+		$names = array_keys( $this->get_bg_scan_extended_phases() );
+		$total = count( $names );
+		if ( 'done' === $phase ) {
+			$index = $total;
+		} elseif ( 'posts' === $phase ) {
+			$index = 0;
+		} else {
+			$found = array_search( $phase, $names, true );
+			$index = false === $found ? 0 : (int) $found;
+		}
+		return array(
+			'index' => (int) $index,
+			'total' => (int) $total,
 		);
 	}
 
