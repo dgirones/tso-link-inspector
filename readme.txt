@@ -131,6 +131,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 * Fix: the admin froze (and could hit "Maximum execution time exceeded") while a scan or check was running, because every admin page load ran a batch inline.
 * Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
 * Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
+* Improvement: the check that starts after a manual scan now only checks new links instead of rechecking every link from scratch, so the dashboard counts no longer drop to zero; "Restart check" still forces a full recheck.
 * Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned, and it names the source being scanned.
 
 = 2.5.0 =

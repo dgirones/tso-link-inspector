@@ -1398,7 +1398,9 @@
 				self.$checkBar.css( 'width', '0%' );
 				self.$checkLbl.text( '' );
 				self.scanChainCheck = true;
-				self.startBgCheck( true, false, 0 );
+				// Resume: check the links that are new or due, not the whole table.
+				// "Restart check" still forces a full recheck.
+				self.startBgCheck( true, true, 0 );
 			}, 800 );
 		},
 
