@@ -136,6 +136,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 * Fix: the link check could loop forever re-reading the same post when a stored link was not found in its source (the rescan re-created the row as unchecked); each source is now re-read at most once per check run, and a check can no longer reschedule itself indefinitely.
 * Fix: on the plugin screen, each progress poll started an extra scan/check tick loop, so after a while the page sent 1-2 admin-ajax requests per second and ignored the server's pause between steps; only one tick loop now runs and the admin keep-alive waits at least 5 seconds while a step is busy.
 * Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned; those sources now have their own share of the bar and the label says which one is running.
+* Improvement: the new background-progress options are included in the autoload normalizer, so they can never end up autoloaded and force WordPress to reload all options on every scan/check tick.
 
 = 2.5.0 =
 * Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
