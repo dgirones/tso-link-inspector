@@ -45,6 +45,28 @@ class TSOLIIN_DB {
 	/** @var array<string, array<string, int>> Request cache for get_stats() / get_stats_for_post(). */
 	private static $stats_cache = array();
 
+	/**
+	 * Transient holding the per-request stats cache between requests.
+	 */
+	const STATS_TRANSIENT = 'tsoliin_stats_cache';
+
+	/**
+	 * Option remembering the plugin version whose schema was already verified.
+	 */
+	const SCHEMA_OK_OPTION = 'tsoliin_schema_verified';
+
+	/**
+	 * Transient that spaces out the periodic schema re-check.
+	 */
+	const SCHEMA_RECHECK_TRANSIENT = 'tsoliin_schema_rechecked';
+
+	/**
+	 * True once this request deleted the stats transient (reset when it is rewritten).
+	 *
+	 * @var bool
+	 */
+	private static $stats_transient_cleared = false;
+
 	/** @var array<int, int> Request cache for get_pending_check_count() keyed by post_id (0 = all). */
 	private static $pending_check_count_cache = array();
 
@@ -296,6 +318,12 @@ class TSOLIIN_DB {
 			if ( 'early' === $phase ) {
 				return;
 			}
+			// The flag says the legacy tables are gone. Re-checking costs a
+			// SHOW TABLES on every admin request, so do it twice a day.
+			if ( get_transient( 'tsoliin_legacy_pc_checked' ) ) {
+				return;
+			}
+			set_transient( 'tsoliin_legacy_pc_checked', 1, 12 * HOUR_IN_SECONDS );
 			if ( empty( $this->legacy_pc_table_names() ) ) {
 				return;
 			}
@@ -453,14 +481,55 @@ class TSOLIIN_DB {
 	 * Ensure the table exists (at most one SHOW TABLES query per request).
 	 */
 	public function ensure_table_exists() {
+		// A schema already verified for this plugin version does not need the
+		// SHOW TABLES / SHOW COLUMNS round trip on every admin page load.
+		if ( $this->schema_verified_for_version() ) {
+			$this->table_exists_cache    = true;
+			$this->schema_upgraded       = true;
+			$this->history_table_ensured = true;
+			return;
+		}
 		$this->maybe_migrate_legacy_table();
 		if ( $this->table_exists() ) {
 			$this->upgrade_schema();
 			$this->ensure_history_table();
+			$this->mark_schema_verified();
 			return;
 		}
 		$this->create_table();
 		$this->table_exists_cache = true;
+		$this->ensure_history_table();
+		$this->mark_schema_verified();
+	}
+
+	/**
+	 * Whether the tables and columns were already checked for this plugin version.
+	 *
+	 * @return bool
+	 */
+	private function schema_verified_for_version() {
+		$version = defined( 'TSOLIIN_VERSION' ) ? TSOLIIN_VERSION : '';
+		if ( '' === $version || (string) get_option( self::SCHEMA_OK_OPTION, '' ) !== (string) $version ) {
+			return false;
+		}
+		// Re-check twice a day, so a table dropped outside the plugin (host
+		// migration, partial restore) is recreated without waiting for an update.
+		if ( ! get_transient( self::SCHEMA_RECHECK_TRANSIENT ) ) {
+			set_transient( self::SCHEMA_RECHECK_TRANSIENT, 1, 12 * HOUR_IN_SECONDS );
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Remember that the schema matches this plugin version.
+	 *
+	 * @return void
+	 */
+	private function mark_schema_verified() {
+		if ( defined( 'TSOLIIN_VERSION' ) ) {
+			update_option( self::SCHEMA_OK_OPTION, TSOLIIN_VERSION, false );
+		}
 	}
 
 	/**
@@ -489,6 +558,7 @@ class TSOLIIN_DB {
 	 * Drop plugin tables (canonical + leftover pc_ names). Used by uninstall.
 	 */
 	public function drop_table() {
+		delete_option( self::SCHEMA_OK_OPTION );
 		global $wpdb;
 
 		$tables = array(
@@ -2391,6 +2461,11 @@ class TSOLIIN_DB {
 	 * Clear cached aggregate stats and broken URL lists (call after writes that change counts).
 	 */
 	public static function clear_stats_cache() {
+		// One delete per request: writing the transient again re-arms it.
+		if ( ! self::$stats_transient_cleared ) {
+			delete_transient( self::STATS_TRANSIENT );
+			self::$stats_transient_cleared = true;
+		}
 		self::$stats_cache                 = array();
 		self::$pending_check_count_cache   = array();
 		self::$cron_queue_counts_cache     = array();
@@ -2454,6 +2529,15 @@ class TSOLIIN_DB {
 		if ( isset( self::$stats_cache[ $cache_key ] ) ) {
 			return self::$stats_cache[ $cache_key ];
 		}
+		// The site-wide counts drive the dashboard and are the slowest query in the
+		// plugin, so they survive between requests until something writes a link.
+		if ( 0 === $post_id ) {
+			$stored = get_transient( self::STATS_TRANSIENT );
+			if ( is_array( $stored ) && isset( $stored[ $cache_key ] ) && is_array( $stored[ $cache_key ] ) ) {
+				self::$stats_cache[ $cache_key ] = $stored[ $cache_key ];
+				return $stored[ $cache_key ];
+			}
+		}
 
 		global $wpdb;
 		$generic = TSOLIIN_Quality::build_generic_anchor_count_expr();
@@ -2512,6 +2596,13 @@ class TSOLIIN_DB {
 			$stats['unpublished_target'] = $this->count_unpublished_targets( 0 );
 		}
 		self::$stats_cache[ $cache_key ] = $stats;
+		if ( 0 === $post_id ) {
+			$stored               = get_transient( self::STATS_TRANSIENT );
+			$stored               = is_array( $stored ) ? $stored : array();
+			$stored[ $cache_key ] = $stats;
+			set_transient( self::STATS_TRANSIENT, $stored, 5 * MINUTE_IN_SECONDS );
+			self::$stats_transient_cleared = false;
+		}
 		return $stats;
 	}
 

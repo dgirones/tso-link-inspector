@@ -72,6 +72,7 @@ $tsoliin_options = array(
 	'tsoliin_bg_check_resynced',
 	'tsoliin_bg_scan_page_pos',
 	'tsoliin_bg_scan_phase_ceiling',
+	'tsoliin_schema_verified',
 );
 foreach ( $tsoliin_options as $tsoliin_option_name ) {
 	delete_option( $tsoliin_option_name );
@@ -93,6 +94,9 @@ $tsoliin_transients = array(
 	'tsoliin_bg_check_step_lock',
 	'tsoliin_bg_lifecycle_start_lock',
 	'tsoliin_site_gate',
+	'tsoliin_stats_cache',
+	'tsoliin_schema_rechecked',
+	'tsoliin_legacy_pc_checked',
 );
 foreach ( $tsoliin_transients as $tsoliin_transient_name ) {
 	delete_transient( $tsoliin_transient_name );

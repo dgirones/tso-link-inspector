@@ -132,6 +132,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 * Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
 * Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
 * Improvement: the check that starts after a manual scan now only checks new links instead of rechecking every link from scratch, so the dashboard counts no longer drop to zero; "Restart check" still forces a full recheck.
+* Improvement: the plugin screens load faster: the dashboard counts are cached between requests instead of running the slowest query on every page load, and the table/column checks no longer run on every admin request.
 * Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned, and it names the source being scanned and moves while a long source is in progress.
 * Fix: the scan progress text flickered between two different wordings, and the new source names were missing from the Spanish and Catalan translations.
 
