@@ -63,6 +63,14 @@ $tsoliin_options = array(
 	'tsoliin_bg_check_empty_retries',
 	'tsoliin_bg_check_user_stopped',
 	'tsoliin_site_gate_state',
+	'tsoliin_bg_scan_rest_until',
+	'tsoliin_bg_check_rest_until',
+	'tsoliin_bg_inflight_scan_post',
+	'tsoliin_bg_inflight_scan_phase',
+	'tsoliin_bg_inflight_check_link',
+	'tsoliin_bg_skipped',
+	'tsoliin_bg_check_resynced',
+	'tsoliin_bg_scan_page_pos',
 );
 foreach ( $tsoliin_options as $tsoliin_option_name ) {
 	delete_option( $tsoliin_option_name );

@@ -3950,8 +3950,9 @@ class TSOLIIN_Admin {
 		if ( get_option( 'tsoliin_bg_check_running' ) ) {
 			$status = $this->cron->run_bg_step( null, false );
 		}
-		$payload         = $this->format_check_progress_payload( $this->cron->get_bg_progress() );
-		$payload['busy'] = ( 'busy' === $status );
+		$payload                = $this->format_check_progress_payload( $this->cron->get_bg_progress() );
+		$payload['busy']        = ( 'busy' === $status );
+		$payload['retry_after'] = $this->cron->get_check_rest_remaining();
 		wp_send_json_success( $payload );
 	}
 
@@ -4027,8 +4028,9 @@ class TSOLIIN_Admin {
 		if ( get_option( 'tsoliin_bg_scan_running' ) ) {
 			$status = $this->cron->run_bg_scan_step( null, false );
 		}
-		$scan         = $this->format_scan_progress_payload( $this->cron->get_bg_scan_progress() );
-		$scan['busy'] = ( 'busy' === $status );
+		$scan                = $this->format_scan_progress_payload( $this->cron->get_bg_scan_progress() );
+		$scan['busy']        = ( 'busy' === $status );
+		$scan['retry_after'] = $this->cron->get_scan_rest_remaining();
 		wp_send_json_success( $scan );
 	}
 
@@ -4037,17 +4039,21 @@ class TSOLIIN_Admin {
 	 */
 	public function ajax_bg_keep_alive() {
 		$this->check_nonce_and_cap();
-		$status = 'idle';
+		$status      = 'idle';
+		$retry_after = 0;
 		if ( get_option( 'tsoliin_bg_scan_running' ) ) {
-			$status = $this->cron->run_bg_scan_step( null, false );
+			$status      = $this->cron->run_bg_scan_step( null, false );
+			$retry_after = $this->cron->get_scan_rest_remaining();
 		} elseif ( get_option( 'tsoliin_bg_check_running' ) ) {
-			$status = $this->cron->run_bg_step( null, false );
+			$status      = $this->cron->run_bg_step( null, false );
+			$retry_after = $this->cron->get_check_rest_remaining();
 		}
 		wp_send_json_success(
 			array(
 				'scan_running'  => (bool) get_option( 'tsoliin_bg_scan_running' ),
 				'check_running' => (bool) get_option( 'tsoliin_bg_check_running' ),
 				'busy'          => ( 'busy' === $status ),
+				'retry_after'   => $retry_after,
 			)
 		);
 	}

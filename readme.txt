@@ -128,9 +128,12 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = Unreleased =
-* Fix: while a background scan or check was running, every wp-admin page load could run a scan/check batch inline before rendering, freezing the admin and sometimes ending in a "Maximum execution time exceeded" fatal; page loads now only schedule the next step and the work runs in background requests.
+* Fix: while a background scan or check was running, every wp-admin page load could run a scan/check batch inline before rendering, freezing the admin and sometimes ending in a "Maximum execution time exceeded" fatal; page loads now only schedule the next step.
 * Fix: background workers forced PHP max_execution_time down to 60 seconds, overriding hosts configured with a higher or unlimited value; the host limit is now only ever raised, never lowered.
-* Fix: the background keep-alive script polled admin-ajax every 4 seconds on every admin screen even with no job running, and retried almost instantly after a failed or busy request; it now stays idle until Heartbeat reports a running job and backs off after failures.
+* Fix: a running scan or check kept the server busy non-stop (WP-Cron re-queued the next step immediately and every open admin tab retried every 150-200 ms), causing high CPU and memory on shared hosting; only one worker runs at a time and each step is followed by a pause at least as long as the step itself.
+* Fix: the background keep-alive script polled admin-ajax every 4 seconds on every admin screen even with no job running; it now stays idle until a job is running and backs off after failures.
+* Fix: a single post, source or link that crashed PHP (timeout / out of memory) or threw an error was retried forever, so the scan or check never finished; it is now skipped after two failed attempts and the run continues.
+* Fix: the link check could loop forever re-reading the same post when a stored link was not found in its source (the rescan re-created the row as unchecked); each source is now re-read at most once per check run, and a check can no longer reschedule itself indefinitely.
 
 = 2.5.0 =
 * Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.

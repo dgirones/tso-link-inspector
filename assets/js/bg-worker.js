@@ -14,13 +14,18 @@
 	var failMs     = 15000;
 	var hasUiTicks = parseInt( tsoliinBgWorker.hasUiTicks, 10 ) === 1;
 	var busyMs     = hasUiTicks ? 1500 : 5000;
+	// Outside the plugin screens, rest between batches so open tabs don't keep PHP busy non-stop.
+	var restMs     = hasUiTicks ? 0 : 10000;
 	var active     = parseInt( tsoliinBgWorker.active, 10 ) === 1;
 
 	function schedule( ms ) {
 		if ( timer ) {
 			window.clearTimeout( timer );
 		}
-		timer = window.setTimeout( tick, Math.max( 0, ms ) );
+		timer = window.setTimeout( function () {
+			timer = null;
+			tick();
+		}, Math.max( 0, ms ) );
 	}
 
 	function tick() {
@@ -43,7 +48,8 @@
 				// Idle: stop polling; Heartbeat reports when a job starts.
 				return;
 			}
-			schedule( d.busy ? busyMs : 0 );
+			var wait = d.retry_after ? parseInt( d.retry_after, 10 ) * 1000 : 0;
+			schedule( Math.max( wait, d.busy ? busyMs : restMs ) );
 		} ).fail( function ( xhr ) {
 			busy = false;
 			if ( xhr && ( xhr.status === 401 || xhr.status === 403 ) ) {
@@ -74,7 +80,8 @@
 		}
 		if ( data.tsoliin_bg.scan_running || data.tsoliin_bg.check_running ) {
 			active = true;
-			if ( ! busy ) {
+			// Don't cut short a pending rest/back-off timer.
+			if ( ! busy && ! timer ) {
 				schedule( 0 );
 			}
 		}

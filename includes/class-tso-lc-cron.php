@@ -25,7 +25,28 @@ class TSOLIIN_Cron {
 	const BG_CRON_TIME_BUDGET = 40;
 	const BG_STEP_LOCK_TTL    = 50;
 	const BG_RECOVERY_DELAY   = 90;
-	const OPT_IMMEDIATE_QUEUE = 'tsoliin_immediate_broken_queue';
+	/** Minimum pause (seconds) after any scan/check step; the pause is at least as long as the step worked (≤ 50% duty). */
+	const BG_MIN_REST = 5;
+	/** A unit (post, source batch, link) whose worker died this many times is skipped instead of retried forever. */
+	const INFLIGHT_MAX_TRIES = 2;
+	/** Empty-batch retries before a check run is finished instead of rescheduled forever. */
+	const EMPTY_BATCH_MAX_RETRIES = 10;
+	/** Cap on per-run resync keys kept in memory/options. */
+	const RESYNC_KEYS_MAX = 5000;
+	/** Option: timestamp until which the scan rests. */
+	const OPT_SCAN_REST_UNTIL = 'tsoliin_bg_scan_rest_until';
+	/** Option: timestamp until which the check rests. */
+	const OPT_CHECK_REST_UNTIL = 'tsoliin_bg_check_rest_until';
+	/** Option prefix: in-progress unit per kind. */
+	const OPT_INFLIGHT_PREFIX = 'tsoliin_bg_inflight_';
+	/** Option: log of skipped units. */
+	const OPT_SKIPPED = 'tsoliin_bg_skipped';
+	/** Option: sources already resynced in the current check run. */
+	const OPT_RESYNCED = 'tsoliin_bg_check_resynced';
+	/** Option: position inside the current post page. */
+	const OPT_SCAN_PAGE_POS = 'tsoliin_bg_scan_page_pos';
+
+	const OPT_IMMEDIATE_QUEUE     = 'tsoliin_immediate_broken_queue';
 	const OPT_EMPTY_BATCH_RETRIES = 'tsoliin_bg_check_empty_retries';
 	const OPT_USER_STOPPED_CHECK  = 'tsoliin_bg_check_user_stopped';
 
@@ -225,6 +246,7 @@ class TSOLIIN_Cron {
 			}
 
 			delete_option( 'tsoliin_bg_scan_error' );
+			delete_option( self::OPT_SCAN_REST_UNTIL );
 			update_option( 'tsoliin_bg_scan_running', 1, false );
 			update_option( 'tsoliin_bg_scan_token', wp_generate_uuid4(), false );
 			update_option( 'tsoliin_bg_scan_page', $page, false );
@@ -321,6 +343,125 @@ class TSOLIIN_Cron {
 	}
 
 	/**
+	 * Seconds left before the next scan/check step may run.
+	 *
+	 * @param string $option OPT_SCAN_REST_UNTIL or OPT_CHECK_REST_UNTIL.
+	 * @return int
+	 */
+	private function rest_remaining( $option ) {
+		return max( 0, (int) get_option( $option, 0 ) - time() );
+	}
+
+	/**
+	 * Seconds until the background scan may run another step.
+	 *
+	 * @return int
+	 */
+	public function get_scan_rest_remaining() {
+		return $this->rest_remaining( self::OPT_SCAN_REST_UNTIL );
+	}
+
+	/**
+	 * Seconds until the background check may run another step.
+	 *
+	 * @return int
+	 */
+	public function get_check_rest_remaining() {
+		return $this->rest_remaining( self::OPT_CHECK_REST_UNTIL );
+	}
+
+	/**
+	 * Seconds to pause after a step: at least as long as the step worked.
+	 *
+	 * Caps every driver (WP-Cron, plugin screen, keep-alive, Heartbeat) at roughly
+	 * half of one PHP worker, however many tabs are open.
+	 *
+	 * @param float $step_started microtime( true ) when the step took the lock.
+	 * @return int
+	 */
+	private function rest_seconds( $step_started ) {
+		return max( self::BG_MIN_REST, (int) ceil( microtime( true ) - (float) $step_started ) );
+	}
+
+	/**
+	 * Store the pause after a step.
+	 *
+	 * @param string $option       Rest option key.
+	 * @param float  $step_started microtime( true ) when the step took the lock.
+	 */
+	private function start_rest( $option, $step_started ) {
+		update_option( $option, time() + $this->rest_seconds( $step_started ), false );
+	}
+
+	/**
+	 * Mark a unit of work as in progress. A marker left behind means the previous
+	 * worker died on this exact unit (PHP timeout / out of memory, which no
+	 * try/catch can see). After INFLIGHT_MAX_TRIES deaths the unit is skipped, so
+	 * one bad post, source or URL can never block a scan or check forever.
+	 *
+	 * @param string     $kind scan_post|scan_phase|check_link.
+	 * @param string|int $unit Unit identifier.
+	 * @return bool False when the unit must be skipped.
+	 */
+	private function begin_inflight( $kind, $unit ) {
+		$option = self::OPT_INFLIGHT_PREFIX . sanitize_key( $kind );
+		$unit   = (string) $unit;
+		$prev   = get_option( $option, array() );
+		$tries  = ( is_array( $prev ) && isset( $prev['unit'] ) && (string) $prev['unit'] === $unit )
+			? absint( $prev['tries'] ?? 0 ) + 1
+			: 1;
+		if ( $tries > self::INFLIGHT_MAX_TRIES ) {
+			delete_option( $option );
+			$this->record_skipped( $kind, $unit, 'worker died ' . self::INFLIGHT_MAX_TRIES . ' times' );
+			return false;
+		}
+		update_option(
+			$option,
+			array(
+				'unit'  => $unit,
+				'tries' => $tries,
+			),
+			false
+		);
+		return true;
+	}
+
+	/**
+	 * Clear the in-progress marker after a unit finished.
+	 *
+	 * @param string $kind scan_post|scan_phase|check_link.
+	 */
+	private function end_inflight( $kind ) {
+		delete_option( self::OPT_INFLIGHT_PREFIX . sanitize_key( $kind ) );
+	}
+
+	/** Drop all in-progress markers (fresh scan/check). */
+	private function clear_inflight() {
+		foreach ( array( 'scan_post', 'scan_phase', 'check_link' ) as $kind ) {
+			$this->end_inflight( $kind );
+		}
+	}
+
+	/**
+	 * Keep a short log of skipped units for support/diagnostics (last 50).
+	 *
+	 * @param string $kind   Unit kind.
+	 * @param string $unit   Unit identifier.
+	 * @param string $reason Why it was skipped.
+	 */
+	private function record_skipped( $kind, $unit, $reason ) {
+		$log   = get_option( self::OPT_SKIPPED, array() );
+		$log   = is_array( $log ) ? $log : array();
+		$log[] = array(
+			'kind'   => sanitize_key( (string) $kind ),
+			'unit'   => sanitize_text_field( (string) $unit ),
+			'reason' => sanitize_text_field( (string) $reason ),
+			'time'   => current_time( 'mysql', true ),
+		);
+		update_option( self::OPT_SKIPPED, array_slice( $log, -50 ), false );
+	}
+
+	/**
 	 * Keep PHP working after the browser leaves the plugin screen.
 	 */
 	private function ignore_worker_abort() {
@@ -342,21 +483,27 @@ class TSOLIIN_Cron {
 		if ( ! get_option( 'tsoliin_bg_scan_running' ) ) {
 			return 'idle';
 		}
+		$resting = $this->rest_remaining( self::OPT_SCAN_REST_UNTIL );
+		if ( $resting > 0 ) {
+			$this->schedule_bg_scan_step_if_needed( $resting );
+			return 'busy';
+		}
 		if ( ! $this->db->acquire_transient_lock( 'tsoliin_bg_scan_step_lock', self::BG_STEP_LOCK_TTL ) ) {
 			$this->schedule_bg_scan_step_if_needed( 2 );
 			return 'busy';
 		}
+		$step_started = microtime( true );
 
 		$this->ignore_worker_abort();
-		$run_token   = (string) get_option( 'tsoliin_bg_scan_token', '' );
+		$run_token = (string) get_option( 'tsoliin_bg_scan_token', '' );
 		if ( 'done' === (string) get_option( 'tsoliin_bg_scan_phase', 'posts' ) && $this->is_bg_scan_run_active( $run_token ) ) {
 			$this->finalize_bg_scan_completion( $run_token );
 			$this->db->release_transient_lock( 'tsoliin_bg_scan_step_lock' );
 			return 'ok';
 		}
-		$max_batches = null === $max_batches ? 500 : max( 1, absint( $max_batches ) );
-		$spawn       = (bool) $spawn;
-		$budget      = null !== $budget_override ? max( 1, (float) $budget_override ) : $this->get_worker_time_budget( $spawn );
+		unset( $max_batches ); // Kept for backward compatibility; the time budget bounds each step.
+		$spawn  = (bool) $spawn;
+		$budget = null !== $budget_override ? max( 1, (float) $budget_override ) : $this->get_worker_time_budget( $spawn );
 		$this->schedule_bg_scan_recovery_event();
 
 		try {
@@ -369,17 +516,19 @@ class TSOLIIN_Cron {
 			update_option( 'tsoliin_bg_scan_total', (int) $total, false );
 
 			if ( 'posts' === $phase ) {
-				$batches_done = 0;
-				while ( $batches_done < $max_batches && ( microtime( true ) - $start ) < $budget ) {
+				while ( ( microtime( true ) - $start ) < $budget ) {
 					if ( ! $this->is_bg_scan_run_active( $run_token ) ) {
 						return 'idle';
 					}
-					$result = $this->scanner->scan_batch( $page, TSOLIIN_BATCH_SIZE, true );
+					$scan_done = $this->scan_posts_page_guarded( $page, $total, $start, $budget, $run_token );
 					if ( ! $this->is_bg_scan_run_active( $run_token ) ) {
 						return 'idle';
+					}
+					update_option( 'tsoliin_bg_scan_started', current_time( 'mysql', true ), false );
+					if ( null === $scan_done ) {
+						break; // Budget used up mid-page; position saved.
 					}
 					++$page;
-					++$batches_done;
 					update_option( 'tsoliin_bg_scan_page', $page, false );
 
 					$scanned = min( ( $page - 1 ) * TSOLIIN_BATCH_SIZE, $total );
@@ -387,7 +536,7 @@ class TSOLIIN_Cron {
 					update_option( 'tsoliin_total_posts_scanned', (int) $scanned, false );
 					update_option( 'tsoliin_bg_scan_started', current_time( 'mysql', true ), false );
 
-					if ( ! empty( $result['done'] ) ) {
+					if ( $scan_done ) {
 						update_option( 'tsoliin_bg_scan_phase', $this->get_first_bg_scan_extended_phase(), false );
 						break;
 					}
@@ -395,11 +544,8 @@ class TSOLIIN_Cron {
 			}
 
 			if ( $this->is_bg_scan_run_active( $run_token )
-				&& 'posts' !== (string) get_option( 'tsoliin_bg_scan_phase', 'posts' ) ) {
-				if ( ( microtime( true ) - $start ) >= $budget ) {
-					$start  = microtime( true );
-					$budget = (float) self::BG_TICK_TIME_BUDGET;
-				}
+				&& 'posts' !== (string) get_option( 'tsoliin_bg_scan_phase', 'posts' )
+				&& ( microtime( true ) - $start ) < $budget ) {
 				if ( $this->process_bg_scan_extended_phases( $start, $run_token, $budget ) ) {
 					$this->finalize_bg_scan_completion( $run_token );
 					return 'ok';
@@ -408,7 +554,7 @@ class TSOLIIN_Cron {
 
 			if ( $this->is_bg_scan_run_active( $run_token ) ) {
 				if ( $spawn ) {
-					$this->reschedule_bg_scan_step( 0 );
+					$this->reschedule_bg_scan_step( $this->rest_seconds( $step_started ) );
 				} else {
 					$this->schedule_bg_scan_recovery_event();
 				}
@@ -420,8 +566,52 @@ class TSOLIIN_Cron {
 			}
 			return 'idle';
 		} finally {
+			$this->start_rest( self::OPT_SCAN_REST_UNTIL, $step_started );
 			$this->db->release_transient_lock( 'tsoliin_bg_scan_step_lock' );
 		}
+	}
+
+	/**
+	 * Scan one page of posts, post by post, with a saved position inside the page.
+	 *
+	 * Every call scans at least one post (guaranteed progress). A post whose worker
+	 * died twice, or that throws, is skipped and logged instead of blocking the scan.
+	 *
+	 * @param int    $page      1-based page.
+	 * @param int    $total     Total posts in scope.
+	 * @param float  $start     Step start (microtime).
+	 * @param float  $budget    Step budget (seconds).
+	 * @param string $run_token Current scan generation.
+	 * @return bool|null True = last page done, false = page done (more pages), null = stopped mid-page.
+	 */
+	private function scan_posts_page_guarded( $page, $total, $start, $budget, $run_token ) {
+		$per  = TSOLIIN_BATCH_SIZE;
+		$ids  = $this->scanner->get_post_ids( $page, $per );
+		$done = empty( $ids ) || ( $page * $per >= $total ) || ( count( $ids ) < $per );
+		$pos  = absint( get_option( self::OPT_SCAN_PAGE_POS, 0 ) );
+		$n    = count( $ids );
+		for ( $i = $pos; $i < $n; $i++ ) {
+			if ( $i > $pos
+				&& ( ( microtime( true ) - $start ) >= $budget || ! $this->is_bg_scan_run_active( $run_token ) ) ) {
+				update_option( self::OPT_SCAN_PAGE_POS, $i, false );
+				return null;
+			}
+			// Save the position first: if this post kills the worker, the next step
+			// must start on this same post so the retry counter can reach its limit.
+			update_option( self::OPT_SCAN_PAGE_POS, $i, false );
+			$post_id = absint( $ids[ $i ] );
+			if ( ! $this->begin_inflight( 'scan_post', $post_id ) ) {
+				continue;
+			}
+			try {
+				$this->scanner->scan_post( $post_id );
+			} catch ( \Throwable $e ) {
+				$this->record_skipped( 'scan_post', (string) $post_id, $e->getMessage() );
+			}
+			$this->end_inflight( 'scan_post' );
+		}
+		delete_option( self::OPT_SCAN_PAGE_POS );
+		return $done;
 	}
 
 	/**
@@ -439,35 +629,64 @@ class TSOLIIN_Cron {
 		$index  = array_search( $phase, array_keys( $phases ), true );
 		$index  = false === $index ? 0 : (int) $index;
 		$names  = array_keys( $phases );
+		$cursor_options = array(
+			'comments' => 'tsoliin_comment_scan_after_id',
+			'menus'    => 'tsoliin_menu_scan_after_id',
+			'terms'    => 'tsoliin_term_scan_after_id',
+			'fse'      => 'tsoliin_fse_scan_after_id',
+			'widgets'  => 'tsoliin_widget_scan_after_index',
+		);
 
 		while ( $index < count( $names ) && ( microtime( true ) - $started_at ) < $budget ) {
 			if ( ! $this->is_bg_scan_run_active( $run_token ) ) {
 				return false;
 			}
-			$name   = $names[ $index ];
-			$method = $phases[ $name ];
-			if ( 'registered' === $name ) {
-				if ( class_exists( 'TSOLIIN_Sources' ) ) {
-					TSOLIIN_Sources::scan_registered_batch( $this->scanner, TSOLIIN_BATCH_SIZE * 2 );
-				}
+			$name       = $names[ $index ];
+			$method     = $phases[ $name ];
+			$cursor_opt = isset( $cursor_options[ $name ] ) ? $cursor_options[ $name ] : '';
+			$before     = '' !== $cursor_opt ? (string) get_option( $cursor_opt, 0 ) : '';
+			$unit       = $name . '@' . $before;
+			if ( ! $this->begin_inflight( 'scan_phase', $unit ) ) {
+				// Worker died twice on this batch: skip the rest of this source.
 				$result = 0;
 			} else {
-				$result = call_user_func( array( $this->scanner, $method[0] ), $method[1] );
-				if ( 'acf' === $name && TSOLIIN_Scanner::SCAN_LOCK_BUSY !== $result ) {
+				try {
+					if ( 'registered' === $name ) {
+						if ( class_exists( 'TSOLIIN_Sources' ) ) {
+							TSOLIIN_Sources::scan_registered_batch( $this->scanner, TSOLIIN_BATCH_SIZE * 2 );
+						}
+						$result = 0;
+					} else {
+						$result = call_user_func( array( $this->scanner, $method[0] ), $method[1] );
+						if ( 'acf' === $name && TSOLIIN_Scanner::SCAN_LOCK_BUSY !== $result ) {
+							$result = 0;
+						}
+						if ( 'widgets' === $name
+							&& TSOLIIN_Scanner::SCAN_LOCK_BUSY !== $result
+							&& 0 === (int) get_option( 'tsoliin_widget_scan_after_index', 0 ) ) {
+							$result = 0;
+						}
+					}
+				} catch ( \Throwable $e ) {
+					$this->record_skipped( 'scan_phase', $unit, $e->getMessage() );
 					$result = 0;
 				}
-				if ( 'widgets' === $name
-					&& TSOLIIN_Scanner::SCAN_LOCK_BUSY !== $result
-					&& 0 === (int) get_option( 'tsoliin_widget_scan_after_index', 0 ) ) {
-					$result = 0;
-				}
+				$this->end_inflight( 'scan_phase' );
 			}
 			update_option( 'tsoliin_bg_scan_started', current_time( 'mysql', true ), false );
 			if ( TSOLIIN_Scanner::SCAN_LOCK_BUSY === $result ) {
 				return false;
 			}
+			// A batch that reports work but did not move its cursor would repeat forever.
+			if ( 0 !== $result && '' !== $cursor_opt && (string) get_option( $cursor_opt, 0 ) === $before ) {
+				$this->record_skipped( 'scan_phase', $unit, 'cursor did not advance' );
+				$result = 0;
+			}
 			if ( 0 !== $result ) {
 				continue;
+			}
+			if ( '' !== $cursor_opt ) {
+				update_option( $cursor_opt, 0, false );
 			}
 			++$index;
 			update_option( 'tsoliin_bg_scan_phase', isset( $names[ $index ] ) ? $names[ $index ] : 'done', false );
@@ -559,6 +778,9 @@ class TSOLIIN_Cron {
 		delete_option( 'tsoliin_widget_scan_after_index' );
 		delete_option( 'tsoliin_term_scan_after_id' );
 		delete_option( 'tsoliin_fse_scan_after_id' );
+		delete_option( self::OPT_SCAN_PAGE_POS );
+		$this->end_inflight( 'scan_post' );
+		$this->end_inflight( 'scan_phase' );
 	}
 
 	/**
@@ -783,6 +1005,9 @@ class TSOLIIN_Cron {
 			update_option( 'tsoliin_bg_check_started', current_time( 'mysql', true ), false );
 			delete_option( self::OPT_USER_STOPPED_CHECK );
 			delete_option( self::OPT_EMPTY_BATCH_RETRIES );
+			delete_option( self::OPT_CHECK_REST_UNTIL );
+			delete_option( self::OPT_RESYNCED );
+			$this->end_inflight( 'check_link' );
 			$this->flush_immediate_broken_queue();
 
 			$ts = wp_next_scheduled( self::HOOK_BG_STEP );
@@ -844,10 +1069,16 @@ class TSOLIIN_Cron {
 		if ( ! get_option( 'tsoliin_bg_check_running' ) ) {
 			return 'idle';
 		}
+		$resting = $this->rest_remaining( self::OPT_CHECK_REST_UNTIL );
+		if ( $resting > 0 ) {
+			$this->schedule_bg_check_step_if_needed( $resting );
+			return 'busy';
+		}
 		if ( ! $this->db->acquire_transient_lock( 'tsoliin_bg_check_step_lock', self::BG_STEP_LOCK_TTL ) ) {
 			$this->schedule_bg_check_step_if_needed( 2 );
 			return 'busy';
 		}
+		$step_started = microtime( true );
 
 		$this->ignore_worker_abort();
 		$run_token = (string) get_option( 'tsoliin_bg_check_token', '' );
@@ -910,7 +1141,7 @@ class TSOLIIN_Cron {
 			$more = $this->db->get_links_batch_for_check( 1, $post_id );
 			if ( ! empty( $more ) ) {
 				if ( $spawn ) {
-					$this->reschedule_bg_check_step( 0 );
+					$this->reschedule_bg_check_step( $this->rest_seconds( $step_started ) );
 				} else {
 					$this->schedule_bg_check_recovery_event();
 				}
@@ -930,6 +1161,7 @@ class TSOLIIN_Cron {
 			return 'ok';
 		} finally {
 			$this->http->end_bulk_timeout();
+			$this->start_rest( self::OPT_CHECK_REST_UNTIL, $step_started );
 			$this->db->release_transient_lock( 'tsoliin_bg_check_step_lock' );
 		}
 	}
@@ -976,6 +1208,11 @@ class TSOLIIN_Cron {
 		$delay = 0;
 		if ( empty( $this->db->get_links_batch_for_check( 1, $post_id ) ) ) {
 			$retries = (int) get_option( self::OPT_EMPTY_BATCH_RETRIES, 0 ) + 1;
+			if ( $retries > self::EMPTY_BATCH_MAX_RETRIES ) {
+				// The count and the batch query disagree persistently: stop instead of looping forever.
+				delete_option( self::OPT_EMPTY_BATCH_RETRIES );
+				return false;
+			}
 			update_option( self::OPT_EMPTY_BATCH_RETRIES, $retries, false );
 			// Keep trying with backoff — do not finalize while pending remains.
 			$delay = min( 120, 5 * max( 1, $retries ) );
@@ -1048,13 +1285,13 @@ class TSOLIIN_Cron {
 		}
 		$nudge = false;
 		if ( get_option( 'tsoliin_bg_scan_running' )
-			&& ( $this->is_cron_event_overdue( self::HOOK_BG_SCAN_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_scan_started', 8 ) ) ) {
+			&& ( $this->is_cron_event_overdue( self::HOOK_BG_SCAN_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_scan_started', self::BG_RECOVERY_DELAY ) ) ) {
 			$this->clear_hook_events( self::HOOK_BG_SCAN_STEP );
 			$this->schedule_bg_scan_step_if_needed( 0 );
 			$nudge = true;
 		}
 		if ( get_option( 'tsoliin_bg_check_running' )
-			&& ( $this->is_cron_event_overdue( self::HOOK_BG_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_check_started', 8 ) ) ) {
+			&& ( $this->is_cron_event_overdue( self::HOOK_BG_STEP ) || $this->is_bg_heartbeat_stale( 'tsoliin_bg_check_started', self::BG_RECOVERY_DELAY ) ) ) {
 			$this->clear_hook_events( self::HOOK_BG_STEP );
 			$this->schedule_bg_check_step_if_needed( 0 );
 			$nudge = true;
@@ -1185,12 +1422,14 @@ class TSOLIIN_Cron {
 		$post_id = absint( get_option( 'tsoliin_bg_check_post_id', 0 ) );
 		TSOLIIN_DB::clear_stats_cache();
 		$pending = $this->db->get_pending_check_count( $post_id );
-		if ( $pending > 0 ) {
-			// Never mark complete while unchecked links remain.
+		if ( $pending > 0 && $this->maybe_reschedule_bg_check( $post_id, $run_token ) ) {
+			// Unchecked links remain and a follow-up step is scheduled.
 			update_option( 'tsoliin_bg_check_running', 1, false );
-			$this->maybe_reschedule_bg_check( $post_id, $run_token );
 			return;
 		}
+		// Either nothing is pending, or the empty-batch retry cap was reached:
+		// finish instead of rescheduling forever.
+		delete_option( self::OPT_RESYNCED );
 
 		$this->flush_immediate_broken_queue();
 		delete_option( self::OPT_EMPTY_BATCH_RETRIES );
@@ -1354,12 +1593,30 @@ class TSOLIIN_Cron {
 		if ( '' !== $run_token && ! $this->is_bg_check_run_active( $run_token ) ) {
 			return null;
 		}
-		$link = $this->prepare_link_for_http_check( $link );
-		if ( ! $link ) {
+		if ( ! $link || empty( $link->id ) ) {
 			return null;
 		}
-		$prev_failures = isset( $link->consecutive_failures ) ? (int) $link->consecutive_failures : 0;
-		$r             = $this->http->check( $link->link_url, (int) $link->post_id );
+		$link_id = (int) $link->id;
+		if ( ! $this->begin_inflight( 'check_link', $link_id ) ) {
+			// The worker died twice on this link: store it as timed out so the queue moves on.
+			$this->db->update_check_result( $link_id, -3, '', false );
+			return null;
+		}
+		try {
+			$link = $this->prepare_link_for_http_check( $link );
+			if ( ! $link ) {
+				$this->end_inflight( 'check_link' );
+				return null;
+			}
+			$prev_failures = isset( $link->consecutive_failures ) ? (int) $link->consecutive_failures : 0;
+			$r             = $this->http->check( $link->link_url, (int) $link->post_id );
+		} catch ( \Throwable $e ) {
+			$this->end_inflight( 'check_link' );
+			$this->record_skipped( 'check_link', (string) $link_id, $e->getMessage() );
+			$this->db->update_check_result( $link_id, -3, '', false );
+			return null;
+		}
+		$this->end_inflight( 'check_link' );
 		if ( '' !== $run_token && ! $this->is_bg_check_run_active( $run_token ) ) {
 			return null;
 		}
@@ -1390,12 +1647,51 @@ class TSOLIIN_Cron {
 		if ( $this->scanner->is_url_present_in_source( $link ) ) {
 			return $link;
 		}
+		// Re-read each source at most once per check run. Re-scanning can insert a
+		// fresh unchecked row for the same URL; without this limit a row the source
+		// check does not recognise was resynced, deleted and re-inserted forever.
+		if ( ! $this->claim_resync( $link ) ) {
+			$this->db->delete_link( (int) $link->id );
+			return null;
+		}
 		$synced = $this->scanner->resync_link_from_source( $link );
 		if ( ! $synced ) {
 			$this->db->delete_link( (int) $link->id );
 			return null;
 		}
 		return $synced;
+	}
+
+	/**
+	 * Allow one resync per source (post / comment / term / widget …) per check run.
+	 *
+	 * @param object $link DB row.
+	 * @return bool True when this source was not resynced yet in the current run.
+	 */
+	private function claim_resync( $link ) {
+		$type    = isset( $link->link_type ) ? (string) $link->link_type : 'link';
+		$post_id = (int) $link->post_id;
+		$sk      = isset( $link->source_key ) ? (string) $link->source_key : '';
+		$key     = ( $post_id > 0 && in_array( $type, array( 'link', 'image', 'iframe', 'plain' ), true ) )
+			? 'p' . $post_id
+			: md5( $type . '|' . $post_id . '|' . $sk );
+		$scope   = get_option( 'tsoliin_bg_check_running' )
+			? 'run-' . (string) get_option( 'tsoliin_bg_check_token', '' )
+			: 'cron-' . gmdate( 'YmdH' );
+
+		$state = get_option( self::OPT_RESYNCED, array() );
+		if ( ! is_array( $state ) || ! isset( $state['scope'] ) || $state['scope'] !== $scope ) {
+			$state = array(
+				'scope' => $scope,
+				'keys'  => array(),
+			);
+		}
+		if ( isset( $state['keys'][ $key ] ) || count( $state['keys'] ) >= self::RESYNC_KEYS_MAX ) {
+			return false;
+		}
+		$state['keys'][ $key ] = 1;
+		update_option( self::OPT_RESYNCED, $state, false );
+		return true;
 	}
 
 	/**

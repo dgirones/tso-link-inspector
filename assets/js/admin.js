@@ -1237,6 +1237,20 @@
 			} );
 		},
 
+		/**
+		 * Wait for the server-side pause between steps instead of polling it.
+		 *
+		 * @param {Object} d Tick response data.
+		 * @return {number} Milliseconds.
+		 */
+		tickDelay: function ( d ) {
+			var wait = d && d.retry_after ? parseInt( d.retry_after, 10 ) * 1000 : 0;
+			if ( d && d.busy ) {
+				wait = Math.max( wait, 3000 );
+			}
+			return Math.max( wait, 500 );
+		},
+
 		scanTick: function () {
 			var self = this;
 			if ( self.scanTickBusy || self.scanAborted || ! self.scanSessionActive ) {
@@ -1269,7 +1283,7 @@
 					if ( scan.running && ! self.scanAborted && self.scanSessionActive ) {
 						setTimeout( function () {
 							self.scanTick();
-						}, scan.busy ? 150 : 0 );
+						}, self.tickDelay( scan ) );
 					}
 				},
 				error: function ( xhr ) {
@@ -1281,7 +1295,7 @@
 					if ( ! self.scanAborted && self.scanSessionActive ) {
 						setTimeout( function () {
 							self.scanTick();
-						}, 400 );
+						}, 15000 );
 					}
 				}
 			} );
@@ -1775,7 +1789,7 @@
 						if ( self.checkSessionActive && ! self.completed ) {
 							setTimeout( function () {
 								self.checkTick();
-							}, d.busy ? 150 : 0 );
+							}, self.tickDelay( d ) );
 						}
 						return;
 					}
@@ -1800,7 +1814,7 @@
 					if ( self.checkSessionActive && ! self.completed ) {
 						setTimeout( function () {
 							self.checkTick();
-						}, 400 );
+						}, 15000 );
 					}
 				}
 			} );
