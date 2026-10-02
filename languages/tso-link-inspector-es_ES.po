@@ -3799,3 +3799,19 @@ msgstr "Demasiadas redirecciones (bucle)"
 #: includes/class-tso-lc-http.php
 msgid "Access blocked (bot?)"
 msgstr "Acceso bloqueado (¿bot?)"
+
+#: includes/class-tso-lc-admin.php
+msgid "HTTP proxy configured (WP_PROXY_HOST):"
+msgstr "Proxy HTTP configurado (WP_PROXY_HOST):"
+
+#: includes/class-tso-lc-admin.php
+msgid "Connections pinned to an IP address work (needed to check domains only a public DNS can resolve)."
+msgstr "Las conexiones fijadas a una dirección IP funcionan (necesario para comprobar dominios que solo un DNS público puede resolver)."
+
+#: includes/class-tso-lc-admin.php
+msgid "This server ignores connections pinned to an IP address (a proxy or custom HTTP transport resolves names itself). Domains this server cannot resolve cannot be checked directly."
+msgstr "Este servidor ignora las conexiones fijadas a una dirección IP (un proxy o un transporte HTTP personalizado resuelve los nombres por sí mismo). Los dominios que este servidor no puede resolver no se pueden comprobar directamente."
+
+#: includes/class-tso-lc-admin.php
+msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
+msgstr "No se pudo conectar a una dirección IP de prueba. El alojamiento puede bloquear las conexiones salientes a direcciones arbitrarias."

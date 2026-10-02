@@ -2061,6 +2061,33 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Diagnostics: does this server honour connections pinned to an IP address?
+	 *
+	 * The DNS second opinion checks pages of domains this server cannot resolve by connecting to the addresses
+	 * Cloudflare returned. That only works when curl is not routed through a proxy or custom transport that
+	 * resolves names itself. A made-up host name is pinned to a public address that answers on port 80
+	 * for any Host header; any HTTP answer proves pinning works.
+	 *
+	 * @return string works|ignored|unreachable
+	 */
+	public function diagnose_ip_pinning() {
+		self::$fallback_ips = array( 'tsoliin-pin-test.invalid' => array( '1.1.1.1' ) );
+		try {
+			$result = $this->check_request( 'http://tsoliin-pin-test.invalid/', 0 );
+		} finally {
+			self::$fallback_ips = array();
+		}
+		$code = isset( $result['status_code'] ) ? (int) $result['status_code'] : 0;
+		if ( $code >= 100 ) {
+			return 'works';
+		}
+		if ( -2 === $code ) {
+			return 'ignored';
+		}
+		return 'unreachable';
+	}
+
+	/**
 	 * Result for action URLs (logout, etc.) that must not be HTTP-checked.
 	 *
 	 * @return array{status_code:int,redirect_url:string,is_broken:int}

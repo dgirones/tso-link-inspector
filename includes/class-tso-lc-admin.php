@@ -5074,6 +5074,18 @@ class TSOLIIN_Admin {
 		$check = $this->cron->get_bg_progress();
 		$lines = array_merge( $lines, $this->format_diagnostic_check_lines( $check ) );
 
+		if ( defined( 'WP_PROXY_HOST' ) && '' !== (string) WP_PROXY_HOST ) {
+			$lines[] = 'INFO ' . __( 'HTTP proxy configured (WP_PROXY_HOST):', 'tso-link-inspector' ) . ' ' . WP_PROXY_HOST;
+		}
+		$pinning = $this->http->diagnose_ip_pinning();
+		if ( 'works' === $pinning ) {
+			$lines[] = 'OK ' . __( 'Connections pinned to an IP address work (needed to check domains only a public DNS can resolve).', 'tso-link-inspector' );
+		} elseif ( 'ignored' === $pinning ) {
+			$lines[] = 'WARN ' . __( 'This server ignores connections pinned to an IP address (a proxy or custom HTTP transport resolves names itself). Domains this server cannot resolve cannot be checked directly.', 'tso-link-inspector' );
+		} else {
+			$lines[] = 'WARN ' . __( 'Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses.', 'tso-link-inspector' );
+		}
+
 		$last_scan = (string) get_option( 'tsoliin_last_full_scan', '' );
 		if ( '' !== $last_scan ) {
 			$lines[] = 'OK ' . __( 'Last full scan:', 'tso-link-inspector' ) . ' ' . $last_scan;

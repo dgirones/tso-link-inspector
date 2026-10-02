@@ -3619,3 +3619,19 @@ msgstr "Massa redireccions (bucle)"
 #: includes/class-tso-lc-http.php
 msgid "Access blocked (bot?)"
 msgstr "Accés bloquejat (bot?)"
+
+#: includes/class-tso-lc-admin.php
+msgid "HTTP proxy configured (WP_PROXY_HOST):"
+msgstr "Servidor intermediari HTTP configurat (WP_PROXY_HOST):"
+
+#: includes/class-tso-lc-admin.php
+msgid "Connections pinned to an IP address work (needed to check domains only a public DNS can resolve)."
+msgstr "Les connexions fixades a una adreça IP funcionen (necessari per comprovar dominis que només un DNS públic pot resoldre)."
+
+#: includes/class-tso-lc-admin.php
+msgid "This server ignores connections pinned to an IP address (a proxy or custom HTTP transport resolves names itself). Domains this server cannot resolve cannot be checked directly."
+msgstr "Aquest servidor ignora les connexions fixades a una adreça IP (un servidor intermediari o un transport HTTP personalitzat resol els noms per si mateix). Els dominis que aquest servidor no pot resoldre no es poden comprovar directament."
+
+#: includes/class-tso-lc-admin.php
+msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
+msgstr "No s'ha pogut connectar a una adreça IP de prova. L'allotjament pot bloquejar les connexions sortints a adreces arbitràries."
