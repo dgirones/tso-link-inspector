@@ -69,6 +69,13 @@ class TSOLIIN_HTTP {
 	private static $dns_pins = array();
 
 	/**
+	 * Public IPs (from the DNS second opinion) for hosts this server cannot resolve; valid for one check() only.
+	 *
+	 * @var array<string,string[]>
+	 */
+	private static $fallback_ips = array();
+
+	/**
 	 * Unix time (float) after which check() gives up immediately, or null for no limit.
 	 *
 	 * @var float|null
@@ -1092,7 +1099,7 @@ class TSOLIIN_HTTP {
 		if ( ! preg_match( '#^https?://#i', $url ) ) {
 			return false;
 		}
-		if ( function_exists( 'wp_http_validate_url' ) && false === wp_http_validate_url( $url ) ) {
+		if ( function_exists( 'wp_http_validate_url' ) && false === wp_http_validate_url( $url ) && ! self::url_uses_fallback_ips( $url ) ) {
 			return false;
 		}
 		$parsed = wp_parse_url( $url );
@@ -1261,6 +1268,10 @@ class TSOLIIN_HTTP {
 		}
 		$ips = array_values( array_unique( array_filter( $ips ) ) );
 		if ( empty( $ips ) ) {
+			$fallback_key = rtrim( $host, '.' );
+			if ( isset( self::$fallback_ips[ $fallback_key ] ) ) {
+				return self::$fallback_ips[ $fallback_key ];
+			}
 			// Do not cache a failed lookup: it may be a temporary resolver error.
 			return array();
 		}
@@ -1418,7 +1429,16 @@ class TSOLIIN_HTTP {
 	 */
 	private function guard_remote_url_for_request( $url ) {
 		if ( ! self::is_safe_remote_url( $url, true ) ) {
-			return 'blocked';
+			if ( ! self::hostname_has_no_dns( $url, true ) ) {
+				return 'blocked';
+			}
+			$fallback = self::use_second_opinion_ips( $url );
+			if ( 'none' === $fallback ) {
+				return 'dns';
+			}
+			if ( 'ok' !== $fallback || ! self::is_safe_remote_url( $url, true ) ) {
+				return 'blocked';
+			}
 		}
 		// An empty pre-lookup is not conclusive (temporary resolver errors look the same as NXDOMAIN);
 		// the HTTP request itself decides, and a resolve failure is re-tried before being reported.
@@ -1855,6 +1875,20 @@ class TSOLIIN_HTTP {
 	 * @return bool|null True = unreachable confirmed, false = resolves to an address, null = unknown / disabled.
 	 */
 	private static function public_dns_says_nxdomain( $host ) {
+		$lookup = self::public_dns_lookup( $host );
+		if ( null === $lookup ) {
+			return null;
+		}
+		return 'nx' === $lookup['state'];
+	}
+
+	/**
+	 * DNS second opinion with the addresses found.
+	 *
+	 * @param string $host Hostname.
+	 * @return array{state:string,ips:string[]}|null state "nx" (unreachable) or "ok" (has addresses); null = unknown / disabled.
+	 */
+	private static function public_dns_lookup( $host ) {
 		$s = get_option( 'tsoliin_settings', array() );
 		if ( ! is_array( $s ) || empty( $s['dns_second_opinion'] ) ) {
 			return null;
@@ -1863,44 +1897,61 @@ class TSOLIIN_HTTP {
 		if ( '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) || false === strpos( $host, '.' ) ) {
 			return null;
 		}
-		$key    = 'tsoliin_dns3_' . md5( $host );
+		$key    = 'tsoliin_dns4_' . md5( $host );
 		$cached = get_transient( $key );
-		if ( 'nx' === $cached ) {
-			return true;
-		}
-		if ( 'ok' === $cached ) {
-			return false;
+		if ( is_array( $cached ) && isset( $cached['state'] ) && in_array( $cached['state'], array( 'nx', 'ok' ), true ) ) {
+			return array(
+				'state' => (string) $cached['state'],
+				'ips'   => isset( $cached['ips'] ) && is_array( $cached['ips'] ) ? array_values( $cached['ips'] ) : array(),
+			);
 		}
 		$a = self::doh_query( $host, 'A' );
 		if ( null === $a ) {
 			return null;
 		}
 		if ( 3 === $a['status'] ) {
-			set_transient( $key, 'nx', 6 * HOUR_IN_SECONDS );
-			return true;
-		}
-		if ( 0 === $a['status'] && $a['has_address'] ) {
-			set_transient( $key, 'ok', 6 * HOUR_IN_SECONDS );
-			return false;
+			return self::store_dns_lookup( $key, 'nx', array(), 6 * HOUR_IN_SECONDS );
 		}
 		if ( 0 !== $a['status'] && 2 !== $a['status'] ) {
 			return null;
 		}
-		// NOERROR without an A record, or SERVFAIL: the AAAA answer decides.
+		// AAAA is asked as well so the HTTP check can use either address family.
 		$aaaa = self::doh_query( $host, 'AAAA' );
+		if ( 0 === $a['status'] && ! empty( $a['ips'] ) ) {
+			$ips = array_merge( $a['ips'], ( is_array( $aaaa ) && 0 === $aaaa['status'] ) ? $aaaa['ips'] : array() );
+			return self::store_dns_lookup( $key, 'ok', $ips, 6 * HOUR_IN_SECONDS );
+		}
+		// NOERROR without an A record, or SERVFAIL: the AAAA answer decides.
 		if ( null === $aaaa ) {
 			return null;
 		}
-		if ( 0 === $aaaa['status'] && $aaaa['has_address'] ) {
-			set_transient( $key, 'ok', 6 * HOUR_IN_SECONDS );
-			return false;
+		if ( 0 === $aaaa['status'] && ! empty( $aaaa['ips'] ) ) {
+			return self::store_dns_lookup( $key, 'ok', $aaaa['ips'], 6 * HOUR_IN_SECONDS );
 		}
 		if ( $aaaa['status'] === $a['status'] || 3 === $aaaa['status'] ) {
 			// No address records (NOERROR/NODATA), or name servers failing on both lookups (SERVFAIL).
-			set_transient( $key, 'nx', ( 2 === $a['status'] ) ? HOUR_IN_SECONDS : 6 * HOUR_IN_SECONDS );
-			return true;
+			return self::store_dns_lookup( $key, 'nx', array(), ( 2 === $a['status'] ) ? HOUR_IN_SECONDS : 6 * HOUR_IN_SECONDS );
 		}
 		return null;
+	}
+
+	/**
+	 * Cache and return one DNS second-opinion result.
+	 *
+	 * @param string   $key     Transient key.
+	 * @param string   $state   nx|ok.
+	 * @param string[] $ips     Addresses.
+	 * @param int      $expires Seconds.
+	 * @return array{state:string,ips:string[]}
+	 */
+	private static function store_dns_lookup( $key, $state, array $ips, $expires ) {
+		$ips    = array_values( array_unique( array_filter( array_map( 'strval', $ips ) ) ) );
+		$result = array(
+			'state' => $state,
+			'ips'   => $ips,
+		);
+		set_transient( $key, $result, (int) $expires );
+		return $result;
 	}
 
 	/**
@@ -1908,7 +1959,7 @@ class TSOLIIN_HTTP {
 	 *
 	 * @param string $host Hostname.
 	 * @param string $type Record type: A or AAAA.
-	 * @return array{status:int,has_address:bool}|null Null when the answer is unusable.
+	 * @return array{status:int,ips:string[]}|null Null when the answer is unusable.
 	 */
 	private static function doh_query( $host, $type ) {
 		$response = wp_remote_get(
@@ -1932,20 +1983,81 @@ class TSOLIIN_HTTP {
 		if ( ! is_array( $data ) || ! isset( $data['Status'] ) ) {
 			return null;
 		}
-		$want        = ( 'AAAA' === $type ) ? 28 : 1;
-		$has_address = false;
+		$want = ( 'AAAA' === $type ) ? 28 : 1;
+		$ips  = array();
 		if ( ! empty( $data['Answer'] ) && is_array( $data['Answer'] ) ) {
 			foreach ( $data['Answer'] as $record ) {
-				if ( is_array( $record ) && isset( $record['type'] ) && $want === (int) $record['type'] ) {
-					$has_address = true;
-					break;
+				if ( ! is_array( $record ) || ! isset( $record['type'], $record['data'] ) || $want !== (int) $record['type'] ) {
+					continue;
+				}
+				$ip = trim( (string) $record['data'] );
+				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+					$ips[] = $ip;
 				}
 			}
 		}
 		return array(
-			'status'      => (int) $data['Status'],
-			'has_address' => $has_address,
+			'status' => (int) $data['Status'],
+			'ips'    => $ips,
 		);
+	}
+
+	/**
+	 * When this server cannot resolve a host, use the addresses from the DNS second opinion for the HTTP check.
+	 *
+	 * Safety: every returned address must be public (otherwise the URL is blocked like any private host), the
+	 * addresses are only kept for the current check, and curl is pinned to them so a later lookup cannot swap them.
+	 *
+	 * @param string $url Absolute http(s) URL whose host failed to resolve locally.
+	 * @return string ok = addresses registered, blocked = resolves to a non-public address, none = no usable answer.
+	 */
+	private static function use_second_opinion_ips( $url ) {
+		$host = strtolower( self::idn_host_to_ascii( trim( (string) wp_parse_url( (string) $url, PHP_URL_HOST ), '.' ) ) );
+		if ( '' === $host ) {
+			return 'none';
+		}
+		$lookup = self::public_dns_lookup( $host );
+		if ( null === $lookup || 'ok' !== $lookup['state'] || empty( $lookup['ips'] ) ) {
+			return 'none';
+		}
+		foreach ( $lookup['ips'] as $ip ) {
+			if ( ! self::is_public_ip( $ip ) ) {
+				return 'blocked';
+			}
+		}
+		self::$fallback_ips[ $host ] = $lookup['ips'];
+		return 'ok';
+	}
+
+	/**
+	 * Whether the URL host has addresses registered by use_second_opinion_ips() and a port WordPress allows.
+	 *
+	 * wp_http_validate_url() rejects hosts this server cannot resolve; for these hosts our own checks (public
+	 * addresses, allowed port, no credentials) replace it.
+	 *
+	 * @param string $url Absolute http(s) URL.
+	 * @return bool
+	 */
+	private static function url_uses_fallback_ips( $url ) {
+		if ( empty( self::$fallback_ips ) ) {
+			return false;
+		}
+		$parsed = wp_parse_url( (string) $url );
+		if ( ! is_array( $parsed ) || empty( $parsed['host'] ) || ! empty( $parsed['user'] ) || ! empty( $parsed['pass'] ) ) {
+			return false;
+		}
+		$host = strtolower( self::idn_host_to_ascii( trim( (string) $parsed['host'], '.' ) ) );
+		if ( ! isset( self::$fallback_ips[ $host ] ) || false !== strpbrk( $host, ':#?[]' ) ) {
+			return false;
+		}
+		if ( ! empty( $parsed['port'] ) ) {
+			// Same port allow-list (and filter) WordPress applies in wp_http_validate_url().
+			$allowed = apply_filters( 'http_allowed_safe_ports', array( 80, 443, 8080 ), $host, (string) $url ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core filter.
+			if ( ! is_array( $allowed ) || ! in_array( (int) $parsed['port'], $allowed, true ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -2140,6 +2252,22 @@ class TSOLIIN_HTTP {
 	 * @return array { status_code: int, redirect_url: string, is_broken: int }
 	 */
 	public function check( $url, $post_id = 0 ) {
+		self::$fallback_ips = array();
+		try {
+			return $this->check_with_candidates( $url, $post_id );
+		} finally {
+			self::$fallback_ips = array();
+		}
+	}
+
+	/**
+	 * Check a URL, trying host variants for internal links.
+	 *
+	 * @param string $url     Absolute or relative URL.
+	 * @param int    $post_id Post ID for resolving relative internal links.
+	 * @return array { status_code: int, redirect_url: string, is_broken: int }
+	 */
+	private function check_with_candidates( $url, $post_id = 0 ) {
 		if ( null !== $this->deadline && microtime( true ) > $this->deadline ) {
 			// Time budget used up (see begin_deadline()): report a timeout without starting another request.
 			return array(
@@ -2212,12 +2340,11 @@ class TSOLIIN_HTTP {
 		if ( self::is_ignored_url( $url ) ) {
 			return $this->skipped_url_result();
 		}
-		if ( ! self::is_safe_remote_url( $url, true ) ) {
-			// WordPress rejects hosts it cannot resolve; tell that apart from a really blocked (private) host.
-			if ( self::hostname_has_no_dns( $url, true ) ) {
-				return $this->dns_failure_result( $url );
-			}
-			return $this->blocked_url_result();
+		// WordPress rejects hosts it cannot resolve; tell that apart from a really blocked (private) host,
+		// and let the DNS second opinion (opt-in) supply addresses so the page itself is still checked.
+		$guard = $this->guard_remote_url_for_request( $url );
+		if ( 'ok' !== $guard ) {
+			return ( 'dns' === $guard ) ? $this->dns_failure_result( $url ) : $this->blocked_url_result();
 		}
 		$chrome_unavail = $this->maybe_chrome_webstore_unavailable_result( $url );
 		if ( null !== $chrome_unavail ) {
@@ -2260,8 +2387,9 @@ class TSOLIIN_HTTP {
 			$cookies        = array(); // Browsers keep cookies between redirect hops; some sites (login/consent chains) loop without them.
 
 			do {
-				$args['cookies'] = $cookies;
-				$guard           = $this->guard_remote_url_for_request( $final_url );
+				$args['cookies']            = $cookies;
+				$args['reject_unsafe_urls'] = ! self::url_uses_fallback_ips( $final_url );
+				$guard                      = $this->guard_remote_url_for_request( $final_url );
 				if ( 'ok' !== $guard ) {
 					return ( 'dns' === $guard ) ? $this->dns_failure_result( $final_url ) : $this->blocked_url_result();
 				}

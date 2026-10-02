@@ -128,7 +128,7 @@ Those destinations are websites already linked from your content, not a service 
 
 = Optional DNS second opinion (Cloudflare) =
 
-Disabled by default. When an administrator enables "DNS second opinion" in Settings and this server cannot resolve a domain, the plugin asks Cloudflare public DNS (DNS-over-HTTPS, `https://cloudflare-dns.com/dns-query`) whether that domain resolves to an address (A or AAAA record), before reporting "Domain does not exist". Data sent: only the hostname of the link being checked (no page content, no site data). The answer is cached for 6 hours. Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ — Privacy policy: https://www.cloudflare.com/privacypolicy/
+Disabled by default. When an administrator enables "DNS second opinion" in Settings and this server cannot resolve a domain, the plugin asks Cloudflare public DNS (DNS-over-HTTPS, `https://cloudflare-dns.com/dns-query`) whether that domain resolves to an address (A or AAAA record), before reporting "Domain does not exist". Data sent to Cloudflare: only the hostname of the link being checked (no page content, no site data). The answer is cached for 6 hours. If Cloudflare returns public IP addresses for a domain this server cannot resolve, the plugin then makes its normal link check (the same HEAD/GET request it makes for any link) to that link's own server using those addresses, so the page itself is verified; addresses that are private or reserved, ports WordPress does not allow, and URLs with credentials are never contacted. Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ — Privacy policy: https://www.cloudflare.com/privacypolicy/
 
 = DNS lookups =
 
@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Improvement: when the DNS second opinion finds that a domain this server cannot resolve exists, the plugin now checks the page itself using the public IP addresses Cloudflare returned, so 404 pages, SSL errors and dead servers are reported instead of showing "200 OK by Cloudflare". Private/reserved addresses, non-standard ports and credentials are blocked.
 * Fix: a search containing &, # or spaces (e.g. a URL with a query string) broke sorting, tabs and pagination, because the search term was not encoded in the list URLs; the term is now encoded and kept.
 * Fix: Export CSV / PDF ignored the Type filter (Link, Image, Iframe…); the export now matches what the list shows.
 * Fix: from the Posts / Products view, opening a post and pressing Back now returns to that view and page instead of the main list.
