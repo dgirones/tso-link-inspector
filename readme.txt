@@ -142,29 +142,16 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
-* Fix: an SSL certificate problem (cURL error 60: expired certificate, missing intermediate certificate, self-signed…) was misclassified as a DNS failure and shown as "Domain not resolved by this server" or "Domain does not exist"; it is now reported as "SSL error (server cannot verify)" and not counted as broken.
-* Improvement: Diagnostics shows the outcome of the latest check that used the DNS second opinion (host name, addresses and result), and uninstall removes its cached answers.
-* Improvement: Diagnostics now reports whether this server honours connections pinned to an IP address (and any WP_PROXY_HOST), which decides if domains that only a public DNS can resolve can be checked directly.
-* Improvement: when the DNS second opinion finds that a domain this server cannot resolve exists, the plugin now checks the page itself using the public IP addresses Cloudflare returned, so 404 pages, SSL errors and dead servers are reported instead of showing "200 OK by Cloudflare". Private/reserved addresses, non-standard ports and credentials are blocked.
-* Fix: a search containing &, # or spaces (e.g. a URL with a query string) broke sorting, tabs and pagination, because the search term was not encoded in the list URLs; the term is now encoded and kept.
-* Fix: Export CSV / PDF ignored the Type filter (Link, Image, Iframe…); the export now matches what the list shows.
-* Fix: from the Posts / Products view, opening a post and pressing Back now returns to that view and page instead of the main list.
-* Improvement: after opening "View all links for this post" from a filtered list (e.g. Broken), the Back button now returns to that list with the same tab, search, sorting and page, instead of the unfiltered All links view.
-* Fix: Smart Suggest no longer offers the www / non-www alias of a link that already works, and never offers a domain-for-sale or parking page (HugeDomains, Sedo, Dan, Afternic…) as the fix for a broken link.
-* Fix: Smart Suggest and the Edit link confirmation could fail with a generic "upstream request failed" error on slow or unreachable hosts, because the many checks outlasted the web server's gateway limit; they now have an 8-second budget for starting new checks and shorter per-request waits, so they finish well under 30 seconds.
-* Fix: Edit link on an http:// link asked "This server cannot confirm the URL… Save it anyway?" even when the new https:// URL worked (200); it only matched the single URL the plugin itself suggested. The URL you type is now checked directly, and the confirmation appears only when this server really cannot verify it. It is also faster, because the extra suggestion checks are skipped.
-* Fix: cookies are now kept between redirect hops, like a browser; sites with a silent login/consent redirect chain (e.g. developer.android.com) are no longer reported as a redirect loop. 999 is labelled "Access blocked (bot?)".
-* Fix: a redirect loop (more than 8 redirects) was shown as a normal redirect; it is now reported as broken "Too many redirects (loop)".
-* Fix: when a server answers HEAD with 405 or 501, the GET answer is now used; LinkedIn's anti-bot code 999 is treated as "blocked by bot protection", not as broken.
-* Fix: links with app/protocol schemes (whatsapp:, tg:, geo:, callto:, market:, webcal:, magnet:, file:…) were resolved as relative paths and reported as 404; they are now skipped like mailto: and tel:.
-* Fix: bare URLs in comments and plain text lost their closing bracket (Wikipedia-style .../Foo_(bar)) and kept trailing quotes, ellipsis or non-breaking spaces, so working links were reported as broken; the end of the URL is now cut correctly.
-* Fix: internationalized domains (e.g. español.es, 日本語.jp) were reported as "Domain does not exist"; they are now converted to punycode before the DNS and HTTP checks.
-* Fix: a redirect to a domain this server cannot resolve skipped the DNS second opinion; it now gets the same verification.
-* Fix: servers that answer HEAD with 404, 500 or 501 but serve the page to GET were reported as broken; any 4xx/5xx to HEAD is now re-checked with GET.
-* Improvement: when Cloudflare DNS second opinion confirms that a domain this server cannot resolve exists, the link is shown as "Domain not resolved by this server (200 OK by Cloudflare)" and counted under OK; Recheck applies the same verification. Cloudflare's answer only counts as OK when the domain has an A or AAAA record; a domain with no address records, or whose name servers fail, is reported as "Domain does not exist (DNS)". Catalan and Spanish translations added.
-* Improvement: when this server cannot resolve a domain, the link is now shown as "Domain not resolved by this server (DNS, unconfirmed)" and is not counted as broken; "Domain does not exist" is reported only when confirmed. New optional setting "DNS second opinion" confirms with Cloudflare public DNS (off by default, hostname only).
-* Fix: a working domain could be reported as "Domain does not exist (DNS)" after a single failed or temporary DNS lookup; the check now queries A and AAAA separately, retries, lets the real HTTP request decide, and only reports a DNS failure once it is confirmed.
-* Fix: a plain-text URL split by inline formatting tags (e.g. http://www.<strong>Youtube</strong>.com/...) was reported as a broken link "http://www"; the URL is now read as visitors see it, and incomplete bare "www" hosts are ignored.
+* Fix: SSL certificate problems (cURL error 60: expired, self-signed, incomplete chain) were misclassified as DNS failures; they now show "SSL error (server cannot verify)" and are not counted as broken.
+* Improvement: DNS second opinion (opt-in, Cloudflare). Domains this server cannot resolve show "not resolved by this server" ("200 OK by Cloudflare" or "DNS, unconfirmed") and are not counted as broken; with the option on, the page itself is checked using the public IPs Cloudflare returns (private addresses, non-standard ports and credentials are blocked). "Domain does not exist" is reported only when confirmed.
+* Improvement: Diagnostics reports IP-pinning support, WP_PROXY_HOST and the latest second-opinion outcome; uninstall removes the cached answers.
+* Fix: working domains reported as "Domain does not exist" after a temporary DNS failure, internationalized domains (español.es, 日本語.jp) and redirects to unresolvable domains.
+* Fix: links with app schemes (whatsapp:, tg:, geo:, callto:…) were checked as 404; bare URLs in text lost closing brackets or kept trailing punctuation, or were split by inline tags.
+* Fix: HEAD errors (405, 501, 4xx/5xx) are retried with GET; cookies are kept between redirects; redirect loops are reported as broken "Too many redirects (loop)"; code 999 is treated as bot protection.
+* Improvement: Back from "View all links for this post" and from the Posts / Products view returns to the list you came from (tab, search, sorting, page).
+* Fix: a search with &, # or spaces broke sorting, tabs and pagination; Export CSV / PDF now respects the Type filter.
+* Fix: Edit link on an http:// link asked "cannot confirm the URL" although the new https:// URL worked; the URL you type is now checked directly.
+* Fix: Smart Suggest no longer offers the www alias of a working link or domain-for-sale pages, and has an 8-second budget so slow hosts no longer fail with "upstream request failed".
 
 = 2.5.3 =
 * Fix: the coming-soon detection no longer requests a made-up /tsoliin-nx-…/ URL, so it stops adding 404 entries to 404-monitor and redirect logs.
