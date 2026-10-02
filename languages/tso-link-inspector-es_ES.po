@@ -3795,3 +3795,7 @@ msgstr "Cuando este servidor no puede resolver un dominio, consulta el DNS públ
 #: includes/class-tso-lc-http.php
 msgid "Too many redirects (loop)"
 msgstr "Demasiadas redirecciones (bucle)"
+
+#: includes/class-tso-lc-http.php
+msgid "Access blocked (bot?)"
+msgstr "Acceso bloqueado (¿bot?)"

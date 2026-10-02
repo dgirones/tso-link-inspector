@@ -1111,7 +1111,7 @@ class TSOLIIN_HTTP {
 	 * @return bool
 	 */
 	public static function hostname_has_no_dns( $url, $fresh_dns = false ) {
-		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$host = strtolower( trim( (string) wp_parse_url( $url, PHP_URL_HOST ), '[]' ) );
 		if ( '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) ) {
 			return false;
 		}
@@ -2224,9 +2224,11 @@ class TSOLIIN_HTTP {
 			$hops           = 0;
 			$max_hops       = 8;
 			$redirect_chain = array();
+			$cookies        = array(); // Browsers keep cookies between redirect hops; some sites (login/consent chains) loop without them.
 
 			do {
-				$guard = $this->guard_remote_url_for_request( $final_url );
+				$args['cookies'] = $cookies;
+				$guard           = $this->guard_remote_url_for_request( $final_url );
 				if ( 'ok' !== $guard ) {
 					return ( 'dns' === $guard ) ? $this->dns_failure_result( $final_url ) : $this->blocked_url_result();
 				}
@@ -2254,6 +2256,14 @@ class TSOLIIN_HTTP {
 					usleep( 800000 );
 					$response = wp_remote_get( $final_url, array_merge( $args, array( 'stream' => false ) ) );
 					$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+				}
+
+				if ( ! is_wp_error( $response ) ) {
+					foreach ( wp_remote_retrieve_cookies( $response ) as $cookie ) {
+						if ( $cookie instanceof WP_Http_Cookie ) {
+							$cookies[ $cookie->name ] = $cookie;
+						}
+					}
 				}
 
 				if ( is_wp_error( $response ) ) {
@@ -3084,6 +3094,7 @@ class TSOLIIN_HTTP {
 			-10 => __( 'Domain not resolved by this server (DNS, unconfirmed)', 'tso-link-inspector' ),
 			-11 => __( 'Domain not resolved by this server (200 OK by Cloudflare)', 'tso-link-inspector' ),
 			-12 => __( 'Too many redirects (loop)', 'tso-link-inspector' ),
+			999 => __( 'Access blocked (bot?)', 'tso-link-inspector' ),
 			0   => __( 'Cannot connect', 'tso-link-inspector' ),
 			-2  => __( 'Domain does not exist (DNS)', 'tso-link-inspector' ),
 			-3  => __( 'Timed out', 'tso-link-inspector' ),

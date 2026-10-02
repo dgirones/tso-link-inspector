@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: cookies are now kept between redirect hops, like a browser; sites with a silent login/consent redirect chain (e.g. developer.android.com) are no longer reported as a redirect loop. 999 is labelled "Access blocked (bot?)".
 * Fix: a redirect loop (more than 8 redirects) was shown as a normal redirect; it is now reported as broken "Too many redirects (loop)".
 * Fix: when a server answers HEAD with 405 or 501, the GET answer is now used; LinkedIn's anti-bot code 999 is treated as "blocked by bot protection", not as broken.
 * Fix: links with app/protocol schemes (whatsapp:, tg:, geo:, callto:, market:, webcal:, magnet:, file:…) were resolved as relative paths and reported as 404; they are now skipped like mailto: and tel:.
