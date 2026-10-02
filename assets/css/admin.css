@@ -2207,6 +2207,27 @@ a.tsoliin-stat:focus-visible {
 	background: var(--tsoliin-row-hover) !important;
 }
 
+/* Posts / Products summary table (widefat, not wp-list-table). */
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary,
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary thead th,
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary tbody td {
+	background: var(--tsoliin-surface);
+	color: var(--tsoliin-text);
+	border-color: var(--tsoliin-border);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary thead th {
+	background: var(--tsoliin-surface-2);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary tbody tr:nth-child(odd) td {
+	background: var(--tsoliin-table-stripe);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-posts-summary tbody tr:hover td {
+	background: var(--tsoliin-row-hover);
+}
+
 .tsoliin-wrap[data-theme="night"] .tsoliin-row--broken,
 .tsoliin-wrap[data-theme="night"] .tsoliin-row--broken th,
 .tsoliin-wrap[data-theme="night"] .tsoliin-row--broken td {
@@ -2300,6 +2321,19 @@ a.tsoliin-stat:focus-visible {
 	background: var(--tsoliin-surface) !important;
 	border-color: var(--tsoliin-border) !important;
 	color: var(--tsoliin-text);
+}
+
+/* Smart Suggest rows: light cards would glare inside the dark panel. */
+.tsoliin-wrap[data-theme="night"] .tsoliin-suggest-list li,
+html[data-tsoliin-theme="night"] .tsoliin-wrap .tsoliin-suggest-list li {
+	background: var(--tsoliin-surface-2);
+	border-color: var(--tsoliin-border);
+	color: var(--tsoliin-text);
+}
+
+.tsoliin-wrap[data-theme="night"] .tsoliin-suggest-list em,
+html[data-tsoliin-theme="night"] .tsoliin-wrap .tsoliin-suggest-list em {
+	color: var(--tsoliin-text-muted) !important; /* the reason text carries an inline light-theme grey */
 }
 
 .tsoliin-wrap[data-theme="night"] .tsoliin-filter-tabs a,

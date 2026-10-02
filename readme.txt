@@ -151,6 +151,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 * Improvement: Back from "View all links for this post" and from the Posts / Products view returns to the list you came from (tab, search, sorting, page).
 * Fix: a search with &, # or spaces broke sorting, tabs and pagination; Export CSV / PDF now respects the Type filter.
 * Fix: Edit link on an http:// link asked "cannot confirm the URL" although the new https:// URL worked; the URL you type is now checked directly.
+* Fix: night mode — the Smart Suggest URL cards and the Posts / Products table were light-coloured inside the dark interface.
 * Fix: Smart Suggest no longer offers the www alias of a working link or domain-for-sale pages, and has an 8-second budget so slow hosts no longer fail with "upstream request failed".
 
 = 2.5.3 =
