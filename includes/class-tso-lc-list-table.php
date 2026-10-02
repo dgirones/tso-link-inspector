@@ -185,7 +185,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		if ( $post_id > 0 && ! in_array( 'ret', $omit_keys, true ) && ! isset( $args['ret'] ) ) {
 			$return_ctx = TSOLIIN_Support::get_request_return_context();
 			if ( '' !== $return_ctx ) {
-				$query['ret'] = rawurlencode( $return_ctx );
+				$query['ret'] = $return_ctx;
 			}
 		}
 
@@ -256,7 +256,8 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			unset( $query[ $omit ] );
 		}
 
-		return add_query_arg( $query, admin_url( 'tools.php' ) );
+		// add_query_arg() does not encode values: a search containing &, # or spaces would split the URL.
+		return add_query_arg( urlencode_deep( $query ), admin_url( 'tools.php' ) );
 	}
 
 	/**
@@ -749,9 +750,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			'post_id' => absint( $item->post_id ),
 		);
 		if ( '' !== $return_query ) {
-			$post_args['ret'] = rawurlencode( $return_query ); // add_query_arg() does not encode values.
+			$post_args['ret'] = $return_query;
 		}
-		$post_url = esc_url( add_query_arg( $post_args, admin_url( 'tools.php' ) ) );
+		$post_url = esc_url( add_query_arg( urlencode_deep( $post_args ), admin_url( 'tools.php' ) ) );
 
 		$out = '<a href="' . esc_url( $edit ) . '" target="_blank" rel="noopener noreferrer" title="' . esc_attr__( 'Edit post', 'tso-link-inspector' ) . '">' . esc_html( $title ) . '</a>';
 		// Icons row: view post + list links for this post.

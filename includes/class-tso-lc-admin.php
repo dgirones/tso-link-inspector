@@ -996,6 +996,11 @@ class TSOLIIN_Admin {
 		if ( 'all' !== $export_scope ) {
 			$export_fields['scope'] = $export_scope;
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$export_type = isset( $_REQUEST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_REQUEST['link_type_filter'] ) ) : '';
+		if ( in_array( $export_type, TSOLIIN_DB::allowed_link_types(), true ) ) {
+			$export_fields['link_type_filter'] = $export_type;
+		}
 		if ( $view_post_id ) {
 			$export_fields['post_id'] = $view_post_id;
 		}
@@ -1113,7 +1118,7 @@ class TSOLIIN_Admin {
 	private function render_content_summary_view( $mode = 'posts' ) {
 		$mode = ( 'products' === $mode ) ? 'products' : 'posts';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$paged    = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$paged    = isset( $_REQUEST['paged'] ) ? max( 1, absint( $_REQUEST['paged'] ) ) : 1; // $_REQUEST: the list is also rendered by the AJAX list navigation.
 		$per_page = TSOLIIN_Support::get_user_list_per_page();
 		$query    = array(
 			'per_page' => $per_page,
@@ -1154,7 +1159,26 @@ class TSOLIIN_Admin {
 		} else {
 			foreach ( $result['items'] as $row ) {
 				$post_id = absint( $row->post_id );
-				$url     = add_query_arg( 'post_id', $post_id, admin_url( 'tools.php?page=tso-link-inspector' ) );
+				$ret_ctx = TSOLIIN_Support::sanitize_return_context(
+					http_build_query(
+						array(
+							'view'  => $view_slug,
+							'paged' => $paged,
+						)
+					)
+				);
+				$url     = add_query_arg(
+					urlencode_deep(
+						array_filter(
+							array(
+								'page'    => 'tso-link-inspector',
+								'post_id' => $post_id,
+								'ret'     => $ret_ctx,
+							)
+						)
+					),
+					admin_url( 'tools.php' )
+				);
 				echo '<tr>';
 				echo '<td><a href="' . esc_url( $url ) . '" class="tsoliin-post-scope-link"><strong>' . esc_html( (string) $row->post_title ) . '</strong></a></td>';
 				echo '<td class="column-num">' . esc_html( TSOLIIN_Support::format_display_number( (int) $row->broken ) ) . '</td>';
@@ -1205,13 +1229,13 @@ class TSOLIIN_Admin {
 			$args['post_id'] = absint( $post_id );
 			$return_ctx      = TSOLIIN_Support::get_request_return_context();
 			if ( '' !== $return_ctx ) {
-				$args['ret'] = rawurlencode( $return_ctx );
+				$args['ret'] = $return_ctx;
 			}
 		}
 		if ( 'all' !== $filter_key && in_array( $filter_key, $this->get_allowed_status_filters(), true ) ) {
 			$args['filter'] = $filter_key;
 		}
-		return add_query_arg( $args, admin_url( 'tools.php' ) );
+		return add_query_arg( urlencode_deep( $args ), admin_url( 'tools.php' ) );
 	}
 
 	/**
@@ -4908,13 +4932,18 @@ class TSOLIIN_Admin {
 		$scope   = isset( $_POST['scope'] ) ? $this->db->sanitize_scope_input( wp_unslash( $_POST['scope'] ) ) : 'all';
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 		$search  = isset( $_POST['s'] ) ? sanitize_text_field( wp_unslash( $_POST['s'] ) ) : '';
+		$type    = isset( $_POST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_POST['link_type_filter'] ) ) : '';
+		if ( ! in_array( $type, TSOLIIN_DB::allowed_link_types(), true ) ) {
+			$type = '';
+		}
 
 		$args = array(
-			'filter'         => $filter,
-			'quality_filter' => $quality,
-			'scope'          => $scope,
-			'search'         => $search,
-			'post_id'        => $post_id,
+			'filter'           => $filter,
+			'quality_filter'   => $quality,
+			'link_type_filter' => $type,
+			'scope'            => $scope,
+			'search'           => $search,
+			'post_id'          => $post_id,
 		);
 		if ( 'pdf' === $format ) {
 			TSOLIIN_Reports::stream_pdf_html( $this->db, $args );

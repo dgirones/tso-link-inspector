@@ -1694,7 +1694,10 @@ class TSOLIIN_Support {
 		$parsed = array();
 		parse_str( $raw, $parsed );
 		$out = array();
-		foreach ( array( 'filter', 'quality_filter', 'link_type_filter', 'scope', 'orderby', 'list_view' ) as $key ) {
+		if ( isset( $parsed['view'] ) && is_string( $parsed['view'] ) && in_array( sanitize_key( $parsed['view'] ), array( 'posts', 'products' ), true ) ) {
+			$out['view'] = sanitize_key( $parsed['view'] );
+		}
+		foreach ( array( 'filter', 'quality_filter', 'link_type_filter', 'scope', 'orderby' ) as $key ) {
 			if ( isset( $parsed[ $key ] ) && is_string( $parsed[ $key ] ) ) {
 				$val = sanitize_key( $parsed[ $key ] );
 				if ( '' !== $val ) {

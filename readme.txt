@@ -142,6 +142,9 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: a search containing &, # or spaces (e.g. a URL with a query string) broke sorting, tabs and pagination, because the search term was not encoded in the list URLs; the term is now encoded and kept.
+* Fix: Export CSV / PDF ignored the Type filter (Link, Image, Iframe…); the export now matches what the list shows.
+* Fix: from the Posts / Products view, opening a post and pressing Back now returns to that view and page instead of the main list.
 * Improvement: after opening "View all links for this post" from a filtered list (e.g. Broken), the Back button now returns to that list with the same tab, search, sorting and page, instead of the unfiltered All links view.
 * Fix: Smart Suggest no longer offers the www / non-www alias of a link that already works, and never offers a domain-for-sale or parking page (HugeDomains, Sedo, Dan, Afternic…) as the fix for a broken link.
 * Fix: Smart Suggest and the Edit link confirmation could fail with a generic "upstream request failed" error on slow or unreachable hosts, because the many checks outlasted the web server's gateway limit; they now have an 8-second budget for starting new checks and shorter per-request waits, so they finish well under 30 seconds.
