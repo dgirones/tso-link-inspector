@@ -3355,8 +3355,8 @@ class TSOLIIN_Admin {
 		}
 		// Cap the waits while verifying so a dead host cannot outlast the gateway limit; the cap must not leak
 		// into the checks that follow when the link is saved.
-		$this->http->begin_bulk_timeout( 8 );
-		$this->http->begin_deadline( 30 );
+		$this->http->begin_bulk_timeout( 6 );
+		$this->http->begin_deadline( 8 );
 		try {
 			return $this->https_upgrade_needs_confirmation( $link, $new_url );
 		} finally {
@@ -4620,8 +4620,8 @@ class TSOLIIN_Admin {
 		}
 
 		// Interactive request: cap each wait and the whole run so a dead host cannot outlast the gateway limit.
-		$this->http->begin_bulk_timeout( 8 );
-		$this->http->begin_deadline( 30 );
+		$this->http->begin_bulk_timeout( 6 );
+		$this->http->begin_deadline( 8 );
 
 		$suggestions       = array();
 		$seen_urls         = array( (string) $link->link_url );
