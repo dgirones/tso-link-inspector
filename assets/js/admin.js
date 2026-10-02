@@ -3294,7 +3294,7 @@
 							var conf = 'high' === s.confidence ? '🟢' : '🟡';
 							var isHttps = /^https:\/\//i.test( s.url || '' );
 							var code = parseInt( s.status_code, 10 );
-							var isBotBlock = ( 401 === code || 403 === code || 429 === code );
+							var isBotBlock = ( 401 === code || 403 === code || 429 === code || 999 === code );
 							var isUnverifiedRemote = unverified || isBotBlock || ( 0 === code || -3 === code || -4 === code || -5 === code || -7 === code || -10 === code || -11 === code );
 							if ( ! actionable || isUnverifiedRemote ) {
 								conf = '⚠️';

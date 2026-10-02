@@ -142,6 +142,8 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: a redirect loop (more than 8 redirects) was shown as a normal redirect; it is now reported as broken "Too many redirects (loop)".
+* Fix: when a server answers HEAD with 405 or 501, the GET answer is now used; LinkedIn's anti-bot code 999 is treated as "blocked by bot protection", not as broken.
 * Fix: links with app/protocol schemes (whatsapp:, tg:, geo:, callto:, market:, webcal:, magnet:, file:…) were resolved as relative paths and reported as 404; they are now skipped like mailto: and tel:.
 * Fix: bare URLs in comments and plain text lost their closing bracket (Wikipedia-style .../Foo_(bar)) and kept trailing quotes, ellipsis or non-breaking spaces, so working links were reported as broken; the end of the URL is now cut correctly.
 * Fix: internationalized domains (e.g. español.es, 日本語.jp) were reported as "Domain does not exist"; they are now converted to punycode before the DNS and HTTP checks.

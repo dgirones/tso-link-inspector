@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *  -7   = blocked (SSRF / private or reserved host)
  *  -9   = site gated (coming soon / maintenance intercepts internal URLs)
  * -10   = DNS lookup failed from this server but not confirmed (not reported as broken)
+ * -12   = redirect loop / more than 8 redirects
  * -11   = DNS lookup failed from this server but Cloudflare DNS resolves it (shown as OK, not broken)
  * 2-5   = legacy (stored by old absint() bug, same meaning as -2 to -5)
  */
@@ -35,6 +36,9 @@ class TSOLIIN_HTTP {
 
 	/** Internal status: this server cannot resolve the domain, but Cloudflare public DNS resolves it (not broken). */
 	const STATUS_DNS_CF_OK = -11;
+
+	/** Internal status: the redirect chain did not end after the maximum number of hops (loop). */
+	const STATUS_TOO_MANY_REDIRECTS = -12;
 
 	/**
 	 * Request timeout in seconds.
@@ -2238,7 +2242,7 @@ class TSOLIIN_HTTP {
 					$get_r = wp_remote_get( $final_url, array_merge( $args, array( 'stream' => false ) ) );
 					if ( ! is_wp_error( $get_r ) ) {
 						$get_code = (int) wp_remote_retrieve_response_code( $get_r );
-						if ( 0 === $code || $get_code < $code || 200 === $get_code ) {
+						if ( 0 === $code || in_array( $code, array( 405, 501 ), true ) || $get_code < $code || 200 === $get_code ) {
 							$response = $get_r;
 							$code     = $get_code;
 						}
@@ -2301,6 +2305,16 @@ class TSOLIIN_HTTP {
 					break; // Not a redirect — we have the final response.
 				}
 			} while ( $hops < $max_hops );
+
+			// Still redirecting after the last allowed hop: a redirect loop, which browsers report as an error.
+			if ( $hops >= $max_hops && in_array( (int) $code, array( 301, 302, 303, 307, 308 ), true ) ) {
+				return array(
+					'status_code'    => self::STATUS_TOO_MANY_REDIRECTS,
+					'redirect_url'   => '',
+					'redirect_chain' => $redirect_chain,
+					'is_broken'      => 1,
+				);
+			}
 
 			// A redirect chain was followed ONLY if the base URL (no fragment) changed.
 			if ( $final_url !== $url ) {
@@ -2497,7 +2511,7 @@ class TSOLIIN_HTTP {
 	/**
 	 * Determine if a status code means the link is broken.
 	 *
-	 * NOTE: 401, 403, 429 are NOT broken — they may be bot-blocks.
+	 * NOTE: 401, 403, 429, 999 are NOT broken — they may be bot-blocks.
 	 *
 	 * @param int $code HTTP status code.
 	 * @return bool
@@ -2519,6 +2533,9 @@ class TSOLIIN_HTTP {
 	 */
 	public static function is_hard_broken_status( $code ) {
 		$code = (int) $code;
+		if ( self::is_bot_block_status( $code ) ) {
+			return false;
+		}
 		if ( in_array( $code, array( -1, -5, -6, -7, -8, self::STATUS_SITE_GATED, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK ), true ) ) {
 			return false;
 		}
@@ -2546,7 +2563,7 @@ class TSOLIIN_HTTP {
 	 * @return bool
 	 */
 	public static function is_bot_block_status( $code ) {
-		return in_array( (int) $code, array( 401, 403, 429 ), true );
+		return in_array( (int) $code, array( 401, 403, 429, 999 ), true );
 	}
 
 	/**
@@ -3066,6 +3083,7 @@ class TSOLIIN_HTTP {
 			-9  => __( 'Unverifiable (coming soon / maintenance)', 'tso-link-inspector' ),
 			-10 => __( 'Domain not resolved by this server (DNS, unconfirmed)', 'tso-link-inspector' ),
 			-11 => __( 'Domain not resolved by this server (200 OK by Cloudflare)', 'tso-link-inspector' ),
+			-12 => __( 'Too many redirects (loop)', 'tso-link-inspector' ),
 			0   => __( 'Cannot connect', 'tso-link-inspector' ),
 			-2  => __( 'Domain does not exist (DNS)', 'tso-link-inspector' ),
 			-3  => __( 'Timed out', 'tso-link-inspector' ),
@@ -3143,7 +3161,7 @@ class TSOLIIN_HTTP {
 		if ( in_array( $code, array( 301, 302, 303, 307, 308 ), true ) ) {
 			return 'tsoliin-status--redirect';
 		}
-		if ( in_array( $code, array( 401, 403, 429 ), true ) ) {
+		if ( in_array( $code, array( 401, 403, 429, 999 ), true ) ) {
 			return 'tsoliin-status--warning';
 		}
 		// Reachable over HTTP but not TLS — not the same as a secure "OK".

@@ -3791,3 +3791,7 @@ msgstr "Segunda opinión DNS"
 #: includes/class-tso-lc-http.php
 msgid "When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting \"Domain does not exist\". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as \"not resolved by this server (unconfirmed)\" and are not counted as broken."
 msgstr "Cuando este servidor no puede resolver un dominio, consulta el DNS público de Cloudflare (cloudflare-dns.com) antes de informar de que \"El dominio no existe\". Si Cloudflare lo resuelve, el enlace se muestra como OK. Solo se envía el nombre de host. Sin esta opción, estos enlaces se muestran como \"no resuelto por este servidor (sin confirmar)\" y no se cuentan como rotos."
+
+#: includes/class-tso-lc-http.php
+msgid "Too many redirects (loop)"
+msgstr "Demasiadas redirecciones (bucle)"
