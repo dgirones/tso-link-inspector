@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Automatic check schedule helpers (throughput, queue stats).
  *
@@ -63,9 +63,9 @@ class TSOLIIN_Schedule {
 		return array_merge(
 			$counts,
 			array(
-				'pending'       => $pending,
-				'checks_per_day'=> $per_day,
-				'est_days'      => $est_days,
+				'pending'        => $pending,
+				'checks_per_day' => $per_day,
+				'est_days'       => $est_days,
 			)
 		);
 	}
@@ -73,9 +73,9 @@ class TSOLIIN_Schedule {
 	/**
 	 * Human-readable queue chip label + tooltip for the dashboard hero.
 	 *
-	 * @param TSOLIIN_DB             $db       Database handler.
-	 * @param array<string, int>     $queue    Output from get_queue_stats().
-	 * @param array<string, mixed>   $settings Schedule settings.
+	 * @param TSOLIIN_DB           $db       Database handler.
+	 * @param array<string, int>   $queue    Output from get_queue_stats().
+	 * @param array<string, mixed> $settings Schedule settings.
 	 * @return array{ label: string, title: string, warn: bool }
 	 */
 	public static function get_queue_chip( TSOLIIN_DB $db, array $queue, array $settings ) {

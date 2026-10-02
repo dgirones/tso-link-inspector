@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Post and comment scanner.
  *
@@ -21,10 +21,18 @@ class TSOLIIN_Scanner {
 	/** Batch processed with zero new links; cron should continue. */
 	const SCAN_BATCH_PROGRESS = -2;
 
-	/** @var TSOLIIN_DB */
+	/**
+	 * Database service instance.
+	 *
+	 * @var TSOLIIN_DB
+	 */
 	private $db;
 
-	/** @var array<int,bool> Post IDs that already received a pre-edit revision this request. */
+	/**
+	 * Post IDs that already received a pre-edit revision this request.
+	 *
+	 * @var array<int,bool>
+	 */
 	private $revision_saved_for_posts = array();
 
 	/**
@@ -34,10 +42,16 @@ class TSOLIIN_Scanner {
 	 */
 	private $preserve_modified_context = null;
 
-	/** @var array<string,bool> Request-scoped is_url_editable_in_source() results. */
+	/**
+	 * Request-scoped is_url_editable_in_source() results.
+	 *
+	 * @var array<string,bool>
+	 */
 	private $editable_source_cache = array();
 
 	/**
+	 * Scan post cache.
+	 *
 	 * @var array<int,WP_Post|false> Request-scoped get_post() results for the
 	 * per-row content-lookup helpers below (is_url_editable_in_post(),
 	 * is_url_in_post_body(), post_has_unlinkable_markup()). These are called
@@ -51,7 +65,7 @@ class TSOLIIN_Scanner {
 	private $scan_post_cache = array();
 
 	/**
-	 * get_post() with a request-scoped cache, for the per-row content-lookup
+	 * Get_post() with a request-scoped cache, for the per-row content-lookup
 	 * helpers that are called repeatedly for the same post across link rows.
 	 *
 	 * @param int $post_id Post ID.
@@ -84,9 +98,18 @@ class TSOLIIN_Scanner {
 		return $post ? $post : null;
 	}
 
-	/** @var int|null Request cache for get_total_posts(). */
+	/**
+	 * Request cache for get_total_posts().
+	 *
+	 * @var int|null
+	 */
 	private $total_posts_cache = null;
 
+	/**
+	 * Set up the class dependencies.
+	 *
+	 * @param TSOLIIN_DB $db Database.
+	 */
 	public function __construct( TSOLIIN_DB $db ) {
 		$this->db = $db;
 	}
@@ -95,7 +118,11 @@ class TSOLIIN_Scanner {
 	// Settings helpers
 	// -------------------------------------------------------------------------
 
-	/** @return string[] */
+	/**
+	 * Get the post types.
+	 *
+	 * @return string[]
+	 */
 	public function get_post_types() {
 		$s = get_option( 'tsoliin_settings', array() );
 		$t = isset( $s['post_types'] ) && is_array( $s['post_types'] ) ? $s['post_types'] : array( 'post', 'page' );
@@ -208,21 +235,35 @@ class TSOLIIN_Scanner {
 		return false;
 	}
 
-	/** @return bool */
-	private function opt( $key, $default = false ) {
+	/**
+	 * Option.
+	 *
+	 * @param string $key           Setting key.
+	 * @param bool   $default_value Default when unset.
+	 * @return bool
+	 */
+	private function opt( $key, $default_value = false ) {
 		$s = get_option( 'tsoliin_settings', array() );
 		if ( ! array_key_exists( $key, $s ) ) {
-			return (bool) $default;
+			return (bool) $default_value;
 		}
 		return ! empty( $s[ $key ] );
 	}
 
-	/** @return bool */
+	/**
+	 * Whether scan comments enabled.
+	 *
+	 * @return bool
+	 */
 	public function is_scan_comments_enabled() {
 		return $this->opt( 'scan_comments' );
 	}
 
-	/** @return bool */
+	/**
+	 * Whether scan widgets enabled.
+	 *
+	 * @return bool
+	 */
 	public function is_scan_widgets_enabled() {
 		return $this->opt( 'scan_widgets', true );
 	}
@@ -242,6 +283,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Release source scan lock.
+	 *
 	 * @param string $source comments|menus|terms|fse.
 	 * @return void
 	 */
@@ -272,7 +315,11 @@ class TSOLIIN_Scanner {
 	// Post count helpers
 	// -------------------------------------------------------------------------
 
-	/** @return int */
+	/**
+	 * Get the total posts.
+	 *
+	 * @return int
+	 */
 	public function get_total_posts() {
 		if ( null !== $this->total_posts_cache ) {
 			return $this->total_posts_cache;
@@ -282,7 +329,7 @@ class TSOLIIN_Scanner {
 			$this->total_posts_cache = 0;
 			return 0;
 		}
-		$q = new WP_Query(
+		$q                       = new WP_Query(
 			array(
 				'post_type'              => $types,
 				'post_status'            => $this->get_scan_post_statuses( $types ),
@@ -298,22 +345,26 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Get the post IDs.
+	 *
 	 * @param int $page     1-based page.
 	 * @param int $per_page Batch size.
 	 * @return int[]
 	 */
 	public function get_post_ids( $page = 1, $per_page = TSOLIIN_BATCH_SIZE ) {
 		$types = $this->get_post_types();
-		$q     = new WP_Query( array(
-			'post_type'      => $types,
-			'post_status'    => $this->get_scan_post_statuses( $types ),
-			'posts_per_page' => max( 1, absint( $per_page ) ),
-			'paged'          => max( 1, absint( $page ) ),
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'orderby'        => 'ID',
-			'order'          => 'ASC',
-		) );
+		$q     = new WP_Query(
+			array(
+				'post_type'      => $types,
+				'post_status'    => $this->get_scan_post_statuses( $types ),
+				'posts_per_page' => max( 1, absint( $per_page ) ),
+				'paged'          => max( 1, absint( $page ) ),
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			)
+		);
 		return $q->posts ? array_map( 'absint', $q->posts ) : array();
 	}
 
@@ -332,12 +383,22 @@ class TSOLIIN_Scanner {
 		return $this->dom_extract( (string) $html, 'a', 'href', 'link', 'textContent' );
 	}
 
-	/** @return array[] */
+	/**
+	 * Extract images.
+	 *
+	 * @param mixed $html HTML markup.
+	 * @return array[]
+	 */
 	public function extract_images( $html ) {
 		return $this->dom_extract( (string) $html, 'img', 'src', 'image', 'alt' );
 	}
 
-	/** @return array[] */
+	/**
+	 * Extract iframes.
+	 *
+	 * @param mixed $html HTML markup.
+	 * @return array[]
+	 */
 	public function extract_iframes( $html ) {
 		return $this->dom_extract( (string) $html, 'iframe', 'src', 'iframe', 'title' );
 	}
@@ -373,7 +434,7 @@ class TSOLIIN_Scanner {
 				continue;
 			}
 			$anchor = ( 'textContent' === $text_key )
-				? sanitize_text_field( wp_strip_all_tags( trim( (string) $node->textContent ) ) )
+				? sanitize_text_field( wp_strip_all_tags( trim( (string) $node->textContent ) ) ) // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 				: sanitize_text_field( trim( (string) $node->getAttribute( $text_key ) ) );
 			if ( '' === $anchor && 'a' === $tag ) {
 				$anchor = sanitize_text_field( trim( (string) $node->getAttribute( 'title' ) ) );
@@ -399,7 +460,11 @@ class TSOLIIN_Scanner {
 					$anchor = sanitize_text_field( rawurldecode( (string) wp_basename( $path ) ) );
 				}
 			}
-			$items[] = array( 'url' => $url, 'anchor' => $anchor, 'type' => $type );
+			$items[] = array(
+				'url'    => $url,
+				'anchor' => $anchor,
+				'type'   => $type,
+			);
 		}
 		return $this->dedup( $items );
 	}
@@ -444,11 +509,21 @@ class TSOLIIN_Scanner {
 			return array();
 		}
 		$scan_text = $this->strip_embedded_url_markup( $text );
-		$items     = array();
+		// Inline formatting tags can split a visible URL (e.g. http://www.<strong>Youtube</strong>.com/...);
+		// drop them so the URL is read as the visitor sees it instead of being cut at the first tag.
+		$joined = preg_replace( '#</?(?:strong|b|em|i|u|s|strike|del|ins|mark|small|big|sub|sup|span|font|code|abbr|cite)\b[^>]*>#i', '', $scan_text );
+		if ( is_string( $joined ) ) {
+			$scan_text = $joined;
+		}
+		$items = array();
 		if ( preg_match_all( '#https?://[^\s<>"\']+#i', $scan_text, $matches ) ) {
 			foreach ( $matches[0] as $raw ) {
 				$url = $this->clean_url( rtrim( (string) $raw, '.,;:!?)' ) );
 				if ( '' === $url || $this->skip_url( $url ) ) {
+					continue;
+				}
+				// A bare "www" host (no domain after it) is an incomplete fragment, not a checkable link.
+				if ( preg_match( '#^https?://www\.?(?:[/?\#]|$)#i', $url ) ) {
 					continue;
 				}
 				if ( $this->url_should_never_be_plain_text( $url ) ) {
@@ -597,6 +672,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Block tree has media URL.
+	 *
 	 * @param array[] $blocks  Parsed blocks.
 	 * @param string  $url_key Normalized URL key.
 	 * @param int     $post_id Post context.
@@ -643,6 +720,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL looks like image file.
+	 *
 	 * @param string $url URL.
 	 * @return bool
 	 */
@@ -671,6 +750,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL looks like wp uploads image.
+	 *
 	 * @param string $url URL.
 	 * @return bool
 	 */
@@ -696,6 +777,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL should be image type.
+	 *
 	 * @param string   $url      URL.
 	 * @param string[] $sources  Content sources to inspect.
 	 * @param int      $post_id  Post context.
@@ -731,7 +814,12 @@ class TSOLIIN_Scanner {
 	private function block_attr_url_type( array $attrs, $url ) {
 		$destination = isset( $attrs['linkDestination'] ) ? (string) $attrs['linkDestination'] : '';
 		if ( 'custom' === $destination ) {
-			$wrap = $this->pick_url_from_assoc( array( 'link' => $attrs['link'] ?? '', 'href' => $attrs['href'] ?? '' ) );
+			$wrap = $this->pick_url_from_assoc(
+				array(
+					'link' => $attrs['link'] ?? '',
+					'href' => $attrs['href'] ?? '',
+				)
+			);
 			if ( '' === $wrap && ! empty( $attrs['link'] ) && is_array( $attrs['link'] ) ) {
 				$wrap = $this->pick_url_from_assoc( $attrs['link'] );
 			}
@@ -753,7 +841,7 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function prefer_scan_item_type( $existing, $incoming ) {
-		$rank = array(
+		$rank     = array(
 			'iframe' => 5,
 			'link'   => 4,
 			'image'  => 3,
@@ -903,6 +991,7 @@ class TSOLIIN_Scanner {
 	 * @param array[] $items   Scanned items.
 	 * @param string  $raw     Raw post_content.
 	 * @param int     $post_id Post ID.
+	 * @param string  $rendered Rendered HTML.
 	 * @return array[]
 	 */
 	private function enrich_scan_item_anchors( array $items, $raw, $post_id = 0, $rendered = '' ) {
@@ -965,7 +1054,7 @@ class TSOLIIN_Scanner {
 		}
 
 		$haystacks = array( $raw );
-		$decoded     = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$decoded   = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		if ( $decoded !== $raw ) {
 			$haystacks[] = $decoded;
 		}
@@ -1091,6 +1180,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Pick URL from assoc.
+	 *
 	 * @param array $data Associative array from block attrs.
 	 * @return string
 	 */
@@ -1115,6 +1206,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Pick label from assoc.
+	 *
 	 * @param array $data Associative array from block attrs.
 	 * @return string
 	 */
@@ -1238,8 +1331,8 @@ class TSOLIIN_Scanner {
 				continue;
 			}
 			$seen[ $key ] = count( $out );
-			$item['url']    = $this->prefer_stored_scan_url( $item['url'] );
-			$out[]          = $item;
+			$item['url']  = $this->prefer_stored_scan_url( $item['url'] );
+			$out[]        = $item;
 		}
 		return $out;
 	}
@@ -1382,6 +1475,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Collect block URLs.
+	 *
 	 * @param array[] $blocks Parsed blocks from parse_blocks().
 	 * @return string[]
 	 */
@@ -1468,7 +1563,11 @@ class TSOLIIN_Scanner {
 					$chunks = preg_split( '/\s+/', $part );
 					$url    = $this->clean_url( trim( (string) $chunks[0] ) );
 					if ( '' !== $url && ! $this->skip_url( $url ) ) {
-						$items[] = array( 'url' => $url, 'anchor' => '', 'type' => 'image' );
+						$items[] = array(
+							'url'    => $url,
+							'anchor' => '',
+							'type'   => 'image',
+						);
 					}
 				}
 			}
@@ -1498,16 +1597,16 @@ class TSOLIIN_Scanner {
 			return array();
 		}
 		$data_attrs = array( 'data-url', 'data-href', 'data-link', 'data-button-url', 'data-bg-url' );
-		$wrapped      = '<html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>';
-		$dom          = new DOMDocument( '1.0', 'UTF-8' );
+		$wrapped    = '<html><head><meta charset="UTF-8"></head><body>' . $html . '</body></html>';
+		$dom        = new DOMDocument( '1.0', 'UTF-8' );
 		libxml_use_internal_errors( true );
 		$dom->loadHTML( $wrapped, LIBXML_NONET | LIBXML_NOWARNING );
 		libxml_clear_errors();
 
 		$items = array();
 		$walk  = function ( DOMNode $node ) use ( &$walk, $data_attrs, &$items ) {
-			if ( XML_ELEMENT_NODE === $node->nodeType ) {
-				/** @var DOMElement $node */
+			if ( XML_ELEMENT_NODE === $node->nodeType ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
+				// $node is a DOMElement here.
 				foreach ( $data_attrs as $attr ) {
 					if ( ! $node->hasAttribute( $attr ) ) {
 						continue;
@@ -1516,17 +1615,21 @@ class TSOLIIN_Scanner {
 					if ( '' === $url || $this->skip_url( $url ) ) {
 						continue;
 					}
-					$items[] = array( 'url' => $url, 'anchor' => '', 'type' => 'link' );
+					$items[] = array(
+						'url'    => $url,
+						'anchor' => '',
+						'type'   => 'link',
+					);
 				}
 			}
 			if ( $node->hasChildNodes() ) {
-				foreach ( $node->childNodes as $child ) {
+				foreach ( $node->childNodes as $child ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 					$walk( $child );
 				}
 			}
 		};
-		if ( $dom->documentElement ) {
-			$walk( $dom->documentElement );
+		if ( $dom->documentElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
+			$walk( $dom->documentElement ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 		}
 		return $this->dedup( $items );
 	}
@@ -1539,7 +1642,7 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function scan_url_key( $url, $post_id = 0 ) {
-		$url = $this->clean_url( (string) $url );
+		$url     = $this->clean_url( (string) $url );
 		$play_id = TSOLIIN_HTTP::parse_play_store_app_id( $url );
 		if ( '' !== $play_id ) {
 			return 'play.google.com:' . $play_id;
@@ -1622,10 +1725,10 @@ class TSOLIIN_Scanner {
 	/**
 	 * Add a scanned item when its URL is not already in the batch.
 	 *
-	 * @param array[]  $items   Items list (by ref).
-	 * @param array    $seen    Map of normalized URL key → item index (by ref).
-	 * @param array    $item    { url, anchor, type }.
-	 * @param int      $post_id Post ID for URL normalization.
+	 * @param array[] $items   Items list (by ref).
+	 * @param array   $seen    Map of normalized URL key → item index (by ref).
+	 * @param array   $item    { url, anchor, type }.
+	 * @param int     $post_id Post ID for URL normalization.
 	 */
 	private function push_scan_item( array &$items, array &$seen, array $item, $post_id = 0 ) {
 		$url = isset( $item['url'] ) ? (string) $item['url'] : '';
@@ -1637,8 +1740,8 @@ class TSOLIIN_Scanner {
 			$idx        = (int) $seen[ $key ];
 			$new_anchor = isset( $item['anchor'] ) ? trim( (string) $item['anchor'] ) : '';
 			if ( isset( $items[ $idx ] ) ) {
-				$existing_type = isset( $items[ $idx ]['type'] ) ? (string) $items[ $idx ]['type'] : 'link';
-				$incoming_type = isset( $item['type'] ) ? (string) $item['type'] : 'link';
+				$existing_type         = isset( $items[ $idx ]['type'] ) ? (string) $items[ $idx ]['type'] : 'link';
+				$incoming_type         = isset( $item['type'] ) ? (string) $item['type'] : 'link';
 				$items[ $idx ]['type'] = $this->prefer_scan_item_type( $existing_type, $incoming_type );
 				if ( '' !== $new_anchor && '' === trim( (string) $items[ $idx ]['anchor'] ) ) {
 					$items[ $idx ]['anchor'] = sanitize_text_field( $item['anchor'] );
@@ -1652,7 +1755,7 @@ class TSOLIIN_Scanner {
 			}
 			return;
 		}
-		$item['url'] = $this->prefer_stored_scan_url( $url );
+		$item['url']  = $this->prefer_stored_scan_url( $url );
 		$seen[ $key ] = count( $items );
 		$items[]      = $item;
 	}
@@ -1833,8 +1936,8 @@ class TSOLIIN_Scanner {
 	 * @return string[]
 	 */
 	private function url_content_variants( $url, $post_id = 0 ) {
-		$url = (string) $url;
-		$post_id = absint( $post_id );
+		$url      = (string) $url;
+		$post_id  = absint( $post_id );
 		$variants = array( $url );
 		$resolved = self::resolve_to_absolute_url( $url, $post_id );
 		if ( '' !== $resolved && $resolved !== $url ) {
@@ -1859,7 +1962,7 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
-	 * www / non-www spellings for same-site absolute URLs.
+	 * Www / non-www spellings for same-site absolute URLs.
 	 *
 	 * @param string   $url      URL.
 	 * @param string[] $variants Existing variants.
@@ -1886,10 +1989,10 @@ class TSOLIIN_Scanner {
 	 * @return string[]
 	 */
 	public static function get_href_match_variants( $url, $post_id = 0 ) {
-		$url     = (string) $url;
-		$post_id = absint( $post_id );
-		$decoded = urldecode( $url );
-		$core    = array( $url );
+		$url      = (string) $url;
+		$post_id  = absint( $post_id );
+		$decoded  = urldecode( $url );
+		$core     = array( $url );
 		$resolved = self::resolve_to_absolute_url( $url, $post_id );
 		if ( '' !== $resolved && $resolved !== $url ) {
 			$core[] = $resolved;
@@ -1905,19 +2008,23 @@ class TSOLIIN_Scanner {
 				}
 			}
 		}
-		$base = array_unique( array_filter( array_merge(
-			$core,
-			array(
-				$decoded,
-				rawurldecode( $url ),
-				html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
-				str_replace( '&', '&amp;', $url ),
-				str_replace( '&', '&amp;', $decoded ),
-				str_replace( '&amp;', '&', $url ),
-				untrailingslashit( $url ),
-				trailingslashit( untrailingslashit( $url ) ),
+		$base = array_unique(
+			array_filter(
+				array_merge(
+					$core,
+					array(
+						$decoded,
+						rawurldecode( $url ),
+						html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
+						str_replace( '&', '&amp;', $url ),
+						str_replace( '&', '&amp;', $decoded ),
+						str_replace( '&amp;', '&', $url ),
+						untrailingslashit( $url ),
+						trailingslashit( untrailingslashit( $url ) ),
+					)
+				)
 			)
-		) ) );
+		);
 		foreach ( $base as $candidate ) {
 			$base = self::add_internal_host_equivalent_urls( $candidate, $base, $post_id );
 		}
@@ -1933,6 +2040,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Skip URL.
+	 *
 	 * @param string $url Raw URL.
 	 * @return bool True if should be skipped.
 	 */
@@ -1974,6 +2083,11 @@ class TSOLIIN_Scanner {
 		return TSOLIIN_HTTP::is_ignored_url( $url );
 	}
 
+	/**
+	 * Dedup.
+	 *
+	 * @param mixed $items Items.
+	 */
 	private function dedup( $items ) {
 		$seen = array();
 		$out  = array();
@@ -2080,6 +2194,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Attachment image URL for size.
+	 *
 	 * @param int    $attachment_id Attachment post ID.
 	 * @param string $size          Image size slug.
 	 * @return string
@@ -2234,7 +2350,7 @@ class TSOLIIN_Scanner {
 	 * @param int    $post_id       Post ID (unused for ids/include rewrite; reserved).
 	 * @return string|null
 	 */
-	private function rewrite_attachment_id_in_classic_gallery_shortcodes( $content, $old_id, $new_id, $post_id = 0 ) {
+	private function rewrite_attachment_id_in_classic_gallery_shortcodes( $content, $old_id, $new_id, $post_id = 0 ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Parameter kept for the public/hook signature.
 		$content = (string) $content;
 		$old_id  = absint( $old_id );
 		$new_id  = absint( $new_id );
@@ -2340,7 +2456,7 @@ class TSOLIIN_Scanner {
 	public function scan_post( $post_id, $force_all = false ) {
 		$post_id = absint( $post_id );
 		clean_post_cache( $post_id );
-		$post    = get_post( $post_id );
+		$post = get_post( $post_id );
 		// Attachments are almost always 'inherit' (not 'publish'); see
 		// get_scan_post_statuses() for why that status is valid for media.
 		$status_ok = $post && (
@@ -2519,7 +2635,11 @@ class TSOLIIN_Scanner {
 				$found = $this->add_scan_batch_found( $found, $this->scan_acf_options() );
 			}
 		}
-		return array( 'scanned' => count( $ids ), 'found' => $found, 'done' => $done );
+		return array(
+			'scanned' => count( $ids ),
+			'found'   => $found,
+			'done'    => $done,
+		);
 	}
 
 	/**
@@ -2548,7 +2668,7 @@ class TSOLIIN_Scanner {
 			// Match upsert eligibility: do not keep rows for URLs found only in rendered HTML
 			// (or other non-editable places) — those produced false "Go to edit" targets.
 			if ( '' !== $sk && $this->is_dedicated_source_key( $sk ) ) {
-				$active_keys[ $sk ] = true;
+				$active_keys[ $sk ]                              = true;
 				$active[ $this->scan_url_key( $url, $post_id ) ] = true;
 				continue;
 			}
@@ -2660,7 +2780,13 @@ class TSOLIIN_Scanner {
 		return $this->dedup( $out );
 	}
 
-	/** @param mixed $val */
+	/**
+	 * Extract meta value.
+	 *
+	 * @param mixed $val Meta value to walk.
+	 * @param mixed $key Setting or cache key.
+	 * @param mixed $out Output collector (by reference).
+	 */
 	private function extract_meta_value( $val, $key, &$out ) {
 		if ( is_string( $val ) ) {
 			$has_markup_url = ( false !== strpos( $val, 'href=' ) )
@@ -2687,7 +2813,11 @@ class TSOLIIN_Scanner {
 					$out[]          = $item;
 				}
 			} elseif ( $this->looks_like_link_url( $val ) ) {
-				$out[] = array( 'url' => $this->clean_url( trim( $val ) ), 'anchor' => sanitize_text_field( $key ), 'type' => 'link' );
+				$out[] = array(
+					'url'    => $this->clean_url( trim( $val ) ),
+					'anchor' => sanitize_text_field( $key ),
+					'type'   => 'link',
+				);
 			}
 			if ( $this->opt( 'scan_meta_plain', true ) && is_string( $val ) ) {
 				foreach ( $this->extract_plain_urls( $val ) as $plain ) {
@@ -2827,7 +2957,11 @@ class TSOLIIN_Scanner {
 		return (bool) preg_match( '#^(?:https?://|/|\./|\.\./)#i', $url );
 	}
 
-	/** @return string[] */
+	/**
+	 * Default excluded meta.
+	 *
+	 * @return string[]
+	 */
 	private function default_excluded_meta() {
 		$keys = array( '_edit_lock', '_edit_last', '_wp_trash_meta_status', '_wp_trash_meta_time', '_wp_old_slug', '_wp_old_date', '_wp_attachment_metadata', '_wp_attached_file', '_thumbnail_id', '_wp_page_template', '_yoast_wpseo_content_score', '_yoast_wpseo_focuskw', '_yoast_wpseo_metadesc', '_yoast_wpseo_title', '_yoast_wpseo_linkdex', '_rank_math_seo_score', '_rank_math_focus_keyword', '_rank_math_internal_links', '_rank_math_internal_linking_processed', '_wpseo_internal_linking' );
 		if ( class_exists( 'TSOLIIN_WooCommerce', false ) ) {
@@ -2944,7 +3078,7 @@ class TSOLIIN_Scanner {
 				$max_id = max( $max_id, $item_id );
 			}
 			if ( $this->scan_nav_menu_item( $item_id ) > 0 ) {
-				$found++;
+				++$found;
 			}
 		}
 
@@ -3054,11 +3188,11 @@ class TSOLIIN_Scanner {
 				continue;
 			}
 			/* translators: %d: comment ID */
-			$anchor         = $item['anchor'] ?: sprintf( __( 'Comment #%d', 'tso-link-inspector' ), $cid );
+			$anchor         = $item['anchor'] ? $item['anchor'] : sprintf( __( 'Comment #%d', 'tso-link-inspector' ), $cid );
 			$sk             = $this->db->sanitize_source_key( 'c-' . $cid . '-l-' . md5( $url ) );
 			$allowed_keys[] = $sk;
 			$this->db->upsert_link( $pid, $url, $anchor, 'comment', $sk );
-			$found++;
+			++$found;
 		}
 
 		$author_url = trim( (string) $comment->comment_author_url );
@@ -3069,7 +3203,7 @@ class TSOLIIN_Scanner {
 			$sk             = $this->db->sanitize_source_key( 'c-' . $cid . '-author' );
 			$allowed_keys[] = $sk;
 			$this->db->upsert_link( $pid, $clean, $anchor, 'comment', $sk );
-			$found++;
+			++$found;
 		}
 
 		$this->db->delete_comment_sources_not_in( $pid, $cid, $allowed_keys );
@@ -3139,7 +3273,7 @@ class TSOLIIN_Scanner {
 			$allowed[] = $sk;
 			$anchor    = ! empty( $item['anchor'] ) ? (string) $item['anchor'] : $default_anchor;
 			$this->db->upsert_link( 0, $url, $anchor, 'term', $sk );
-			$found++;
+			++$found;
 		}
 
 		$this->db->delete_sources_not_in( 'term', $prefix, $allowed, 0 );
@@ -3465,28 +3599,32 @@ class TSOLIIN_Scanner {
 	 * @return string[]
 	 */
 	private function build_url_replace_candidates( $old_url, $post_id = 0 ) {
-		$old_url  = (string) $old_url;
-		$post_id  = absint( $post_id );
-		$decoded  = urldecode( $old_url );
-		$candidates = array_unique( array_filter( array_merge(
-			$this->url_content_variants( $old_url, $post_id ),
-			array(
-				$decoded,
-				rawurldecode( $old_url ),
-				esc_url_raw( $old_url ),
-				esc_url_raw( $decoded ),
-				html_entity_decode( $old_url, ENT_QUOTES, 'UTF-8' ),
-				str_replace( '&', '&amp;', $old_url ),
-				str_replace( '&', '&amp;', $decoded ),
-				str_replace( '&amp;', '&', $old_url ),
-				untrailingslashit( $old_url ),
-				trailingslashit( untrailingslashit( $old_url ) ),
-			),
-			$this->json_slash_url_variants( $old_url ),
-			$this->json_slash_url_variants( $decoded ),
-			$this->percent_placeholder_url_variants( $old_url ),
-			$this->percent_placeholder_url_variants( $decoded )
-		) ) );
+		$old_url    = (string) $old_url;
+		$post_id    = absint( $post_id );
+		$decoded    = urldecode( $old_url );
+		$candidates = array_unique(
+			array_filter(
+				array_merge(
+					$this->url_content_variants( $old_url, $post_id ),
+					array(
+						$decoded,
+						rawurldecode( $old_url ),
+						esc_url_raw( $old_url ),
+						esc_url_raw( $decoded ),
+						html_entity_decode( $old_url, ENT_QUOTES, 'UTF-8' ),
+						str_replace( '&', '&amp;', $old_url ),
+						str_replace( '&', '&amp;', $decoded ),
+						str_replace( '&amp;', '&', $old_url ),
+						untrailingslashit( $old_url ),
+						trailingslashit( untrailingslashit( $old_url ) ),
+					),
+					$this->json_slash_url_variants( $old_url ),
+					$this->json_slash_url_variants( $decoded ),
+					$this->percent_placeholder_url_variants( $old_url ),
+					$this->percent_placeholder_url_variants( $decoded )
+				)
+			)
+		);
 
 		usort(
 			$candidates,
@@ -3569,9 +3707,9 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function normalize_url_for_matching( $url ) {
-		$url = html_entity_decode( (string) $url, ENT_QUOTES, 'UTF-8' );
-		$url = str_replace( '&amp;', '&', $url );
-		$url = preg_replace( '/\{[a-f0-9]{64}\}/i', '%', $url );
+		$url  = html_entity_decode( (string) $url, ENT_QUOTES, 'UTF-8' );
+		$url  = str_replace( '&amp;', '&', $url );
+		$url  = preg_replace( '/\{[a-f0-9]{64}\}/i', '%', $url );
 		$hash = $this->wp_kses_url_percent_placeholder_hash();
 		if ( '' !== $hash ) {
 			$url = str_replace( '{' . $hash . '}', '%', $url );
@@ -3698,11 +3836,11 @@ class TSOLIIN_Scanner {
 
 		$spellings = array();
 		$dom       = $this->load_dom_for_html( $content );
-		if ( $dom && $dom->documentElement ) {
+		if ( $dom && $dom->documentElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 			$body = $dom->getElementsByTagName( 'body' )->item( 0 );
 			if ( $body ) {
 				$walk = function ( DOMNode $node ) use ( &$walk, &$spellings, $stored_url, $post_id ) {
-					if ( XML_ELEMENT_NODE === $node->nodeType && $node instanceof DOMElement ) {
+					if ( XML_ELEMENT_NODE === $node->nodeType && $node instanceof DOMElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 						foreach ( $this->get_editable_url_attributes() as $attr ) {
 							if ( ! $node->hasAttribute( $attr ) ) {
 								continue;
@@ -3723,7 +3861,7 @@ class TSOLIIN_Scanner {
 						}
 					}
 					if ( $node->hasChildNodes() ) {
-						foreach ( $node->childNodes as $child ) {
+						foreach ( $node->childNodes as $child ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 							$walk( $child );
 						}
 					}
@@ -3906,7 +4044,7 @@ class TSOLIIN_Scanner {
 			if ( preg_match_all( '/\[gallery\b[^\]]*\]/i', $content, $matches, PREG_OFFSET_CAPTURE ) ) {
 				$gallery_index = 0;
 				foreach ( $matches[0] as $match ) {
-					$shortcode = (string) $match[0];
+					$shortcode   = (string) $match[0];
 					$attr_string = '';
 					if ( preg_match( '/\[gallery\b([^\]]*)\]/i', $shortcode, $parts ) ) {
 						$attr_string = (string) $parts[1];
@@ -3942,7 +4080,7 @@ class TSOLIIN_Scanner {
 	 * @return array{needle:string,ids:int[],index:int}
 	 */
 	private function get_classic_html_gallery_focus_context( $content, $attachment_id ) {
-		$empty = array(
+		$empty         = array(
 			'needle' => '',
 			'ids'    => array(),
 			'index'  => -1,
@@ -3988,6 +4126,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL in post body content.
+	 *
 	 * @param string $content   Raw post_content.
 	 * @param string $url       Stored URL.
 	 * @param string $link_type link|image|iframe.
@@ -4094,41 +4234,41 @@ class TSOLIIN_Scanner {
 				$this->editable_source_cache[ $cache_key ] = false;
 				return false;
 			}
-			$comment = get_comment( $comment_id );
-			$result  = (bool) ( $comment && $this->url_located_in_string( (string) $comment->comment_content, $url, (int) $link->post_id ) );
+			$comment                                   = get_comment( $comment_id );
+			$result                                    = (bool) ( $comment && $this->url_located_in_string( (string) $comment->comment_content, $url, (int) $link->post_id ) );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( 'widget' === $type ) {
-			$content = $this->get_widget_content_by_source_key( $sk );
-			$result  = ( '' !== $content && $this->url_located_in_string( $content, $url, 0 ) );
+			$content                                   = $this->get_widget_content_by_source_key( $sk );
+			$result                                    = ( '' !== $content && $this->url_located_in_string( $content, $url, 0 ) );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( 'menu' === $type && preg_match( '/^mi-(\d+)/', $sk, $m ) ) {
-			$item_url = get_post_meta( absint( $m[1] ), '_menu_item_url', true );
-			$result   = is_string( $item_url ) && '' !== $item_url && $this->urls_match_for_edit( $item_url, $url );
+			$item_url                                  = get_post_meta( absint( $m[1] ), '_menu_item_url', true );
+			$result                                    = is_string( $item_url ) && '' !== $item_url && $this->urls_match_for_edit( $item_url, $url );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( 'term' === $type && preg_match( '/^t-(\d+)-/', $sk, $m ) ) {
-			$term   = get_term( absint( $m[1] ) );
-			$result = (bool) ( $term && ! is_wp_error( $term ) && $this->url_located_in_string( (string) $term->description, $url, 0 ) );
+			$term                                      = get_term( absint( $m[1] ) );
+			$result                                    = (bool) ( $term && ! is_wp_error( $term ) && $this->url_located_in_string( (string) $term->description, $url, 0 ) );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( class_exists( 'TSOLIIN_WooCommerce', false ) && TSOLIIN_WooCommerce::is_woocommerce_source_key( $sk ) && ! empty( $link->post_id ) ) {
-			$result = TSOLIIN_WooCommerce::product_has_url( (int) $link->post_id, $url );
+			$result                                    = TSOLIIN_WooCommerce::product_has_url( (int) $link->post_id, $url );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( class_exists( 'TSOLIIN_Acf', false ) && TSOLIIN_Acf::is_acf_source_key( $sk ) ) {
-			$result = TSOLIIN_Acf::source_has_url( $link );
+			$result                                    = TSOLIIN_Acf::source_has_url( $link );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
 		if ( class_exists( 'TSOLIIN_Elementor', false ) && TSOLIIN_Elementor::is_elementor_source_key( $sk ) ) {
-			$result = TSOLIIN_Elementor::source_has_url( $link );
+			$result                                    = TSOLIIN_Elementor::source_has_url( $link );
 			$this->editable_source_cache[ $cache_key ] = $result;
 			return $result;
 		}
@@ -4149,6 +4289,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URLs match for edit.
+	 *
 	 * @param string $stored Stored value.
 	 * @param string $needle URL to find.
 	 * @return bool
@@ -4171,6 +4313,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL located in string.
+	 *
 	 * @param string $content HTML or block markup.
 	 * @param string $url     Stored URL.
 	 * @param int    $post_id Post ID.
@@ -4197,6 +4341,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Locate URL in post meta.
+	 *
 	 * @param int    $post_id Post ID.
 	 * @param string $url     Stored URL.
 	 * @return array{ found: bool, field_key: string, snippet: string }
@@ -4222,6 +4368,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Locate URL in meta value.
+	 *
 	 * @param mixed  $value   Meta value.
 	 * @param string $url     Stored URL.
 	 * @param int    $post_id Post ID.
@@ -4274,6 +4422,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Get the scannable meta entries.
+	 *
 	 * @param int $post_id Post ID.
 	 * @return array<int, array{ key: string, value: mixed }>
 	 */
@@ -4431,8 +4581,8 @@ class TSOLIIN_Scanner {
 		}
 
 		if ( $this->is_relative_path_variant( $variant ) ) {
-			$quoted  = preg_quote( $variant, '#' );
-			$escaped = esc_attr( $new_url );
+			$quoted   = preg_quote( $variant, '#' );
+			$escaped  = esc_attr( $new_url );
 			$patterns = array(
 				'#(href=(["\']))' . $quoted . '(\2)#i',
 				'#(src=(["\']))' . $quoted . '(\2)#i',
@@ -4564,6 +4714,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace URLs in meta value.
+	 *
 	 * @param mixed  $val     Meta value.
 	 * @param string $old_url Stored URL.
 	 * @param string $new_url New URL.
@@ -4693,6 +4845,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Extract matching tag snippet.
+	 *
 	 * @param string $content HTML.
 	 * @param string $old_url Stored URL.
 	 * @param int    $post_id Post ID.
@@ -4750,6 +4904,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace URL in tag snippet.
+	 *
 	 * @param string $snippet Tag snippet.
 	 * @param string $old_url Stored URL.
 	 * @param string $new_url New URL.
@@ -4872,10 +5028,12 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
-	 * @param array[] $blocks     Parsed blocks.
+	 * Replace URL in blocks recursive.
+	 *
+	 * @param array[]  $blocks     Parsed blocks.
 	 * @param string[] $candidates URL variants to replace.
-	 * @param string  $new_url    Replacement URL.
-	 * @param bool    $changed    Set true when a value changes.
+	 * @param string   $new_url    Replacement URL.
+	 * @param bool     $changed    Set true when a value changes.
 	 * @return array[]
 	 */
 	private function replace_url_in_blocks_recursive( array $blocks, array $candidates, $new_url, &$changed ) {
@@ -4898,6 +5056,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace URL values in array.
+	 *
 	 * @param array    $data       Block attrs or nested array.
 	 * @param string[] $candidates URL variants.
 	 * @param string   $new_url    Replacement URL.
@@ -4942,7 +5102,7 @@ class TSOLIIN_Scanner {
 	 * Store a post revision before content edits when enabled in settings.
 	 *
 	 * @param int $post_id Post ID.
-	 * @return void
+	 * @return bool True when a revision was stored.
 	 */
 	private function maybe_create_post_revision( $post_id ) {
 		$post_id = absint( $post_id );
@@ -5119,6 +5279,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace alt in blocks recursive.
+	 *
 	 * @param array[]  $blocks     Parsed blocks.
 	 * @param string[] $candidates URL variants to match.
 	 * @param string   $new_alt    Replacement alt text.
@@ -5145,6 +5307,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace alt in block attributes.
+	 *
 	 * @param array    $attrs      Block attrs.
 	 * @param string[] $candidates URL variants to match.
 	 * @param string   $new_alt    Replacement alt text.
@@ -5156,6 +5320,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace alt in array.
+	 *
 	 * @param array    $data       Block attrs or nested array.
 	 * @param string[] $candidates URL variants to match.
 	 * @param string   $new_alt    Replacement alt text.
@@ -5207,6 +5373,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Array tree contains URL candidate.
+	 *
 	 * @param array    $data       Nested block attrs.
 	 * @param string[] $candidates URL variants to match.
 	 * @param int      $depth      Recursion guard.
@@ -5233,6 +5401,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * URL value matches candidates.
+	 *
 	 * @param string   $value      URL from block attrs.
 	 * @param string[] $candidates URL variants to match.
 	 * @return bool
@@ -5381,8 +5551,8 @@ class TSOLIIN_Scanner {
 			return false;
 		}
 
-		$stored_frag = (string) ( wp_parse_url( $stored_url, PHP_URL_FRAGMENT ) ?: '' );
-		$cand_frag   = (string) ( wp_parse_url( $candidate_url, PHP_URL_FRAGMENT ) ?: '' );
+		$stored_frag = (string) wp_parse_url( $stored_url, PHP_URL_FRAGMENT );
+		$cand_frag   = (string) wp_parse_url( $candidate_url, PHP_URL_FRAGMENT );
 		if ( $stored_frag !== $cand_frag ) {
 			return false;
 		}
@@ -5641,6 +5811,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace anchor in blocks recursive.
+	 *
 	 * @param array[]  $blocks     Parsed blocks.
 	 * @param string   $stored_url Stored URL.
 	 * @param string[] $candidates URL variants to match.
@@ -5695,6 +5867,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace anchor labels in array.
+	 *
 	 * @param array    $data       Block attrs or nested array.
 	 * @param string[] $candidates URL variants to match.
 	 * @param string   $new_anchor Replacement link text.
@@ -5787,6 +5961,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Replace anchor in meta value.
+	 *
 	 * @param mixed  $val        Meta value.
 	 * @param string $stored_url Stored URL.
 	 * @param string $new_anchor New link text.
@@ -6048,6 +6224,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Unlink link in HTML content.
+	 *
 	 * @param string $content   HTML.
 	 * @param string $url       Stored href URL.
 	 * @param int    $post_id   Post ID.
@@ -6095,6 +6273,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Unlink image in HTML content.
+	 *
 	 * @param string $content HTML.
 	 * @param string $url     Stored src URL.
 	 * @param int    $post_id Post ID.
@@ -6148,6 +6328,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Unlink iframe in HTML content.
+	 *
 	 * @param string $content HTML.
 	 * @param string $url     Stored src URL.
 	 * @param int    $post_id Post ID.
@@ -6184,8 +6366,8 @@ class TSOLIIN_Scanner {
 			if ( false === $close_pos ) {
 				continue;
 			}
-			$end     = $close_pos + 9;
-			$pos     = strpos( $content, $snippet );
+			$end = $close_pos + 9;
+			$pos = strpos( $content, $snippet );
 			if ( false === $pos ) {
 				$pos = stripos( $content, $snippet );
 				if ( false === $pos ) {
@@ -6233,6 +6415,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Unlink in blocks recursive.
+	 *
 	 * @param array[]  $blocks     Parsed blocks.
 	 * @param string   $url        Stored URL.
 	 * @param string[] $candidates URL variants to match.
@@ -6326,7 +6510,7 @@ class TSOLIIN_Scanner {
 		if ( ! $this->array_tree_contains_url_candidate( $block['attrs'], $candidates ) ) {
 			return false;
 		}
-		$name = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
+		$name         = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
 		$media_blocks = array(
 			'core/image',
 			'core/gallery',
@@ -6421,7 +6605,7 @@ class TSOLIIN_Scanner {
 		if ( $comment_id <= 0 || ! current_user_can( 'edit_comment', $comment_id ) ) {
 			return false;
 		}
-		$comment    = get_comment( $comment_id );
+		$comment = get_comment( $comment_id );
 		if ( ! $comment ) {
 			return false;
 		}
@@ -6429,17 +6613,21 @@ class TSOLIIN_Scanner {
 
 		$content = (string) $comment->comment_content;
 		// Match href values the same way as post content / replace helpers (encoding, entities, trailing slash).
-		$href_variants = array_unique( array_filter( array(
-			$url,
-			urldecode( $url ),
-			rawurldecode( $url ),
-			str_replace( '&', '&amp;', $url ),
-			str_replace( '&', '&amp;', urldecode( $url ) ),
-			html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
-			rtrim( $url, '/' ),
-			rtrim( urldecode( $url ), '/' ),
-			rtrim( rawurldecode( $url ), '/' ),
-		) ) );
+		$href_variants = array_unique(
+			array_filter(
+				array(
+					$url,
+					urldecode( $url ),
+					rawurldecode( $url ),
+					str_replace( '&', '&amp;', $url ),
+					str_replace( '&', '&amp;', urldecode( $url ) ),
+					html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
+					rtrim( $url, '/' ),
+					rtrim( urldecode( $url ), '/' ),
+					rtrim( rawurldecode( $url ), '/' ),
+				)
+			)
+		);
 
 		$content_changed = false;
 		foreach ( $href_variants as $v ) {
@@ -6448,7 +6636,7 @@ class TSOLIIN_Scanner {
 			}
 			$new = preg_replace( '#<a\s[^>]*href=["\']' . preg_quote( $v, '#' ) . '["\'][^>]*>(.*?)</a>#is', '$1', $content );
 			if ( null !== $new && $new !== $content ) {
-				$content = $new;
+				$content         = $new;
 				$content_changed = true;
 				break;
 			}
@@ -6462,7 +6650,7 @@ class TSOLIIN_Scanner {
 				}
 				$new = str_replace( $v, '', $content );
 				if ( $new !== $content ) {
-					$content = trim( preg_replace( '/\s{2,}/', ' ', $new ) );
+					$content         = trim( preg_replace( '/\s{2,}/', ' ', $new ) );
 					$content_changed = true;
 					break;
 				}
@@ -6512,15 +6700,15 @@ class TSOLIIN_Scanner {
 			if ( empty( $p['host'] ) ) {
 				return '';
 			}
-			$host = strtolower( (string) $p['host'] );
-			$path = isset( $p['path'] ) ? $p['path'] : '/';
-			$path = '/' === $path ? '/' : rtrim( $path, '/' );
+			$host  = strtolower( (string) $p['host'] );
+			$path  = isset( $p['path'] ) ? $p['path'] : '/';
+			$path  = '/' === $path ? '/' : rtrim( $path, '/' );
 			$query = isset( $p['query'] ) ? '?' . $p['query'] : '';
 			$port  = isset( $p['port'] ) ? ':' . (int) $p['port'] : '';
 			return $host . $port . $path . $query;
 		};
-		$a = $strip_scheme( $author_url );
-		$b = $strip_scheme( $target_url );
+		$a            = $strip_scheme( $author_url );
+		$b            = $strip_scheme( $target_url );
 		return '' !== $a && $a === $b;
 	}
 
@@ -6528,7 +6716,11 @@ class TSOLIIN_Scanner {
 	// Cache purge
 	// -------------------------------------------------------------------------
 
-	/** @param int $post_id */
+	/**
+	 * Purge cache.
+	 *
+	 * @param int $post_id Post ID.
+	 */
 	public function purge_cache( $post_id ) {
 		$post_id = absint( $post_id );
 		do_action( 'litespeed_purge_post', $post_id ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- LiteSpeed Cache public API.
@@ -6562,7 +6754,7 @@ class TSOLIIN_Scanner {
 		if ( $comment_id <= 0 || ! current_user_can( 'edit_comment', $comment_id ) ) {
 			return false;
 		}
-		$comment    = get_comment( $comment_id );
+		$comment = get_comment( $comment_id );
 		if ( ! $comment ) {
 			return false;
 		}
@@ -6582,10 +6774,12 @@ class TSOLIIN_Scanner {
 			return false;
 		}
 
-		return false !== wp_update_comment( array(
-			'comment_ID'      => $comment_id,
-			'comment_content' => $new_text,
-		) );
+		return false !== wp_update_comment(
+			array(
+				'comment_ID'      => $comment_id,
+				'comment_content' => $new_text,
+			)
+		);
 	}
 
 	/**
@@ -6607,15 +6801,19 @@ class TSOLIIN_Scanner {
 			return false;
 		}
 
-		$url  = (string) $url;
-		$text = (string) $comment->comment_content;
-		$candidates = array_unique( array_filter( array(
-			$url,
-			urldecode( $url ),
-			rawurldecode( $url ),
-			str_replace( '&', '&amp;', $url ),
-			html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
-		) ) );
+		$url        = (string) $url;
+		$text       = (string) $comment->comment_content;
+		$candidates = array_unique(
+			array_filter(
+				array(
+					$url,
+					urldecode( $url ),
+					rawurldecode( $url ),
+					str_replace( '&', '&amp;', $url ),
+					html_entity_decode( $url, ENT_QUOTES, 'UTF-8' ),
+				)
+			)
+		);
 
 		foreach ( $candidates as $c ) {
 			if ( '' === $c ) {
@@ -6624,10 +6822,12 @@ class TSOLIIN_Scanner {
 			$pattern  = '#(<a\s[^>]*href=["\']' . preg_quote( $c, '#' ) . '["\'][^>]*>)(.*?)(</a>)#is';
 			$new_text = preg_replace( $pattern, '$1' . esc_html( $new_anchor ) . '$3', $text, 1, $count );
 			if ( $count > 0 && is_string( $new_text ) && $new_text !== $text ) {
-				return false !== wp_update_comment( array(
-					'comment_ID'      => $comment_id,
-					'comment_content' => $new_text,
-				) );
+				return false !== wp_update_comment(
+					array(
+						'comment_ID'      => $comment_id,
+						'comment_content' => $new_text,
+					)
+				);
 			}
 		}
 		return false;
@@ -6845,7 +7045,7 @@ class TSOLIIN_Scanner {
 			$allowed_keys[] = $sk;
 			$anchor         = ! empty( $item['anchor'] ) ? (string) $item['anchor'] : (string) $post->post_title;
 			$this->db->upsert_link( $post_id, $url, $anchor, $link_type, $sk );
-			$found++;
+			++$found;
 		}
 
 		$this->db->delete_sources_not_in( $link_type, $prefix, $allowed_keys, $post_id );
@@ -6880,7 +7080,7 @@ class TSOLIIN_Scanner {
 			$allowed[] = $sk;
 			$anchor    = ! empty( $item['anchor'] ) ? (string) $item['anchor'] : __( 'ACF Options', 'tso-link-inspector' );
 			$this->db->upsert_link( 0, $url, $anchor, 'acf', $sk );
-			$found++;
+			++$found;
 		}
 
 		$this->cleanup_stale_acf_option_links( $allowed );
@@ -7018,7 +7218,7 @@ class TSOLIIN_Scanner {
 				continue;
 			}
 			$this->db->delete_link( (int) $row->id );
-			$deleted++;
+			++$deleted;
 		}
 		return $deleted;
 	}
@@ -7033,6 +7233,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Get the registered widget instances.
+	 *
 	 * @return array<int, array{sidebar_id:string,widget_id:string}>
 	 */
 	private function get_registered_widget_instances() {
@@ -7093,7 +7295,7 @@ class TSOLIIN_Scanner {
 				$allowed[] = $sk;
 				$anchor    = ! empty( $item['anchor'] ) ? (string) $item['anchor'] : $default_anchor;
 				$this->db->upsert_link( 0, $url, $anchor, 'widget', $sk );
-				$found++;
+				++$found;
 			}
 		}
 
@@ -7297,10 +7499,14 @@ class TSOLIIN_Scanner {
 		if ( '' === $new_anchor ) {
 			return false;
 		}
-		$variants = array_unique( array_filter( array_merge(
-			$this->build_url_replace_candidates( (string) $url, 0 ),
-			array( urldecode( (string) $url ), str_replace( '&', '&amp;', (string) $url ) )
-		) ) );
+		$variants = array_unique(
+			array_filter(
+				array_merge(
+					$this->build_url_replace_candidates( (string) $url, 0 ),
+					array( urldecode( (string) $url ), str_replace( '&', '&amp;', (string) $url ) )
+				)
+			)
+		);
 		foreach ( $variants as $v ) {
 			if ( '' === $v ) {
 				continue;
@@ -7326,6 +7532,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Unlink URL in widget HTML.
+	 *
 	 * @param string $source_key Widget source_key.
 	 * @param string $url        URL.
 	 * @return bool
@@ -7360,6 +7568,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Save widget instance content.
+	 *
 	 * @param string $widget_id Widget instance ID.
 	 * @param string $content   New HTML/text content for the widget field.
 	 * @return bool
@@ -7395,6 +7605,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Menu item ID from source key.
+	 *
 	 * @param string $source_key mi-{item_id} source key.
 	 * @return int Menu item post ID or 0.
 	 */
@@ -7423,7 +7635,7 @@ class TSOLIIN_Scanner {
 		}
 		$stored = (string) get_post_meta( $item_id, '_menu_item_url', true );
 		if ( '' === $stored && get_post( $item_id ) ) {
-			$item = wp_setup_nav_menu_item( get_post( $item_id ) );
+			$item   = wp_setup_nav_menu_item( get_post( $item_id ) );
 			$stored = ( $item && ! empty( $item->url ) ) ? (string) $item->url : '';
 		}
 		if ( '' === $stored || ! $this->comment_author_url_matches_row_url( $stored, (string) $old_url ) ) {
@@ -7441,7 +7653,7 @@ class TSOLIIN_Scanner {
 	 * @return bool
 	 */
 	public function replace_anchor_in_menu_item( $source_key, $new_anchor ) {
-		$item_id = $this->menu_item_id_from_source_key( $source_key );
+		$item_id    = $this->menu_item_id_from_source_key( $source_key );
 		$new_anchor = sanitize_text_field( (string) $new_anchor );
 		if ( ! $item_id || '' === $new_anchor ) {
 			return false;
@@ -7492,6 +7704,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Term ID from source key.
+	 *
 	 * @param string $source_key t-{term_id}-… source key.
 	 * @return int Term ID or 0.
 	 */
@@ -7515,7 +7729,7 @@ class TSOLIIN_Scanner {
 		if ( $term_id <= 0 || ! current_user_can( 'edit_term', $term_id ) ) {
 			return false;
 		}
-		$term    = $term_id ? get_term( $term_id ) : null;
+		$term = $term_id ? get_term( $term_id ) : null;
 		if ( ! $term || is_wp_error( $term ) ) {
 			return false;
 		}
@@ -7546,7 +7760,7 @@ class TSOLIIN_Scanner {
 		if ( $term_id <= 0 || ! current_user_can( 'edit_term', $term_id ) ) {
 			return false;
 		}
-		$term    = $term_id ? get_term( $term_id ) : null;
+		$term = $term_id ? get_term( $term_id ) : null;
 		if ( ! $term || is_wp_error( $term ) ) {
 			return false;
 		}
@@ -7580,7 +7794,7 @@ class TSOLIIN_Scanner {
 		if ( $term_id <= 0 || ! current_user_can( 'edit_term', $term_id ) ) {
 			return false;
 		}
-		$term    = $term_id ? get_term( $term_id ) : null;
+		$term = $term_id ? get_term( $term_id ) : null;
 		if ( ! $term || is_wp_error( $term ) ) {
 			return false;
 		}
@@ -7605,6 +7819,8 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Get the widget instance content.
+	 *
 	 * @param string $widget_id Widget instance ID (e.g. text-2, block-3).
 	 * @return string
 	 */
@@ -7612,9 +7828,9 @@ class TSOLIIN_Scanner {
 		if ( ! preg_match( '/^(.+)-(\d+)$/', (string) $widget_id, $m ) ) {
 			return '';
 		}
-		$type    = (string) $m[1];
-		$number  = absint( $m[2] );
-		$option  = get_option( 'widget_' . $type );
+		$type   = (string) $m[1];
+		$number = absint( $m[2] );
+		$option = get_option( 'widget_' . $type );
 		if ( ! is_array( $option ) || empty( $option[ $number ] ) || ! is_array( $option[ $number ] ) ) {
 			return '';
 		}
@@ -7771,5 +7987,4 @@ class TSOLIIN_Scanner {
 		$this->release_source_scan_lock( 'fse' );
 		return $found > 0 ? $found : self::SCAN_BATCH_PROGRESS;
 	}
-
 }

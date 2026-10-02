@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * ACF field helpers: ID-based values and Options pages.
  *
@@ -164,6 +164,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Get the options post IDs.
+	 *
 	 * @return array<int|string>
 	 */
 	private static function get_options_post_ids() {
@@ -207,7 +209,7 @@ class TSOLIIN_Acf {
 			$rows = is_array( $value ) ? $value : array();
 			if ( in_array( $type, array( 'group', 'clone' ), true ) ) {
 				// Clone/group store one associative row (or nested arrays), not a list of rows.
-				$is_list = $rows !== array() && array_keys( $rows ) === range( 0, count( $rows ) - 1 );
+				$is_list = array() !== $rows && array_keys( $rows ) === range( 0, count( $rows ) - 1 );
 				if ( ! $is_list ) {
 					$rows = array( $rows );
 				}
@@ -344,6 +346,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Attachment URL from value.
+	 *
 	 * @param mixed $value Image/file value.
 	 * @return string
 	 */
@@ -378,6 +382,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Permalink from value.
+	 *
 	 * @param mixed $value Post/page_link value.
 	 * @return string
 	 */
@@ -402,6 +408,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Term URL from value.
+	 *
 	 * @param mixed $value Term ID, slug, or WP_Term.
 	 * @return string
 	 */
@@ -424,6 +432,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Extract HTTP URLs from string.
+	 *
 	 * @param string $html HTML or text.
 	 * @return string[]
 	 */
@@ -441,6 +451,8 @@ class TSOLIIN_Acf {
 	}
 
 	/**
+	 * Push item.
+	 *
 	 * @param array  $out     Items (by ref).
 	 * @param string $url     URL.
 	 * @param string $anchor  Anchor.

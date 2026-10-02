@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * WP-Cron handler.
  *
@@ -15,16 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class TSOLIIN_Cron {
 
-	const HOOK_SCAN         = 'tsoliin_cron_scan';
-	const HOOK_CHECK        = 'tsoliin_cron_check';
-	const HOOK_BG_STEP      = 'tsoliin_bg_check_step';
-	const HOOK_BG_SCAN_STEP = 'tsoliin_bg_scan_step';
+	const HOOK_SCAN           = 'tsoliin_cron_scan';
+	const HOOK_CHECK          = 'tsoliin_cron_check';
+	const HOOK_BG_STEP        = 'tsoliin_bg_check_step';
+	const HOOK_BG_SCAN_STEP   = 'tsoliin_bg_scan_step';
 	const BG_BATCH            = 25;
 	const BG_POLL_BATCH       = 25;
 	const BG_TICK_TIME_BUDGET = 12;
 	const BG_CRON_TIME_BUDGET = 40;
 	const BG_STEP_LOCK_TTL    = 50;
 	const BG_RECOVERY_DELAY   = 90;
+
+	/**
+	 * Seconds to wait before retrying while WordPress installs updates.
+	 */
+	const CORE_UPDATE_RETRY_DELAY = 60;
 	/** Minimum pause (seconds) after any scan/check step; the pause is at least as long as the step worked (≤ 50% duty). */
 	const BG_MIN_REST = 5;
 	/** A unit (post, source batch, link) whose worker died this many times is skipped instead of retried forever. */
@@ -52,32 +57,54 @@ class TSOLIIN_Cron {
 	const OPT_EMPTY_BATCH_RETRIES = 'tsoliin_bg_check_empty_retries';
 	const OPT_USER_STOPPED_CHECK  = 'tsoliin_bg_check_user_stopped';
 
-	/** @var TSOLIIN_DB */
+	/**
+	 * Database service instance.
+	 *
+	 * @var TSOLIIN_DB
+	 */
 	private $db;
 
-	/** @var TSOLIIN_Scanner */
+	/**
+	 * Scanner service instance.
+	 *
+	 * @var TSOLIIN_Scanner
+	 */
 	private $scanner;
 
-	/** @var TSOLIIN_HTTP */
+	/**
+	 * HTTP service instance.
+	 *
+	 * @var TSOLIIN_HTTP
+	 */
 	private $http;
 
+	/**
+	 * Set up the class dependencies.
+	 *
+	 * @param TSOLIIN_DB      $db Database.
+	 * @param TSOLIIN_Scanner $scanner Scanner.
+	 * @param TSOLIIN_HTTP    $http HTTP.
+	 */
 	public function __construct( TSOLIIN_DB $db, TSOLIIN_Scanner $scanner, TSOLIIN_HTTP $http ) {
 		$this->db      = $db;
 		$this->scanner = $scanner;
 		$this->http    = $http;
 
-		add_action( self::HOOK_SCAN,         array( $this, 'run_scan' ) );
-		add_action( self::HOOK_CHECK,        array( $this, 'run_check_batch' ) );
-		add_action( self::HOOK_BG_STEP,      array( $this, 'run_bg_step' ) );
+		add_action( self::HOOK_SCAN, array( $this, 'run_scan' ) );
+		add_action( self::HOOK_CHECK, array( $this, 'run_check_batch' ) );
+		add_action( self::HOOK_BG_STEP, array( $this, 'run_bg_step' ) );
 		add_action( self::HOOK_BG_SCAN_STEP, array( $this, 'run_bg_scan_step' ) );
-		add_action( 'admin_init',             array( $this, 'maybe_run_overdue_bg_workers' ), 30 );
-		add_filter( 'heartbeat_received',      array( $this, 'heartbeat_drive_bg_jobs' ), 10, 2 );
+		add_action( 'admin_init', array( $this, 'maybe_run_overdue_bg_workers' ), 30 );
+		add_filter( 'heartbeat_received', array( $this, 'heartbeat_drive_bg_jobs' ), 10, 2 );
 	}
 
 	// -------------------------------------------------------------------------
 	// Schedule management
 	// -------------------------------------------------------------------------
 
+	/**
+	 * Schedule.
+	 */
 	public function schedule() {
 		if ( ! wp_next_scheduled( self::HOOK_SCAN ) ) {
 			wp_schedule_event( time(), 'daily', self::HOOK_SCAN );
@@ -87,6 +114,9 @@ class TSOLIIN_Cron {
 		}
 	}
 
+	/**
+	 * Unschedule.
+	 */
 	public function unschedule() {
 		foreach ( array( self::HOOK_SCAN, self::HOOK_CHECK, self::HOOK_BG_STEP, self::HOOK_BG_SCAN_STEP ) as $hook ) {
 			wp_clear_scheduled_hook( $hook );
@@ -106,14 +136,16 @@ class TSOLIIN_Cron {
 	}
 
 	/**
+	 * Whether scan setting enabled.
+	 *
 	 * @param string $key     Settings key.
-	 * @param bool   $default Default when unset.
+	 * @param bool   $default_value Default when unset.
 	 * @return bool
 	 */
-	private function is_scan_setting_enabled( $key, $default = false ) {
+	private function is_scan_setting_enabled( $key, $default_value = false ) {
 		$s = get_option( 'tsoliin_settings', array() );
 		if ( ! is_array( $s ) || ! array_key_exists( $key, $s ) ) {
-			return (bool) $default;
+			return (bool) $default_value;
 		}
 		return ! empty( $s[ $key ] );
 	}
@@ -136,9 +168,9 @@ class TSOLIIN_Cron {
 			delete_option( self::OPT_USER_STOPPED_CHECK );
 		}
 
-		$schedule   = TSOLIIN_Schedule::get_settings();
-		$batch      = $schedule['cron_check_batch'];
-		$links      = $this->db->get_links_for_cron_check( $batch, $schedule['recheck_days'], $schedule['broken_recheck_days'] );
+		$schedule = TSOLIIN_Schedule::get_settings();
+		$batch    = $schedule['cron_check_batch'];
+		$links    = $this->db->get_links_for_cron_check( $batch, $schedule['recheck_days'], $schedule['broken_recheck_days'] );
 
 		if ( empty( $links ) ) {
 			// No links needed checking. Do NOT update last_check_batch timestamp
@@ -149,7 +181,7 @@ class TSOLIIN_Cron {
 
 		$checked        = 0;
 		$newly_detected = array();
-		$started_at = microtime( true );
+		$started_at     = microtime( true );
 		foreach ( $links as $link ) {
 			if ( ( microtime( true ) - $started_at ) >= 45 ) {
 				break;
@@ -166,7 +198,7 @@ class TSOLIIN_Cron {
 			if ( ! empty( $item ) ) {
 				$newly_detected[] = $item;
 			}
-			$checked++;
+			++$checked;
 		}
 
 		// Only update timestamp when links were actually checked.
@@ -201,6 +233,12 @@ class TSOLIIN_Cron {
 		return $this->db->acquire_transient_lock( 'tsoliin_bg_lifecycle_start_lock', 15 );
 	}
 
+	/**
+	 * Start background scan.
+	 *
+	 * @param bool $resume Resume.
+	 * @param bool $spawn Whether to spawn a background worker.
+	 */
 	public function start_bg_scan( $resume = true, $spawn = true ) {
 		if ( get_option( 'tsoliin_bg_check_running' ) ) {
 			$this->stop_bg_check();
@@ -222,7 +260,7 @@ class TSOLIIN_Cron {
 				}
 				$this->schedule_bg_scan_step_if_needed( $spawn ? 0 : self::BG_RECOVERY_DELAY );
 				if ( $spawn ) {
-					spawn_cron();
+					$this->spawn_cron_safely();
 				}
 				return true;
 			}
@@ -238,9 +276,8 @@ class TSOLIIN_Cron {
 			$page     = max( 1, (int) get_option( 'tsoliin_bg_scan_page', 1 ) );
 			$scanned  = (int) get_option( 'tsoliin_bg_scan_scanned', 0 );
 
-			if ( $resume && ! $complete ) {
-				// Keep stored post and extended-source cursors.
-			} else {
+			// On resume of an unfinished run, keep stored post and extended-source cursors.
+			if ( ! $resume || $complete ) {
 				$this->reset_bg_scan_cursors();
 				$page    = 1;
 				$scanned = 0;
@@ -260,7 +297,7 @@ class TSOLIIN_Cron {
 			wp_clear_scheduled_hook( self::HOOK_BG_SCAN_STEP );
 			wp_schedule_single_event( time() + ( $spawn ? 0 : self::BG_RECOVERY_DELAY ), self::HOOK_BG_SCAN_STEP );
 			if ( $spawn ) {
-				spawn_cron();
+				$this->spawn_cron_safely();
 			}
 			return true;
 		} finally {
@@ -464,7 +501,73 @@ class TSOLIIN_Cron {
 	}
 
 	/**
-	 * Keep PHP working after the browser leaves the plugin screen.
+	 * Whether WordPress core is installing updates right now.
+	 *
+	 * While core, plugin, theme or translation updates run, WordPress puts the
+	 * site in maintenance mode (the .maintenance file). Running a heavy worker
+	 * in the same WP-Cron request can push that request past the host time
+	 * limit and leave the site stuck in maintenance mode, so workers yield.
+	 *
+	 * @return bool
+	 */
+	private function is_core_update_in_progress() {
+		if ( function_exists( 'wp_is_maintenance_mode' ) && wp_is_maintenance_mode() ) {
+			return true;
+		}
+		if ( file_exists( ABSPATH . '.maintenance' ) ) {
+			return true;
+		}
+		return (bool) get_option( 'auto_updater.lock' ) || (bool) get_option( 'core_updater.lock' );
+	}
+
+	/**
+	 * Whether core update checks are due in this WP-Cron run.
+	 *
+	 * WP-Cron runs every due event in one PHP request. When a core update
+	 * check (which may auto-install updates) is due, the worker steps aside so
+	 * the updater gets the full request time.
+	 *
+	 * @return bool
+	 */
+	private function core_update_events_due() {
+		if ( ! wp_doing_cron() ) {
+			return false;
+		}
+		$now = time();
+		foreach ( array( 'wp_version_check', 'wp_update_plugins', 'wp_update_themes', 'wp_maybe_auto_update' ) as $hook ) {
+			$next = wp_next_scheduled( $hook );
+			if ( false !== $next && (int) $next <= $now ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether a background worker should wait instead of running now.
+	 *
+	 * @param bool $spawn True when running from WP-Cron.
+	 * @return bool
+	 */
+	private function should_yield_to_core_updates( $spawn ) {
+		if ( $this->is_core_update_in_progress() ) {
+			return true;
+		}
+		return $spawn && $this->core_update_events_due();
+	}
+
+	/**
+	 * Spawn WP-Cron unless WordPress is installing updates.
+	 */
+	private function spawn_cron_safely() {
+		if ( $this->is_core_update_in_progress() ) {
+			return;
+		}
+		spawn_cron();
+	}
+
+	/**
+	 * Keep the worker running if the admin closes the tab mid-batch.
 	 */
 	private function ignore_worker_abort() {
 		if ( function_exists( 'ignore_user_abort' ) ) {
@@ -484,6 +587,10 @@ class TSOLIIN_Cron {
 	public function run_bg_scan_step( $max_batches = null, $spawn = true, $budget_override = null ) {
 		if ( ! get_option( 'tsoliin_bg_scan_running' ) ) {
 			return 'idle';
+		}
+		if ( $this->should_yield_to_core_updates( $spawn ) ) {
+			$this->schedule_bg_scan_step_if_needed( self::CORE_UPDATE_RETRY_DELAY );
+			return 'busy';
 		}
 		$resting = $this->rest_remaining( self::OPT_SCAN_REST_UNTIL );
 		if ( $resting > 0 ) {
@@ -625,12 +732,12 @@ class TSOLIIN_Cron {
 	 * @return bool True when every enabled source completed a full cycle.
 	 */
 	private function process_bg_scan_extended_phases( $started_at, $run_token, $budget = 0 ) {
-		$budget = $budget > 0 ? (float) $budget : (float) self::BG_CRON_TIME_BUDGET;
-		$phases = $this->get_bg_scan_extended_phases();
-		$phase  = (string) get_option( 'tsoliin_bg_scan_phase', $this->get_first_bg_scan_extended_phase() );
-		$index  = array_search( $phase, array_keys( $phases ), true );
-		$index  = false === $index ? 0 : (int) $index;
-		$names  = array_keys( $phases );
+		$budget         = $budget > 0 ? (float) $budget : (float) self::BG_CRON_TIME_BUDGET;
+		$phases         = $this->get_bg_scan_extended_phases();
+		$phase          = (string) get_option( 'tsoliin_bg_scan_phase', $this->get_first_bg_scan_extended_phase() );
+		$index          = array_search( $phase, array_keys( $phases ), true );
+		$index          = false === $index ? 0 : (int) $index;
+		$names          = array_keys( $phases );
 		$cursor_options = array(
 			'comments' => 'tsoliin_comment_scan_after_id',
 			'menus'    => 'tsoliin_menu_scan_after_id',
@@ -638,8 +745,9 @@ class TSOLIIN_Cron {
 			'fse'      => 'tsoliin_fse_scan_after_id',
 			'widgets'  => 'tsoliin_widget_scan_after_index',
 		);
+		$names_count    = count( $names );
 
-		while ( $index < count( $names ) && ( microtime( true ) - $started_at ) < $budget ) {
+		while ( $index < $names_count && ( microtime( true ) - $started_at ) < $budget ) {
 			if ( ! $this->is_bg_scan_run_active( $run_token ) ) {
 				return false;
 			}
@@ -726,7 +834,11 @@ class TSOLIIN_Cron {
 		return $phases;
 	}
 
-	/** @return string */
+	/**
+	 * Get the first background scan extended phase.
+	 *
+	 * @return string
+	 */
 	private function get_first_bg_scan_extended_phase() {
 		$names = array_keys( $this->get_bg_scan_extended_phases() );
 		return isset( $names[0] ) ? $names[0] : 'done';
@@ -734,6 +846,8 @@ class TSOLIIN_Cron {
 
 	/**
 	 * Mark a background scan complete and persist summary options.
+	 *
+	 * @param string $run_token Run generation token.
 	 */
 	private function finalize_bg_scan_completion( $run_token = '' ) {
 		if ( '' !== $run_token && ! $this->is_bg_scan_run_active( $run_token ) ) {
@@ -816,6 +930,7 @@ class TSOLIIN_Cron {
 	/**
 	 * Schedule the next background scan cron step when none is pending.
 	 *
+	 * @param int $delay Seconds before the next worker runs.
 	 * @return void
 	 */
 	private function schedule_bg_scan_step_if_needed( $delay = 0 ) {
@@ -830,14 +945,22 @@ class TSOLIIN_Cron {
 		wp_schedule_single_event( time() + self::BG_RECOVERY_DELAY, self::HOOK_BG_SCAN_STEP );
 	}
 
-	/** @param int $delay Seconds before the next worker. */
+	/**
+	 * Reschedule background scan step.
+	 *
+	 * @param int $delay Seconds before the next worker.
+	 */
 	private function reschedule_bg_scan_step( $delay ) {
 		wp_clear_scheduled_hook( self::HOOK_BG_SCAN_STEP );
 		wp_schedule_single_event( time() + max( 0, absint( $delay ) ), self::HOOK_BG_SCAN_STEP );
-		spawn_cron();
+		$this->spawn_cron_safely();
 	}
 
-	/** @param string $run_token Scan generation token. */
+	/**
+	 * Whether background scan run active.
+	 *
+	 * @param string $run_token Scan generation token.
+	 */
 	private function is_bg_scan_run_active( $run_token ) {
 		return get_option( 'tsoliin_bg_scan_running' )
 			&& '' !== $run_token
@@ -847,6 +970,7 @@ class TSOLIIN_Cron {
 	/**
 	 * Schedule the next background check cron step when none is pending.
 	 *
+	 * @param int $delay Seconds before the next worker runs.
 	 * @return void
 	 */
 	private function schedule_bg_check_step_if_needed( $delay = 0 ) {
@@ -861,14 +985,22 @@ class TSOLIIN_Cron {
 		wp_schedule_single_event( time() + self::BG_RECOVERY_DELAY, self::HOOK_BG_STEP );
 	}
 
-	/** @param int $delay Seconds before the next worker. */
+	/**
+	 * Reschedule background check step.
+	 *
+	 * @param int $delay Seconds before the next worker.
+	 */
 	private function reschedule_bg_check_step( $delay ) {
 		wp_clear_scheduled_hook( self::HOOK_BG_STEP );
 		wp_schedule_single_event( time() + max( 0, absint( $delay ) ), self::HOOK_BG_STEP );
-		spawn_cron();
+		$this->spawn_cron_safely();
 	}
 
-	/** @param string $run_token Check generation token. */
+	/**
+	 * Whether background check run active.
+	 *
+	 * @param string $run_token Check generation token.
+	 */
 	private function is_bg_check_run_active( $run_token ) {
 		return get_option( 'tsoliin_bg_check_running' )
 			&& '' !== $run_token
@@ -896,7 +1028,7 @@ class TSOLIIN_Cron {
 		if ( $running && '' !== $started && ( time() - (int) strtotime( $started ) ) > 20 ) {
 			// Extra sources after 205/205 still need a worker; WP-Cron loopback often never fires.
 			$this->schedule_bg_scan_step_if_needed( 0 );
-			spawn_cron();
+			$this->spawn_cron_safely();
 		}
 
 		if ( $scanned > $total ) {
@@ -960,7 +1092,7 @@ class TSOLIIN_Cron {
 			'terms'    => 'tsoliin_term_scan_after_id',
 			'fse'      => 'tsoliin_fse_scan_after_id',
 		);
-		$phase = (string) $phase;
+		$phase   = (string) $phase;
 		if ( ! isset( $cursors[ $phase ] ) ) {
 			return 0.0;
 		}
@@ -1064,7 +1196,7 @@ class TSOLIIN_Cron {
 					}
 					$this->schedule_bg_check_step_if_needed( $spawn ? 0 : self::BG_RECOVERY_DELAY );
 					if ( $spawn ) {
-						spawn_cron();
+						$this->spawn_cron_safely();
 					}
 					return true;
 				}
@@ -1124,7 +1256,7 @@ class TSOLIIN_Cron {
 			}
 			wp_schedule_single_event( time() + ( $spawn ? 0 : self::BG_RECOVERY_DELAY ), self::HOOK_BG_STEP );
 			if ( $spawn ) {
-				spawn_cron();
+				$this->spawn_cron_safely();
 			}
 			return true;
 		} finally {
@@ -1176,6 +1308,10 @@ class TSOLIIN_Cron {
 	public function run_bg_step( $batch_size = null, $spawn = true, $budget_override = null ) {
 		if ( ! get_option( 'tsoliin_bg_check_running' ) ) {
 			return 'idle';
+		}
+		if ( $this->should_yield_to_core_updates( $spawn ) ) {
+			$this->schedule_bg_check_step_if_needed( self::CORE_UPDATE_RETRY_DELAY );
+			return 'busy';
 		}
 		$resting = $this->rest_remaining( self::OPT_CHECK_REST_UNTIL );
 		if ( $resting > 0 ) {
@@ -1298,7 +1434,9 @@ class TSOLIIN_Cron {
 	 *
 	 * Never abandons unchecked links: a full Check now / Scan→Check run must reach 100%.
 	 *
-	 * @param int $post_id Scope (0 = site-wide).
+	 * @param int    $post_id Scope (0 = site-wide).
+	 * @param string $run_token Run generation token.
+	 * @param bool   $spawn Whether to spawn a background worker.
 	 * @return bool True when a follow-up step was scheduled.
 	 */
 	private function maybe_reschedule_bg_check( $post_id, $run_token = '', $spawn = true ) {
@@ -1365,7 +1503,7 @@ class TSOLIIN_Cron {
 
 		if ( $running ) {
 			$this->schedule_bg_check_step_if_needed();
-			spawn_cron();
+			$this->spawn_cron_safely();
 			return;
 		}
 
@@ -1405,11 +1543,13 @@ class TSOLIIN_Cron {
 			$nudge = true;
 		}
 		if ( $nudge ) {
-			spawn_cron();
+			$this->spawn_cron_safely();
 		}
 	}
 
 	/**
+	 * Whether background heartbeat stale.
+	 *
 	 * @param string $option_key Option holding a MySQL UTC datetime.
 	 * @param int    $seconds    Stale after this many seconds.
 	 * @return bool
@@ -1456,6 +1596,8 @@ class TSOLIIN_Cron {
 	}
 
 	/**
+	 * Whether cron event overdue.
+	 *
 	 * @param string $hook Cron hook.
 	 * @return bool True when the next event is missing or already due.
 	 */
@@ -1465,6 +1607,8 @@ class TSOLIIN_Cron {
 	}
 
 	/**
+	 * Clear hook events.
+	 *
 	 * @param string $hook Cron hook.
 	 */
 	private function clear_hook_events( $hook ) {
@@ -1521,6 +1665,7 @@ class TSOLIIN_Cron {
 	/**
 	 * Mark a background check run complete and run post-check maintenance.
 	 *
+	 * @param string $run_token Run generation token.
 	 * @return void
 	 */
 	private function finalize_bg_check_completion( $run_token = '' ) {
@@ -1560,12 +1705,12 @@ class TSOLIIN_Cron {
 	 * @return array{ running: bool, checked: int, total: int, pct: int, post_id: int, pending: int }
 	 */
 	public function get_bg_progress() {
-		$running = (bool) get_option( 'tsoliin_bg_check_running', 0 );
+		$running  = (bool) get_option( 'tsoliin_bg_check_running', 0 );
 		$complete = (bool) get_option( 'tsoliin_bg_check_complete', 0 );
-		$checked = (int)  get_option( 'tsoliin_bg_check_checked', 0 );
-		$total   = (int)  get_option( 'tsoliin_bg_check_total',   0 );
-		$started = (string) get_option( 'tsoliin_bg_check_started', '' );
-		$post_id = absint( get_option( 'tsoliin_bg_check_post_id', 0 ) );
+		$checked  = (int) get_option( 'tsoliin_bg_check_checked', 0 );
+		$total    = (int) get_option( 'tsoliin_bg_check_total', 0 );
+		$started  = (string) get_option( 'tsoliin_bg_check_started', '' );
+		$post_id  = absint( get_option( 'tsoliin_bg_check_post_id', 0 ) );
 
 		// Auto-clear stale running flag (> 30 min without heartbeat).
 		if ( $running && '' !== $started ) {
@@ -1575,7 +1720,7 @@ class TSOLIIN_Cron {
 				if ( $stale_pending > 0 ) {
 					// Work remains — reschedule without faking a successful batch heartbeat.
 					$this->schedule_bg_check_step_if_needed();
-					spawn_cron();
+					$this->spawn_cron_safely();
 				} else {
 					$this->finalize_bg_check_completion();
 					$running  = false;
@@ -1612,13 +1757,13 @@ class TSOLIIN_Cron {
 		}
 
 		return array(
-			'running' => $running,
-			'checked' => $checked,
-			'total'   => $total,
-			'pct'     => $pct,
-			'post_id' => $post_id,
-			'pending' => $pending,
-			'complete'=> $complete,
+			'running'  => $running,
+			'checked'  => $checked,
+			'total'    => $total,
+			'pct'      => $pct,
+			'post_id'  => $post_id,
+			'pending'  => $pending,
+			'complete' => $complete,
 		);
 	}
 
@@ -1845,13 +1990,13 @@ class TSOLIIN_Cron {
 		if ( ! in_array( $mode, array( 'immediate', 'confirmed' ), true ) ) {
 			return null;
 		}
-		$prev_failures = max( 0, (int) $prev_failures );
+		$prev_failures   = max( 0, (int) $prev_failures );
 		$was_hard_broken = $this->is_hard_broken_status(
 			! empty( $link->is_broken ),
 			isset( $link->redirect_url ) ? (string) $link->redirect_url : '',
 			isset( $link->status_code ) ? (int) $link->status_code : 0
 		);
-		$is_hard_broken = $this->is_hard_broken_status(
+		$is_hard_broken  = $this->is_hard_broken_status(
 			! empty( $r['is_broken'] ),
 			isset( $r['redirect_url'] ) ? (string) $r['redirect_url'] : '',
 			isset( $r['status_code'] ) ? (int) $r['status_code'] : 0
@@ -1875,11 +2020,11 @@ class TSOLIIN_Cron {
 			$post_title = (string) get_the_title( $post_id );
 		}
 		return array(
-			'id'         => isset( $link->id ) ? absint( $link->id ) : 0,
-			'link_url'   => isset( $link->link_url ) ? (string) $link->link_url : '',
-			'status_code'=> isset( $r['status_code'] ) ? (int) $r['status_code'] : 0,
-			'post_id'    => $post_id,
-			'post_title' => $post_title,
+			'id'          => isset( $link->id ) ? absint( $link->id ) : 0,
+			'link_url'    => isset( $link->link_url ) ? (string) $link->link_url : '',
+			'status_code' => isset( $r['status_code'] ) ? (int) $r['status_code'] : 0,
+			'post_id'     => $post_id,
+			'post_title'  => $post_title,
 		);
 	}
 
@@ -1895,7 +2040,7 @@ class TSOLIIN_Cron {
 		$locked   = false;
 		while ( $attempts < 8 && ! $this->db->acquire_transient_lock( $lock_key, 10 ) ) {
 			usleep( 25000 );
-			$attempts++;
+			++$attempts;
 		}
 		$locked = ( $attempts < 8 );
 		if ( ! $locked ) {
@@ -1906,7 +2051,7 @@ class TSOLIIN_Cron {
 		if ( ! is_array( $queue ) ) {
 			$queue = array();
 		}
-		$key = ! empty( $item['id'] ) ? 'id-' . absint( $item['id'] ) : md5( wp_json_encode( $item ) );
+		$key           = ! empty( $item['id'] ) ? 'id-' . absint( $item['id'] ) : md5( wp_json_encode( $item ) );
 		$queue[ $key ] = $item;
 		// Keep queue bounded.
 		if ( count( $queue ) > 300 ) {
@@ -1932,10 +2077,10 @@ class TSOLIIN_Cron {
 			return true;
 		}
 
-		$items          = array_values( $items );
-		$items_count    = count( $items );
-		$site_name      = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
-		$subject        = sprintf(
+		$items       = array_values( $items );
+		$items_count = count( $items );
+		$site_name   = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+		$subject     = sprintf(
 			/* translators: 1: site name, 2: count */
 			__( '[%1$s] Broken links report (%2$d)', 'tso-link-inspector' ),
 			$site_name,

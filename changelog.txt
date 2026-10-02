@@ -4,6 +4,25 @@ Current releases are listed in readme.txt.
 
 == Changelog ==
 
+= 2.5.0 =
+* Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
+* Fix: on posts with many links, the list re-queried the same post's content from the database for every row that belonged to it (up to 3 times per row across the title, view, and edit links), instead of reusing the post already fetched for an earlier row; a request-level cache now keeps this to one lookup per post per page load.
+* Fix: the "Edit post" and "View post" links for each row asked WordPress for the post by ID, which re-queries the database when that post isn't already in WordPress's own cache; they now reuse the post already fetched for that row, removing another source of repeated queries.
+* Fix: some of the plugin's own background scan/check progress options could still be marked to autoload in the database from older versions, so WordPress reloaded its entire options table on every scan/check "tick" that updated them; these are now normalized to not autoload on upgrade, matching what the code already requests.
+
+= 2.4.9 =
+* Fix: link list column headers (e.g. Last checked) could drift out of alignment with their own column depending on how long that site's URLs/titles were; column widths are now fixed instead of recalculated from content.
+* Improvement: Last checked now always shows dd/mm/yyyy 24h time, instead of following each site's own date/time format setting.
+* Fix: disabling WooCommerce product scanning no longer leaves "Product" permanently and silently checked in the Content types list; products are only scanned as generic content while WooCommerce scanning is enabled.
+* Fix: the "Last checked" column header could wrap onto two lines, pushing its sort arrow below the text instead of beside it like the other columns; the column is now wide enough for the label to stay on one line.
+* Improvement: added a Type filter dropdown (Link, Image, Iframe, Comment, Menu, etc.) to the link list, independent of the Status/Quality/Internal-External filters and the dashboard stat cards.
+* Fix: enabling "Media (attachment)" under Content types scanned almost no media items, because WordPress stores attachments with post_status "inherit" (not "publish"); the scan now also accepts "inherit" for attachments.
+* Fix: an absolute server filesystem path stored in another plugin's postmeta (e.g. a backup-file path starting with "/home/.../public_html/...") could be mistaken for a site-relative URL and checked as a bogus link at the domain root (always reporting 404 even though the real file exists); such paths are now recognized and skipped.
+
+= 2.4.8 =
+* Fix: Mobile and web view in night mode
+* Fix: Unresolved template placeholders (e.g. `${sec.image}`, `{{state.logo}}`) are no longer scanned as broken links; a rescan clears any already-stored placeholder rows.
+
 = 2.4.7 =
 * Fix: Scan deduplication treats Jetpack Photon image URLs (`i0.wp.com`/`i1.wp.com`/`i2.wp.com`) with resize query params (`?h=&w=…`) as the same resource as the plain file URL (only one row is stored; broken duplicate no longer reappears as "Not checked" after each rescan).
 * Fix: URLs extracted from `srcset` (and the plain-regex link fallback) are HTML-entity-decoded before being stored, so `&#038;` no longer gets misread as the start of a URL fragment (`...jpg#038;w=460&ssl=1`) — this was creating extra unchecked duplicate rows for the same Jetpack Photon image on top of the dedup fix above.

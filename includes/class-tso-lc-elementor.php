@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Elementor / ACF dynamic tag resolution in builder JSON.
  *
@@ -142,7 +142,7 @@ class TSOLIIN_Elementor {
 		$prev_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
 		$post_obj  = get_post( $post_id );
 		if ( $post_obj ) {
-			$GLOBALS['post'] = $post_obj;
+			$GLOBALS['post'] = $post_obj; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentional: Elementor needs the global post while rendering; restored in finally.
 			setup_postdata( $post_obj );
 		}
 		try {
@@ -152,7 +152,7 @@ class TSOLIIN_Elementor {
 				$el_db->restore_current_post();
 			}
 			if ( $prev_post instanceof WP_Post ) {
-				$GLOBALS['post'] = $prev_post;
+				$GLOBALS['post'] = $prev_post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentional: Elementor needs the global post while rendering; restored in finally.
 				setup_postdata( $prev_post );
 			} else {
 				wp_reset_postdata();
@@ -161,6 +161,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Walk value.
+	 *
 	 * @param mixed $value   Nested builder value.
 	 * @param int   $post_id Post ID.
 	 * @param array $out     Items (by ref).
@@ -193,6 +195,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Collect tags from string.
+	 *
 	 * @param string $text    Raw string.
 	 * @param int    $post_id Post ID.
 	 * @param array  $out     Items (by ref).
@@ -221,6 +225,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Resolve elementor tag.
+	 *
 	 * @param string $tag_text Tag markup.
 	 * @param int    $post_id  Post ID.
 	 * @return array[]
@@ -246,8 +252,8 @@ class TSOLIIN_Elementor {
 						return '';
 					}
 				);
-				$anchor = self::tag_anchor( $tag_text );
-				$type   = self::tag_link_type( $tag_text );
+				$anchor  = self::tag_anchor( $tag_text );
+				$type    = self::tag_link_type( $tag_text );
 				foreach ( self::urls_from_resolved_content( $content ) as $url ) {
 					$items[] = array(
 						'url'    => $url,
@@ -308,6 +314,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Resolve ACF shortcode.
+	 *
 	 * @param string $shortcode Shortcode markup.
 	 * @param int    $post_id   Default post ID.
 	 * @return array[]
@@ -342,6 +350,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * URLs from ACF value.
+	 *
 	 * @param mixed $value ACF field value.
 	 * @return string[]
 	 */
@@ -383,6 +393,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * URLs from resolved content.
+	 *
 	 * @param string $content Resolved tag content.
 	 * @return string[]
 	 */
@@ -412,6 +424,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Parse tag attributes.
+	 *
 	 * @param string $tag_text Tag markup.
 	 * @return array<string,string>
 	 */
@@ -426,6 +440,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Decode tag settings.
+	 *
 	 * @param string $raw Encoded settings attribute.
 	 * @return array
 	 */
@@ -439,6 +455,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Tag anchor.
+	 *
 	 * @param string $tag_text Tag markup.
 	 * @return string
 	 */
@@ -454,6 +472,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Tag link type.
+	 *
 	 * @param string $tag_text Tag markup.
 	 * @return string
 	 */
@@ -467,6 +487,8 @@ class TSOLIIN_Elementor {
 	}
 
 	/**
+	 * Push item.
+	 *
 	 * @param array  $out     Items (by ref).
 	 * @param string $url     URL.
 	 * @param string $anchor  Anchor.

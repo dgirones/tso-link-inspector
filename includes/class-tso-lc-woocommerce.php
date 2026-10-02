@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Optional WooCommerce product link sources.
  *
@@ -150,8 +150,9 @@ class TSOLIIN_WooCommerce {
 					$ids[] = $vid;
 				}
 			}
-			$page++;
-		} while ( count( $batch ) === $per_page );
+			++$page;
+			$batch_count = count( $batch );
+		} while ( $per_page === $batch_count );
 
 		return $ids;
 	}
@@ -328,6 +329,8 @@ class TSOLIIN_WooCommerce {
 	}
 
 	/**
+	 * Looks like URL.
+	 *
 	 * @param string $url Candidate.
 	 * @return bool
 	 */
@@ -343,6 +346,8 @@ class TSOLIIN_WooCommerce {
 	}
 
 	/**
+	 * URLs loosely equal.
+	 *
 	 * @param string $a First URL.
 	 * @param string $b Second URL.
 	 * @return bool

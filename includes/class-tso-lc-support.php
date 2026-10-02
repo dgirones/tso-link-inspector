@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Support / donation helpers (TSO brand).
  *
@@ -38,7 +38,11 @@ class TSOLIIN_Support {
 	 */
 	private static $inline_edit_link_cache = array();
 
-	/** @var array<string,bool> Request-scoped should_focus_link_in_post_content() results. */
+	/**
+	 * Request-scoped should_focus_link_in_post_content() results.
+	 *
+	 * @var array<string,bool>
+	 */
 	private static $focus_in_post_content_cache = array();
 
 	/**
@@ -92,9 +96,9 @@ class TSOLIIN_Support {
 	public static function render_donate_button() {
 		?>
 		<a class="tsoliin-donate-btn"
-		   href="<?php echo esc_url( self::get_kofi_donate_url() ); ?>"
-		   target="_blank"
-		   rel="noopener noreferrer">
+			href="<?php echo esc_url( self::get_kofi_donate_url() ); ?>"
+			target="_blank"
+			rel="noopener noreferrer">
 			<?php echo esc_html( self::get_donate_label() ); ?>
 		</a>
 		<?php
@@ -178,23 +182,41 @@ class TSOLIIN_Support {
 		}
 
 		if ( 0 === strpos( $tz, 'Europe/' ) ) {
-			return array( 'lat' => 41.39, 'lng' => 2.17 );
+			return array(
+				'lat' => 41.39,
+				'lng' => 2.17,
+			);
 		}
 		if ( 0 === strpos( $tz, 'America/' ) ) {
-			return array( 'lat' => 19.43, 'lng' => -99.13 );
+			return array(
+				'lat' => 19.43,
+				'lng' => -99.13,
+			);
 		}
 		if ( 0 === strpos( $tz, 'Atlantic/' ) ) {
-			return array( 'lat' => 28.29, 'lng' => -16.63 );
+			return array(
+				'lat' => 28.29,
+				'lng' => -16.63,
+			);
 		}
 		if ( 0 === strpos( $tz, 'Asia/' ) ) {
-			return array( 'lat' => 35.68, 'lng' => 139.69 );
+			return array(
+				'lat' => 35.68,
+				'lng' => 139.69,
+			);
 		}
 		if ( 0 === strpos( $tz, 'Australia/' ) || 0 === strpos( $tz, 'Pacific/' ) ) {
-			return array( 'lat' => -33.87, 'lng' => 151.21 );
+			return array(
+				'lat' => -33.87,
+				'lng' => 151.21,
+			);
 		}
 
 		// Default: Iberian Peninsula.
-		return array( 'lat' => 41.39, 'lng' => 2.17 );
+		return array(
+			'lat' => 41.39,
+			'lng' => 2.17,
+		);
 	}
 
 	/**
@@ -624,6 +646,11 @@ class TSOLIIN_Support {
 		return $post_id;
 	}
 
+	/**
+	 * Get the post frontend view URL for link.
+	 *
+	 * @param mixed $link Link.
+	 */
 	public static function get_post_frontend_view_url_for_link( $link ) {
 		if ( ! $link || empty( $link->post_id ) ) {
 			return '';
@@ -817,8 +844,8 @@ class TSOLIIN_Support {
 
 		$parsed_focus = wp_parse_url( $url );
 		if ( is_array( $parsed_focus ) && ! empty( $parsed_focus['query'] ) && ! empty( $parsed_focus['host'] ) ) {
-			$scheme = isset( $parsed_focus['scheme'] ) ? (string) $parsed_focus['scheme'] : 'https';
-			$path   = isset( $parsed_focus['path'] ) ? (string) $parsed_focus['path'] : '';
+			$scheme     = isset( $parsed_focus['scheme'] ) ? (string) $parsed_focus['scheme'] : 'https';
+			$path       = isset( $parsed_focus['path'] ) ? (string) $parsed_focus['path'] : '';
 			$variants[] = $scheme . '://' . $parsed_focus['host'] . $path;
 		}
 
@@ -833,8 +860,8 @@ class TSOLIIN_Support {
 		$attachment_id = self::resolve_attachment_id_from_url( $url );
 
 		$classic_gallery = false;
-		$gallery_ids       = array();
-		$gallery_index     = -1;
+		$gallery_ids     = array();
+		$gallery_index   = -1;
 		if ( $post instanceof WP_Post && 'image' === $link_type && $attachment_id > 0 ) {
 			$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
 			if ( $scanner && method_exists( $scanner, 'get_classic_gallery_focus_context' ) ) {
@@ -870,20 +897,20 @@ class TSOLIIN_Support {
 		}
 
 		return array(
-			'variants'        => array_values( array_unique( array_filter( array_merge( $variants, $extra ) ) ) ),
-			'attrs'           => self::get_focus_attributes_for_link_type( $link_type ),
-			'linkType'        => $link_type,
-			'inPostContent'   => $in_post_content ? 1 : 0,
-			'metaKeyHint'     => $meta_key_hint,
-			'contentNeedle'   => $content_needle,
-			'attachmentId'    => $attachment_id,
-			'fileName'        => self::file_name_from_url( $url ),
-			'isBlockEditor'   => $is_block_editor ? 1 : 0,
-			'classicGallery'  => $classic_gallery ? 1 : 0,
-			'galleryIds'      => $gallery_ids,
-			'galleryIndex'    => $gallery_index,
-			'preferTextMode'  => $prefer_text_mode ? 1 : 0,
-			'youtubeVideoId'  => $youtube_id,
+			'variants'       => array_values( array_unique( array_filter( array_merge( $variants, $extra ) ) ) ),
+			'attrs'          => self::get_focus_attributes_for_link_type( $link_type ),
+			'linkType'       => $link_type,
+			'inPostContent'  => $in_post_content ? 1 : 0,
+			'metaKeyHint'    => $meta_key_hint,
+			'contentNeedle'  => $content_needle,
+			'attachmentId'   => $attachment_id,
+			'fileName'       => self::file_name_from_url( $url ),
+			'isBlockEditor'  => $is_block_editor ? 1 : 0,
+			'classicGallery' => $classic_gallery ? 1 : 0,
+			'galleryIds'     => $gallery_ids,
+			'galleryIndex'   => $gallery_index,
+			'preferTextMode' => $prefer_text_mode ? 1 : 0,
+			'youtubeVideoId' => $youtube_id,
 		);
 	}
 
@@ -919,7 +946,7 @@ class TSOLIIN_Support {
 		}
 		$norm_key = self::attachment_url_cache_key( $normalized );
 		if ( $normalized !== $url && array_key_exists( $norm_key, self::$attachment_id_by_url ) ) {
-			$id = (int) self::$attachment_id_by_url[ $norm_key ];
+			$id                                       = (int) self::$attachment_id_by_url[ $norm_key ];
 			self::$attachment_id_by_url[ $cache_key ] = $id;
 			return $id;
 		}
@@ -999,8 +1026,10 @@ class TSOLIIN_Support {
 			return 0;
 		}
 
-		$post_id = (int) $map[ $rel ];
-		return ( $post_id > 0 && 'attachment' === get_post_type( $post_id ) ) ? $post_id : 0;
+		// The map only contains attachments (the query joins wp_posts), so there
+		// is no per-id get_post_type() lookup here: that ran one SELECT per image
+		// while the links table was rendered.
+		return (int) $map[ $rel ];
 	}
 
 	/**
@@ -1036,7 +1065,10 @@ class TSOLIIN_Support {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
-			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_wp_attached_file'"
+			"SELECT pm.post_id, pm.meta_value
+				FROM {$wpdb->postmeta} pm
+				INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id AND p.post_type = 'attachment'
+				WHERE pm.meta_key = '_wp_attached_file'"
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
@@ -1074,7 +1106,7 @@ class TSOLIIN_Support {
 	 * @return string
 	 */
 	private static function attachment_url_cache_key( $url ) {
-		$url = trim( (string) $url );
+		$url  = trim( (string) $url );
 		$path = wp_parse_url( $url, PHP_URL_PATH );
 		if ( is_string( $path ) && '' !== $path ) {
 			return strtolower( $path );
@@ -1092,8 +1124,8 @@ class TSOLIIN_Support {
 		if ( ! empty( $link->id ) ) {
 			return 'id:' . absint( $link->id );
 		}
-		$url = isset( $link->link_url ) ? (string) $link->link_url : '';
-		$sk  = isset( $link->source_key ) ? (string) $link->source_key : '';
+		$url  = isset( $link->link_url ) ? (string) $link->link_url : '';
+		$sk   = isset( $link->source_key ) ? (string) $link->source_key : '';
 		$type = isset( $link->link_type ) ? (string) $link->link_type : '';
 		if ( '' === $url && '' === $sk ) {
 			return '';
@@ -1184,6 +1216,8 @@ class TSOLIIN_Support {
 	}
 
 	/**
+	 * Sanitize youtube video ID.
+	 *
 	 * @param string $id Raw candidate ID.
 	 * @return string
 	 */
@@ -1589,7 +1623,7 @@ class TSOLIIN_Support {
 	/**
 	 * Status column HTML for a link row (list table + AJAX).
 	 *
-	 * @param object           $item Link row.
+	 * @param object            $item Link row.
 	 * @param TSOLIIN_HTTP|null $http HTTP helper.
 	 * @return string
 	 */

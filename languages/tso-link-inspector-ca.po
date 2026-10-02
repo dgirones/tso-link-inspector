@@ -3576,3 +3576,22 @@ msgstr "altres fonts registrades"
 
 msgid "other sources"
 msgstr "altres fonts"
+
+msgid "A scan is already running. Showing its progress."
+msgstr "Ja hi ha un escaneig en marxa. Se'n mostra el progrés."
+
+msgid "How long a scan or check takes"
+msgstr "Quant triga un escaneig o una comprovació"
+
+msgid "Only one batch runs at a time, and each batch is followed by a pause of a similar length, so the plugin never takes more than about half of one PHP process. On shared hosting this keeps the admin usable while a scan runs. The progress bar spends its first 70% on posts and the rest on comments, menus, terms, templates and widgets; it names the source it is working on. A source with many items can hold the bar on the same number for minutes: that is the pause, not a hang. You can close the browser, the work continues on the server."
+msgstr "Només s'executa un lot alhora, i cada lot va seguit d'una pausa de durada semblant, de manera que el plugin mai ocupa més de la meitat d'un procés PHP. En allotjament compartit això manté l'escriptori utilitzable mentre s'escaneja. La barra dedica el seu primer 70% a les entrades i la resta a comentaris, menús, termes, plantilles i ginys; indica la font que està processant. Una font amb molts elements pot mantenir la barra en el mateix número durant minuts: és la pausa, no un bloqueig. Pots tancar el navegador, la feina continua al servidor."
+
+msgid "Scan now while a scan is running"
+msgstr "Escanejar ara mentre hi ha un escaneig en marxa"
+
+msgid "The button attaches to the run already in progress and shows its status instead of starting a second one. When a scan finishes, the links it just found are checked automatically; links checked earlier keep their status. Use Restart from zero when you want every link tested again."
+msgstr "El botó s'enganxa a l'escaneig que ja hi ha en marxa i en mostra l'estat en lloc d'iniciar-ne un altre. Quan acaba un escaneig, els enllaços acabats de trobar es comproven automàticament; els enllaços comprovats abans conserven el seu estat. Fes servir Reiniciar des de zero quan els vulguis tornar a comprovar tots."
+
+#: includes/class-tso-lc-admin.php
+msgid "WordPress is installing updates. This page will reload when they finish…"
+msgstr "WordPress està instal·lant actualitzacions. Aquesta pàgina es tornarà a carregar quan acabin…"

@@ -3756,3 +3756,22 @@ msgstr "otras fuentes registradas"
 
 msgid "other sources"
 msgstr "otras fuentes"
+
+msgid "A scan is already running. Showing its progress."
+msgstr "Ya hay un escaneo en marcha. Se muestra su progreso."
+
+msgid "How long a scan or check takes"
+msgstr "Cuánto tarda un escaneo o una comprobación"
+
+msgid "Only one batch runs at a time, and each batch is followed by a pause of a similar length, so the plugin never takes more than about half of one PHP process. On shared hosting this keeps the admin usable while a scan runs. The progress bar spends its first 70% on posts and the rest on comments, menus, terms, templates and widgets; it names the source it is working on. A source with many items can hold the bar on the same number for minutes: that is the pause, not a hang. You can close the browser, the work continues on the server."
+msgstr "Solo se ejecuta un lote cada vez, y cada lote va seguido de una pausa de duración similar, de modo que el plugin nunca ocupa más de la mitad de un proceso PHP. En alojamiento compartido esto mantiene el escritorio utilizable mientras se escanea. La barra dedica su primer 70% a las entradas y el resto a comentarios, menús, términos, plantillas y widgets; indica la fuente que está procesando. Una fuente con muchos elementos puede mantener la barra en el mismo número durante minutos: es la pausa, no un bloqueo. Puedes cerrar el navegador, el trabajo continúa en el servidor."
+
+msgid "Scan now while a scan is running"
+msgstr "Escanear ahora mientras hay un escaneo en marcha"
+
+msgid "The button attaches to the run already in progress and shows its status instead of starting a second one. When a scan finishes, the links it just found are checked automatically; links checked earlier keep their status. Use Restart from zero when you want every link tested again."
+msgstr "El botón se engancha al escaneo que ya está en marcha y muestra su estado en lugar de iniciar otro. Cuando termina un escaneo, los enlaces recién encontrados se comprueban automáticamente; los enlaces comprobados antes conservan su estado. Usa Reiniciar desde cero cuando quieras volver a comprobarlos todos."
+
+#: includes/class-tso-lc-admin.php
+msgid "WordPress is installing updates. This page will reload when they finish…"
+msgstr "WordPress está instalando actualizaciones. Esta página se recargará cuando terminen…"

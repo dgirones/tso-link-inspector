@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * HTML email notifications for broken links.
  *
@@ -86,6 +86,8 @@ class TSOLIIN_Email {
 	}
 
 	/**
+	 * Build broken links HTML.
+	 *
 	 * @param string $intro      Intro text.
 	 * @param array  $items      Normalized items.
 	 * @param int    $more_count Extra rows not shown.

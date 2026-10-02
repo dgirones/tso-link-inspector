@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * WordPress dashboard widget for Link Inspector.
  *
@@ -14,10 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class TSOLIIN_Dashboard {
 
-	/** @var TSOLIIN_DB */
+	/**
+	 * Database service instance.
+	 *
+	 * @var TSOLIIN_DB
+	 */
 	private $db;
 
 	/**
+	 * Set up the class dependencies.
+	 *
 	 * @param TSOLIIN_DB $db Database handler.
 	 */
 	public function __construct( TSOLIIN_DB $db ) {

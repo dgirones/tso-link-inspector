@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Third-party link source registry (Phase 2).
  *
@@ -15,7 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class TSOLIIN_Sources {
 
-	/** @var array<string, callable> */
+	/**
+	 * Callable>.
+	 *
+	 * @var array<string,
+	 */
 	private static $sources = array();
 
 	/**
@@ -38,6 +42,8 @@ class TSOLIIN_Sources {
 	}
 
 	/**
+	 * Get the registered.
+	 *
 	 * @return array<string, callable>
 	 */
 	public static function get_registered() {
@@ -73,7 +79,7 @@ class TSOLIIN_Sources {
 					continue;
 				}
 				if ( $scanner->upsert_external_item( $item, (string) $source_id ) ) {
-					$found++;
+					++$found;
 				}
 			}
 		}
@@ -98,6 +104,6 @@ class TSOLIIN_Sources {
  * @param callable $callback Collector returning link item arrays.
  * @return bool
  */
-function tsoliin_register_link_source( $id, $callback ) {
+function tsoliin_register_link_source( $id, $callback ) { // phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- Bootstrap helpers live next to the main class by design.
 	return TSOLIIN_Sources::register( $id, $callback );
 }

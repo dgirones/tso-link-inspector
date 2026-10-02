@@ -8,6 +8,80 @@
 ( function ( $ ) {
 	'use strict';
 
+	/**
+	 * Show (once) that WordPress is updating and the reload is on hold.
+	 */
+	function tsoliinShowUpdatingNotice() {
+		if ( document.getElementById( 'tsoliin-wp-updating' ) ) {
+			return;
+		}
+		var text = ( window.tsoliinData && tsoliinData.i18n && tsoliinData.i18n.wpUpdating ) ? tsoliinData.i18n.wpUpdating : 'WordPress is installing updates…';
+		var box  = $( '<div id="tsoliin-wp-updating" class="notice notice-warning inline"><p></p></div>' );
+		box.find( 'p' ).text( text );
+		var wrap = $( '.tsoliin-wrap' ).first();
+		if ( wrap.length ) {
+			wrap.prepend( box );
+		} else {
+			$( '#wpbody-content' ).prepend( box );
+		}
+	}
+
+	/**
+	 * Navigate to an admin URL without letting the WordPress maintenance page stick to it.
+	 *
+	 * While WordPress installs updates it answers every request with its maintenance
+	 * page (HTTP 503), and some hosts send that page with long browser-cache headers.
+	 * A reload in those seconds would keep showing "maintenance" for this URL until a
+	 * hard refresh. So: probe first and wait while the site answers 503, then load the
+	 * page with a one-off query arg (removed again by WordPress after load), so no
+	 * maintenance response can ever be cached under the real screen URL.
+	 *
+	 * @param {string} url     Target URL (defaults to the current page).
+	 * @param {number} attempt Internal retry counter.
+	 */
+	function tsoliinSafeNavigate( url, attempt ) {
+		var target = url || window.location.href;
+		attempt    = attempt || 0;
+		var go = function () {
+			var dest = target;
+			try {
+				var u = new URL( target, window.location.href );
+				if ( u.origin === window.location.origin ) {
+					u.searchParams.set( 'tsoliin_nc', String( Date.now() ) );
+					dest = u.toString();
+				}
+			} catch ( e ) {
+				dest = target;
+			}
+			window.location.assign( dest );
+		};
+		if ( ! window.fetch || ! window.URLSearchParams || ! window.tsoliinData || ! tsoliinData.ajaxUrl ) {
+			go();
+			return;
+		}
+		var body = new URLSearchParams();
+		body.set( 'action', 'tsoliin_ping' );
+		body.set( 'nonce', tsoliinData.nonce || '' );
+		window.fetch( tsoliinData.ajaxUrl, {
+			method      : 'POST',
+			credentials : 'same-origin',
+			cache       : 'no-store',
+			body        : body
+		} ).then( function ( res ) {
+			// WordPress ignores a stale .maintenance file after 10 minutes; stop waiting by then.
+			if ( 503 === res.status && attempt < 40 ) {
+				tsoliinShowUpdatingNotice();
+				window.setTimeout( function () {
+					tsoliinSafeNavigate( target, attempt + 1 );
+				}, 15000 );
+				return;
+			}
+			go();
+		} ).catch( function () {
+			go();
+		} );
+	}
+
 	var LC = {
 
 		// ---------------------------------------------------------------
@@ -508,7 +582,7 @@
 
 			if ( ! $target.length ) {
 				if ( opts.fallbackNavigate && params.href ) {
-					window.location.href = params.href;
+					tsoliinSafeNavigate( params.href );
 				}
 				return;
 			}
@@ -573,11 +647,11 @@
 								console.error( 'tsoliin list nav', err );
 							}
 							if ( opts.fallbackNavigate && params.href ) {
-								window.location.href = params.href;
+								tsoliinSafeNavigate( params.href );
 							}
 						}
 					} else if ( opts.fallbackNavigate && params.href ) {
-						window.location.href = params.href;
+						tsoliinSafeNavigate( params.href );
 					}
 				},
 				error: function ( xhr, status ) {
@@ -585,7 +659,7 @@
 						return;
 					}
 					if ( opts.fallbackNavigate && params.href ) {
-						window.location.href = params.href;
+						tsoliinSafeNavigate( params.href );
 					} else {
 						alert( tsoliinData.i18n.error );
 					}
@@ -634,7 +708,7 @@
 			opts = opts || {};
 			var params = this.parseListNavLink( href );
 			if ( ! params ) {
-				window.location.href = href;
+				tsoliinSafeNavigate( href );
 				return;
 			}
 			if ( opts.region ) {
@@ -1108,10 +1182,15 @@
 			var self = this;
 			var forceRestart = ( false === resume );
 			if ( self.scanning && ! forceRestart ) {
+				// A scan was already running when the page loaded: attach to it and
+				// say so, instead of the button appearing to do nothing.
 				self.scanAborted = false;
 				self.scanSessionActive = true;
 				self.startPolling();
 				self.scanTick();
+				if ( tsoliinData.i18n && tsoliinData.i18n.scanAlreadyRunning ) {
+					self.showNotice( tsoliinData.i18n.scanAlreadyRunning, 'info' );
+				}
 				return;
 			}
 			if ( self.scanning && forceRestart ) {
@@ -1895,7 +1974,7 @@
 					setTimeout( tryReload, 500 );
 					return;
 				}
-				window.location.reload();
+				tsoliinSafeNavigate();
 			};
 			setTimeout( tryReload, delayMs );
 		},
@@ -2049,7 +2128,7 @@
 						self.listReloadTimer = window.setTimeout( wait, 500 );
 						return;
 					}
-					window.location.reload();
+					tsoliinSafeNavigate();
 				};
 				wait();
 			}, delay || 1200 );
@@ -3216,7 +3295,7 @@
 							var isHttps = /^https:\/\//i.test( s.url || '' );
 							var code = parseInt( s.status_code, 10 );
 							var isBotBlock = ( 401 === code || 403 === code || 429 === code );
-							var isUnverifiedRemote = unverified || isBotBlock || ( 0 === code || -3 === code || -4 === code || -5 === code || -7 === code );
+							var isUnverifiedRemote = unverified || isBotBlock || ( 0 === code || -3 === code || -4 === code || -5 === code || -7 === code || -10 === code );
 							if ( ! actionable || isUnverifiedRemote ) {
 								conf = '⚠️';
 							} else if ( ! isHttps ) {

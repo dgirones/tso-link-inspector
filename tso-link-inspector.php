@@ -1,8 +1,8 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Plugin Name:       TSO Link Inspector
  * Description:       Find and fix broken links across your entire WordPress site without opening each post.
- * Version:           2.5.1
+ * Version:           2.5.4
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            Tu Soporte Online
@@ -19,12 +19,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TSOLIIN_VERSION',    '2.5.1' );
+define( 'TSOLIIN_VERSION', '2.5.4' );
 define( 'TSOLIIN_PLUGIN_FILE', __FILE__ );
-define( 'TSOLIIN_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
-define( 'TSOLIIN_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
+define( 'TSOLIIN_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'TSOLIIN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'TSOLIIN_TEXT_DOMAIN', 'tso-link-inspector' );
-define( 'TSOLIIN_BATCH_SIZE',  20 );
+define( 'TSOLIIN_BATCH_SIZE', 20 );
 
 /**
  * Whether the current request is a Link Inspector admin screen or plugin AJAX call.
@@ -51,32 +51,63 @@ function tsoliin_is_plugin_admin_request() {
 	return false;
 }
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed -- Bootstrap helpers live next to the main class by design.
+
 /**
  * Main plugin class.
  *
  * @since 1.0.0
  */
 final class TSOLIIN_Link_Inspector {
+	// phpcs:enable Universal.Files.SeparateFunctionsFromOO.Mixed
 
-	/** @var TSOLIIN_Link_Inspector|null */
+	/**
+	 * Instance.
+	 *
+	 * @var TSOLIIN_Link_Inspector|null
+	 */
 	private static $instance = null;
 
-	/** @var TSOLIIN_DB */
+	/**
+	 * Database service instance.
+	 *
+	 * @var TSOLIIN_DB
+	 */
 	public $db;
 
-	/** @var TSOLIIN_Scanner */
+	/**
+	 * Scanner service instance.
+	 *
+	 * @var TSOLIIN_Scanner
+	 */
 	public $scanner;
 
-	/** @var TSOLIIN_HTTP */
+	/**
+	 * HTTP service instance.
+	 *
+	 * @var TSOLIIN_HTTP
+	 */
 	public $http;
 
-	/** @var TSOLIIN_Cron */
+	/**
+	 * Cron service instance.
+	 *
+	 * @var TSOLIIN_Cron
+	 */
 	public $cron;
 
-	/** @var TSOLIIN_Admin|null */
+	/**
+	 * Admin.
+	 *
+	 * @var TSOLIIN_Admin|null
+	 */
 	public $admin;
 
-	/** @var array<string,string> */
+	/**
+	 * Runtime translations.
+	 *
+	 * @var array<string,string>
+	 */
 	private $runtime_translations = array();
 
 	/**
@@ -147,7 +178,7 @@ final class TSOLIIN_Link_Inspector {
 		// plugin_locale filter fires before JIT translation loading — must be registered here.
 		add_filter( 'plugin_locale', array( $this, 'force_plugin_locale' ), 10, 2 );
 		add_filter( 'gettext', array( $this, 'runtime_gettext_fallback' ), 999, 3 );
-		add_action( 'init',       array( $this, 'load_textdomain' ), 1 );
+		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_db' ) );
 		add_action( 'admin_init', array( $this, 'late_cleanup_legacy_pc_tables' ), 999 );
 		add_action( 'deleted_comment', array( $this, 'on_deleted_comment' ), 10, 2 );
@@ -327,7 +358,7 @@ final class TSOLIIN_Link_Inspector {
 			return 'en_US_no_translation';
 		}
 		if ( '' !== $language ) {
-			return $language; // e.g. 'es_ES' or 'ca'
+			return $language; // e.g. 'es_ES' or 'ca'.
 		}
 		return $locale; // Automatic: use site locale.
 	}
@@ -409,7 +440,7 @@ final class TSOLIIN_Link_Inspector {
 		return $map;
 	}
 
-	
+
 	/**
 	 * Drop legacy pc_ tables if another admin hook recreated them this request.
 	 */
@@ -592,7 +623,7 @@ final class TSOLIIN_Link_Inspector {
 	 * @param int        $comment_id Comment ID.
 	 * @param WP_Comment $comment    Comment object (may be empty in some WP versions).
 	 */
-	public function on_deleted_comment( $comment_id, $comment = null ) {
+	public function on_deleted_comment( $comment_id, $comment = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Parameter kept for the public/hook signature.
 		$this->db->delete_links_for_comment( (int) $comment_id );
 	}
 
@@ -823,16 +854,16 @@ final class TSOLIIN_Link_Inspector {
 			return;
 		}
 		$enqueued = true;
-		$link    = $request['link'];
-		$post_id = $request['post_id'];
+		$link     = $request['link'];
+		$post_id  = $request['post_id'];
 		wp_enqueue_style(
 			'tsoliin-focus-link',
 			TSOLIIN_PLUGIN_URL . 'assets/css/focus-link.css',
 			array(),
 			TSOLIIN_VERSION
 		);
-		$deps = array();
-		$post = get_post( $post_id );
+		$deps             = array();
+		$post             = get_post( $post_id );
 		$use_block_editor = TSOLIIN_Support::post_uses_block_editor( $post );
 		if ( $use_block_editor ) {
 			if ( wp_script_is( 'wp-data', 'registered' ) ) {
@@ -893,8 +924,8 @@ final class TSOLIIN_Link_Inspector {
 					continue;
 				}
 				$matched[ $variant ] = true;
-				$escaped = preg_quote( $variant, '#' );
-				$replaced = preg_replace_callback(
+				$escaped             = preg_quote( $variant, '#' );
+				$replaced            = preg_replace_callback(
 					'#<a(\s[^>]*href\s*=\s*["\']' . $escaped . '["\'][^>]*)>#i',
 					static function ( $m ) {
 						$attrs = $m[1];

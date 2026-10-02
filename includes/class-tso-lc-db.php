@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Database handler.
  *
@@ -21,28 +21,56 @@ if ( ! class_exists( 'TSOLIIN_Quality', false ) ) {
  */
 class TSOLIIN_DB {
 
-	/** @var string Full table name. */
+	/**
+	 * Full table name.
+	 *
+	 * @var string
+	 */
 	private $table;
 
-	/** @var string Full history table name. */
+	/**
+	 * Full history table name.
+	 *
+	 * @var string
+	 */
 	private $history_table;
 
 	/** Max URL-change history rows kept (oldest pruned automatically). */
 	const HISTORY_MAX_ROWS = 500;
 
-	/** @var bool|null Cached result of table_exists() for this request. */
+	/**
+	 * Cached result of table_exists() for this request.
+	 *
+	 * @var bool|null
+	 */
 	private $table_exists_cache = null;
 
-	/** @var array<string, bool> Per-request cache for db_table_exists_exact(). */
+	/**
+	 * Bool> Per-request cache for db_table_exists_exact().
+	 *
+	 * @var array<string,
+	 */
 	private $db_table_exists_exact_cache = array();
 
-	/** @var bool Whether upgrade_schema() already ran this request. */
+	/**
+	 * Whether upgrade_schema() already ran this request.
+	 *
+	 * @var bool
+	 */
 	private $schema_upgraded = false;
 
-	/** @var bool Whether create_history_table() already ran this request. */
+	/**
+	 * Whether create_history_table() already ran this request.
+	 *
+	 * @var bool
+	 */
 	private $history_table_ensured = false;
 
-	/** @var array<string, array<string, int>> Request cache for get_stats() / get_stats_for_post(). */
+	/**
+	 * Array<string, int>> Request cache for get_stats() / get_stats_for_post().
+	 *
+	 * @var array<string,
+	 */
 	private static $stats_cache = array();
 
 	/**
@@ -67,30 +95,57 @@ class TSOLIIN_DB {
 	 */
 	private static $stats_transient_cleared = false;
 
-	/** @var array<int, int> Request cache for get_pending_check_count() keyed by post_id (0 = all). */
+	/**
+	 * Int> Request cache for get_pending_check_count() keyed by post_id (0 = all).
+	 *
+	 * @var array<int,
+	 */
 	private static $pending_check_count_cache = array();
 
-	/** @var array<string, array<string, int>> Request cache for get_cron_queue_counts(). */
+	/**
+	 * Array<string, int>> Request cache for get_cron_queue_counts().
+	 *
+	 * @var array<string,
+	 */
 	private static $cron_queue_counts_cache = array();
 
-	/** @var array<int, string[]> Request cache for get_broken_link_urls_for_post(). */
+	/**
+	 * String[]> Request cache for get_broken_link_urls_for_post().
+	 *
+	 * @var array<int,
+	 */
 	private static $broken_urls_by_post_cache = array();
 
-	/** @var int|null Request guard for maybe_cleanup_transparent_redirects(); null = not tried yet. */
+	/**
+	 * Request guard for maybe_cleanup_transparent_redirects(); null = not tried yet.
+	 *
+	 * @var int|null
+	 */
 	private static $transparent_rd_cleanup_attempted = null;
 
+	/**
+	 * Set up the class dependencies.
+	 */
 	public function __construct() {
 		global $wpdb;
 		$this->table         = $wpdb->prefix . 'tso_link_inspector';
 		$this->history_table = $wpdb->prefix . 'tso_link_inspector_history';
 	}
 
-	/** @return string */
+	/**
+	 * Get the table.
+	 *
+	 * @return string
+	 */
 	public function get_table() {
 		return $this->table;
 	}
 
-	/** @return string */
+	/**
+	 * Get the history table.
+	 *
+	 * @return string
+	 */
 	public function get_history_table() {
 		return $this->history_table;
 	}
@@ -233,7 +288,7 @@ class TSOLIIN_DB {
 				$this->remember_table_exists( $legacy_raw, false );
 				$gone = true;
 			} else {
-				$tmp     = esc_sql( $canonical_raw . '_mig_tmp' );
+				$tmp = esc_sql( $canonical_raw . '_mig_tmp' );
 				$wpdb->query( "DROP TABLE IF EXISTS `{$tmp}`" );
 				$renamed = $wpdb->query( "RENAME TABLE `{$canonical}` TO `{$tmp}`, `{$legacy}` TO `{$canonical}`" );
 				if ( false !== $renamed ) {
@@ -601,6 +656,15 @@ class TSOLIIN_DB {
 		return array( 'link', 'image', 'iframe', 'plain', 'comment', 'menu', 'widget', 'term', 'template', 'wp_block', 'acf' );
 	}
 
+	/**
+	 * Upsert link.
+	 *
+	 * @param mixed  $post_id Post ID.
+	 * @param mixed  $link_url Link URL.
+	 * @param mixed  $anchor Anchor.
+	 * @param string $link_type Link type.
+	 * @param string $source_key Source key.
+	 */
 	public function upsert_link( $post_id, $link_url, $anchor, $link_type = 'link', $source_key = '' ) {
 		global $wpdb;
 
@@ -711,7 +775,10 @@ class TSOLIIN_DB {
 			}
 			$wpdb->update(
 				$this->table,
-				array( 'anchor_text' => $anchor_to_store, 'link_type' => $link_type ),
+				array(
+					'anchor_text' => $anchor_to_store,
+					'link_type'   => $link_type,
+				),
 				array( 'id' => absint( $existing ) ),
 				array( '%s', '%s' ),
 				array( '%d' )
@@ -820,7 +887,7 @@ class TSOLIIN_DB {
 
 		$play_id = TSOLIIN_HTTP::parse_play_store_app_id( $link_url );
 		if ( '' !== $play_id ) {
-			$like    = '%' . $wpdb->esc_like( 'id=' . $play_id ) . '%';
+			$like           = '%' . $wpdb->esc_like( 'id=' . $play_id ) . '%';
 			$play_host_like = '%play.google.com%';
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$found = $wpdb->get_var(
@@ -841,6 +908,8 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Sanitize source key.
+	 *
 	 * @param string $key Raw source key.
 	 * @return string
 	 */
@@ -943,7 +1012,7 @@ class TSOLIIN_DB {
 		if ( ! $post_id || ! $cid ) {
 			return;
 		}
-		$prefix = 'c-' . $cid . '-';
+		$prefix  = 'c-' . $cid . '-';
 		$allowed = array();
 		foreach ( $allowed_keys as $k ) {
 			$k = $this->sanitize_source_key( (string) $k );
@@ -1079,7 +1148,7 @@ class TSOLIIN_DB {
 			return;
 		}
 
-		$normalized = TSOLIIN_HTTP::normalize_stored_check_result(
+		$normalized   = TSOLIIN_HTTP::normalize_stored_check_result(
 			(string) $row->link_url,
 			$status_code,
 			$redirect_url,
@@ -1095,8 +1164,8 @@ class TSOLIIN_DB {
 			$chain_json = '';
 		}
 
-		$verified = (int) $row->user_verified;
-		$clear_lock = false;
+		$verified      = (int) $row->user_verified;
+		$clear_lock    = false;
 		$prev_failures = isset( $row->consecutive_failures ) ? (int) $row->consecutive_failures : 0;
 		$failures      = $is_broken ? $prev_failures + 1 : 0;
 
@@ -1124,7 +1193,7 @@ class TSOLIIN_DB {
 				);
 			}
 
-			$link_changed = ! TSOLIIN_HTTP::urls_equivalent_for_verify_lock( (string) $row->link_url, $baseline_link );
+			$link_changed     = ! TSOLIIN_HTTP::urls_equivalent_for_verify_lock( (string) $row->link_url, $baseline_link );
 			$http             = new TSOLIIN_HTTP();
 			$redirect_changed = ! $http->redirect_outcomes_match_for_verify( (string) $row->link_url, $baseline_redir, $redirect_url );
 
@@ -1133,8 +1202,8 @@ class TSOLIIN_DB {
 				$wpdb->update(
 					$this->table,
 					array(
-						'last_checked'          => current_time( 'mysql', true ),
-						'consecutive_failures'  => 0,
+						'last_checked'         => current_time( 'mysql', true ),
+						'consecutive_failures' => 0,
 					),
 					array( 'id' => $link_id ),
 					array( '%s', '%d' ),
@@ -1149,7 +1218,7 @@ class TSOLIIN_DB {
 			$clear_lock = true;
 		}
 
-		$data = array(
+		$data   = array(
 			'status_code'          => intval( $status_code ),
 			'redirect_url'         => $redirect_url,
 			'redirect_chain'       => $chain_json,
@@ -1161,7 +1230,7 @@ class TSOLIIN_DB {
 
 		if ( $clear_lock ) {
 			$data['user_verified']            = 0;
-			$data['verify_baseline_link']    = '';
+			$data['verify_baseline_link']     = '';
 			$data['verify_baseline_redirect'] = '';
 			$format[]                         = '%d';
 			$format[]                         = '%s';
@@ -1201,15 +1270,15 @@ class TSOLIIN_DB {
 		$wpdb->update(
 			$this->table,
 			array(
-				'link_url'                   => $new_url,
-				'status_code'                => 0,
-				'redirect_url'               => '',
-				'is_broken'                  => 0,
-				'last_checked'               => null,
-				'consecutive_failures'       => 0,
-				'user_verified'              => 0, // New URL: clear user decision, needs fresh check.
-				'verify_baseline_link'       => '',
-				'verify_baseline_redirect'   => '',
+				'link_url'                 => $new_url,
+				'status_code'              => 0,
+				'redirect_url'             => '',
+				'is_broken'                => 0,
+				'last_checked'             => null,
+				'consecutive_failures'     => 0,
+				'user_verified'            => 0, // New URL: clear user decision, needs fresh check.
+				'verify_baseline_link'     => '',
+				'verify_baseline_redirect' => '',
 			),
 			array( 'id' => $link_id ),
 			array( '%s', '%d', '%s', '%d', '%s', '%d', '%d', '%s', '%s' ),
@@ -1292,8 +1361,8 @@ class TSOLIIN_DB {
 		$this->ensure_history_table();
 		$limit = max( 1, (int) $limit );
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name from $wpdb->prefix + fixed suffix.
-		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->history_table}" );
-		$extra = self::history_overflow_count( $count, $limit );
+		$count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->history_table}" );
+		$extra   = self::history_overflow_count( $count, $limit );
 		$deleted = 0;
 		if ( $extra > 0 ) {
 			$deleted = (int) $wpdb->query(
@@ -1308,6 +1377,8 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Count URL change history.
+	 *
 	 * @return int
 	 */
 	public function count_url_change_history() {
@@ -1318,6 +1389,8 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Get the URL change history.
+	 *
 	 * @param int $limit Max rows.
 	 * @return array<int, object>
 	 */
@@ -1337,6 +1410,8 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Clear URL change history.
+	 *
 	 * @return int Rows deleted.
 	 */
 	public function clear_url_change_history() {
@@ -1371,6 +1446,8 @@ class TSOLIIN_DB {
 
 	/**
 	 * Mark a link as not broken (manually validated).
+	 *
+	 * @param mixed $link_id Link ID.
 	 */
 	public function mark_as_not_broken( $link_id ) {
 		global $wpdb;
@@ -1393,15 +1470,15 @@ class TSOLIIN_DB {
 		$wpdb->update(
 			$this->table,
 			array(
-				'is_broken'                  => 0,
-				'status_code'                => 200,
-				'last_checked'               => current_time( 'mysql', true ),
-				'redirect_url'               => '',
-				'redirect_chain'             => '',
-				'consecutive_failures'       => 0,
-				'user_verified'              => 1,
-				'verify_baseline_link'       => $baseline_link,
-				'verify_baseline_redirect'   => $baseline_redir,
+				'is_broken'                => 0,
+				'status_code'              => 200,
+				'last_checked'             => current_time( 'mysql', true ),
+				'redirect_url'             => '',
+				'redirect_chain'           => '',
+				'consecutive_failures'     => 0,
+				'user_verified'            => 1,
+				'verify_baseline_link'     => $baseline_link,
+				'verify_baseline_redirect' => $baseline_redir,
 			),
 			array( 'id' => $link_id ),
 			array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s' ),
@@ -1415,6 +1492,7 @@ class TSOLIIN_DB {
 	/**
 	 * Delete a single link row.
 	 *
+	 * @param mixed $link_id Link ID.
 	 * @return bool True when a row was deleted.
 	 */
 	public function delete_link( $link_id ) {
@@ -1429,6 +1507,8 @@ class TSOLIIN_DB {
 
 	/**
 	 * Delete all link rows for a post.
+	 *
+	 * @param mixed $post_id Post ID.
 	 */
 	public function delete_links_for_post( $post_id ) {
 		global $wpdb;
@@ -1658,19 +1738,19 @@ class TSOLIIN_DB {
 	public function get_links( $args = array() ) {
 		global $wpdb;
 
-		$defaults = array(
+		$defaults      = array(
 			'filter'           => 'all',
 			'quality_filter'   => '',
 			'link_type_filter' => '',
 			'scope'            => 'all',
-			'per_page'       => 20,
-			'paged'          => 1,
-			'orderby'        => 'date_found',
-			'order'          => 'DESC',
-			'search'         => '',
-			'post_id'        => 0,
+			'per_page'         => 20,
+			'paged'            => 1,
+			'orderby'          => 'date_found',
+			'order'            => 'DESC',
+			'search'           => '',
+			'post_id'          => 0,
 		);
-		$args = wp_parse_args( $args, $defaults );
+		$args          = wp_parse_args( $args, $defaults );
 		$args['scope'] = $this->sanitize_link_scope( $args['scope'] );
 		$args          = $this->normalize_link_query_filters( $args );
 
@@ -1778,12 +1858,12 @@ class TSOLIIN_DB {
 		$scope_sql = $this->build_link_scope_sql( $scope );
 		if ( '' !== $scope_sql['where'] ) {
 			$where .= $scope_sql['where'];
-			$params  = array_merge( $params, $scope_sql['params'] );
+			$params = array_merge( $params, $scope_sql['params'] );
 		}
 
 		if ( ! empty( $args['post_id'] ) ) {
-			$where    .= ' AND l.post_id = %d';
-			$params[]  = absint( $args['post_id'] );
+			$where   .= ' AND l.post_id = %d';
+			$params[] = absint( $args['post_id'] );
 		}
 
 		$link_type_filter = isset( $args['link_type_filter'] ) ? sanitize_key( (string) $args['link_type_filter'] ) : '';
@@ -1860,9 +1940,9 @@ class TSOLIIN_DB {
 			);
 		}
 
-		$scan_args                    = $args;
-		$scan_args['quality_filter']  = '';
-		$scan_args['scope']           = 'internal';
+		$scan_args                   = $args;
+		$scan_args['quality_filter'] = '';
+		$scan_args['scope']          = 'internal';
 
 		$per_page = max( 1, absint( $args['per_page'] ) );
 		$paged    = max( 1, absint( $args['paged'] ) );
@@ -1890,11 +1970,11 @@ class TSOLIIN_DB {
 		$order       = $query_parts['order'];
 		$posts_join  = $query_parts['posts_join'];
 
-		$batch_size  = 250;
-		$cursor      = 0;
-		$match_index = 0;
-		$items       = array();
-		$list_offset = max( 0, (int) $list_offset );
+		$batch_size    = 250;
+		$cursor        = 0;
+		$match_index   = 0;
+		$items         = array();
+		$list_offset   = max( 0, (int) $list_offset );
 		$list_per_page = max( 0, (int) $list_per_page );
 
 		while ( true ) {
@@ -1919,7 +1999,7 @@ class TSOLIIN_DB {
 				if ( ! $count_only && $match_index >= $list_offset && count( $items ) < $list_per_page ) {
 					$items[] = $link;
 				}
-				$match_index++;
+				++$match_index;
 			}
 		}
 
@@ -1995,7 +2075,7 @@ class TSOLIIN_DB {
 			0,
 			true
 		);
-		$count = (int) $result['total'];
+		$count  = (int) $result['total'];
 		if ( ! $post_id ) {
 			set_transient( 'tsoliin_unpub_cnt_v3_all', $count, 15 * MINUTE_IN_SECONDS );
 		}
@@ -2033,7 +2113,10 @@ class TSOLIIN_DB {
 	private function build_link_scope_sql( $scope, $column = 'l.link_url' ) {
 		$scope = $this->sanitize_link_scope( $scope );
 		if ( 'all' === $scope ) {
-			return array( 'where' => '', 'params' => array() );
+			return array(
+				'where'  => '',
+				'params' => array(),
+			);
 		}
 
 		$internal = TSOLIIN_HTTP::build_internal_link_scope_sql( $column );
@@ -2082,16 +2165,16 @@ class TSOLIIN_DB {
 	public function get_posts_link_summary( $args = array() ) {
 		global $wpdb;
 
-		$defaults = array(
+		$defaults          = array(
 			'per_page'          => 20,
 			'paged'             => 1,
 			'post_type'         => '',
 			'exclude_post_type' => '',
 		);
-		$args     = wp_parse_args( $args, $defaults );
-		$per_page = max( 1, absint( $args['per_page'] ) );
-		$offset   = ( max( 1, absint( $args['paged'] ) ) - 1 ) * $per_page;
-		$post_type = sanitize_key( (string) $args['post_type'] );
+		$args              = wp_parse_args( $args, $defaults );
+		$per_page          = max( 1, absint( $args['per_page'] ) );
+		$offset            = ( max( 1, absint( $args['paged'] ) ) - 1 ) * $per_page;
+		$post_type         = sanitize_key( (string) $args['post_type'] );
 		$exclude_post_type = sanitize_key( (string) $args['exclude_post_type'] );
 
 		$having    = 'HAVING broken > 0 OR redirect_count > 0 OR unchecked_count > 0';
@@ -2104,12 +2187,12 @@ class TSOLIIN_DB {
 			$type_sql    = ' AND p.post_type != %s';
 			$type_args[] = $exclude_post_type;
 		}
-		$base_from = "FROM {$this->table} l INNER JOIN {$wpdb->posts} p ON p.ID = l.post_id WHERE l.post_id > 0 AND p.post_status != 'trash'{$type_sql} GROUP BY l.post_id, p.post_title";
-		$select_agg = "SELECT l.post_id, p.post_title,
+		$base_from  = "FROM {$this->table} l INNER JOIN {$wpdb->posts} p ON p.ID = l.post_id WHERE l.post_id > 0 AND p.post_status != 'trash'{$type_sql} GROUP BY l.post_id, p.post_title";
+		$select_agg = 'SELECT l.post_id, p.post_title,
 			COUNT(*) AS total_links,
 			SUM(CASE WHEN l.last_checked IS NOT NULL AND l.is_broken = 1 AND l.user_verified = 0 THEN 1 ELSE 0 END) AS broken,
-			SUM(CASE WHEN " . self::sql_redirect_match( 'l.' ) . " THEN 1 ELSE 0 END) AS redirect_count,
-			SUM(CASE WHEN l.last_checked IS NULL AND l.user_verified = 0 THEN 1 ELSE 0 END) AS unchecked_count";
+			SUM(CASE WHEN ' . self::sql_redirect_match( 'l.' ) . ' THEN 1 ELSE 0 END) AS redirect_count,
+			SUM(CASE WHEN l.last_checked IS NULL AND l.user_verified = 0 THEN 1 ELSE 0 END) AS unchecked_count';
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$count_inner = "SELECT COUNT(*) FROM (
@@ -2125,7 +2208,7 @@ class TSOLIIN_DB {
 			$total = (int) $wpdb->get_var( $count_inner );
 		}
 
-		$items_sql = "{$select_agg}
+		$items_sql    = "{$select_agg}
 			{$base_from}
 			{$having}
 			ORDER BY broken DESC, redirect_count DESC, total_links DESC
@@ -2184,11 +2267,11 @@ class TSOLIIN_DB {
 	 */
 	public function get_links_for_cron_check( $limit = 10, $ok_stale_days = 30, $broken_stale_days = 7 ) {
 		global $wpdb;
-		$limit           = max( 1, absint( $limit ) );
-		$ok_stale_days   = max( 1, absint( $ok_stale_days ) );
+		$limit             = max( 1, absint( $limit ) );
+		$ok_stale_days     = max( 1, absint( $ok_stale_days ) );
 		$broken_stale_days = max( 1, absint( $broken_stale_days ) );
-		$ok_threshold    = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $ok_stale_days . ' days' ) );
-		$broken_threshold = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $broken_stale_days . ' days' ) );
+		$ok_threshold      = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $ok_stale_days . ' days' ) );
+		$broken_threshold  = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $broken_stale_days . ' days' ) );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $wpdb->get_results(
@@ -2255,17 +2338,22 @@ class TSOLIIN_DB {
 		// Buckets are mutually exclusive (NULL vs stale broken vs stale OK).
 		$total = $unchecked + $broken_stale + $ok_stale;
 
-		$result = array(
-			'unchecked'     => $unchecked,
-			'broken_stale'  => $broken_stale,
-			'ok_stale'      => $ok_stale,
-			'total'         => $total,
+		$result                                      = array(
+			'unchecked'    => $unchecked,
+			'broken_stale' => $broken_stale,
+			'ok_stale'     => $ok_stale,
+			'total'        => $total,
 		);
 		self::$cron_queue_counts_cache[ $cache_key ] = $result;
 		return $result;
 	}
 
-	/** @return int Rows with last_checked IS NULL (includes manually verified). */
+	/**
+	 * Get the pending check count.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return int Rows with last_checked IS NULL (includes manually verified).
+	 */
 	public function get_pending_check_count( $post_id = 0 ) {
 		global $wpdb;
 		$post_id = absint( $post_id );
@@ -2290,7 +2378,11 @@ class TSOLIIN_DB {
 		return $count;
 	}
 
-	/** @return int */
+	/**
+	 * Get the unchecked count.
+	 *
+	 * @return int
+	 */
 	public function get_unchecked_count() {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -2466,9 +2558,9 @@ class TSOLIIN_DB {
 			delete_transient( self::STATS_TRANSIENT );
 			self::$stats_transient_cleared = true;
 		}
-		self::$stats_cache                 = array();
-		self::$pending_check_count_cache   = array();
-		self::$cron_queue_counts_cache     = array();
+		self::$stats_cache               = array();
+		self::$pending_check_count_cache = array();
+		self::$cron_queue_counts_cache   = array();
 		self::$broken_urls_by_post_cache = array();
 		delete_transient( 'tsoliin_unpub_cnt_all' );
 		delete_transient( 'tsoliin_unpub_cnt_v2_all' );
@@ -2523,8 +2615,8 @@ class TSOLIIN_DB {
 	 * @return array<string,int>
 	 */
 	private function query_aggregate_stats( $scope = 'all', $post_id = 0 ) {
-		$scope   = $this->sanitize_link_scope( $scope );
-		$post_id = absint( $post_id );
+		$scope     = $this->sanitize_link_scope( $scope );
+		$post_id   = absint( $post_id );
 		$cache_key = ( $post_id ? 'post_' . $post_id : 'site' ) . '_' . $scope;
 		if ( isset( self::$stats_cache[ $cache_key ] ) ) {
 			return self::$stats_cache[ $cache_key ];
@@ -2551,19 +2643,19 @@ class TSOLIIN_DB {
 
 		$scope_sql = $this->build_link_scope_sql( $scope, 'link_url' );
 		if ( '' !== $scope_sql['where'] ) {
-			$where  .= $scope_sql['where'];
-			$params  = array_merge( $params, $scope_sql['params'] );
+			$where .= $scope_sql['where'];
+			$params = array_merge( $params, $scope_sql['params'] );
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Static SQL fragments; values passed via $wpdb->prepare().
-		$sql = "SELECT COUNT(*) AS total,"
-			. " SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=1 AND user_verified=0 THEN 1 ELSE 0 END) AS broken,"
-			. " SUM(CASE WHEN " . self::sql_redirect_match() . " THEN 1 ELSE 0 END) AS redirect,"
-			. " SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=0 AND status_code=200 AND link_url NOT LIKE %s AND user_verified=0 THEN 1 ELSE 0 END) AS ok,"
-			. " SUM(CASE WHEN last_checked IS NULL AND user_verified=0 THEN 1 ELSE 0 END) AS unchecked,"
-			. " SUM(CASE WHEN last_checked IS NOT NULL AND link_url LIKE %s AND is_broken=0 AND user_verified=0 THEN 1 ELSE 0 END) AS http_insecure,"
-			. " SUM(CASE WHEN user_verified=1 THEN 1 ELSE 0 END) AS manual_locked,"
-			. " " . TSOLIIN_Quality::build_empty_anchor_count_expr() . " AS empty_anchor,"
+		$sql = 'SELECT COUNT(*) AS total,'
+			. ' SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=1 AND user_verified=0 THEN 1 ELSE 0 END) AS broken,'
+			. ' SUM(CASE WHEN ' . self::sql_redirect_match() . ' THEN 1 ELSE 0 END) AS redirect,'
+			. ' SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=0 AND status_code=200 AND link_url NOT LIKE %s AND user_verified=0 THEN 1 ELSE 0 END) AS ok,'
+			. ' SUM(CASE WHEN last_checked IS NULL AND user_verified=0 THEN 1 ELSE 0 END) AS unchecked,'
+			. ' SUM(CASE WHEN last_checked IS NOT NULL AND link_url LIKE %s AND is_broken=0 AND user_verified=0 THEN 1 ELSE 0 END) AS http_insecure,'
+			. ' SUM(CASE WHEN user_verified=1 THEN 1 ELSE 0 END) AS manual_locked,'
+			. ' ' . TSOLIIN_Quality::build_empty_anchor_count_expr() . ' AS empty_anchor,'
 			. " {$generic['expr']} AS generic_anchor"
 			. " FROM {$this->table}{$where}";
 		$row = $wpdb->get_row(
@@ -2576,18 +2668,18 @@ class TSOLIIN_DB {
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$defaults = array(
-			'total'               => 0,
-			'broken'              => 0,
-			'redirect'            => 0,
-			'ok'                  => 0,
-			'unchecked'           => 0,
-			'http_insecure'       => 0,
-			'manual_locked'       => 0,
-			'empty_anchor'        => 0,
-			'generic_anchor'      => 0,
-			'unpublished_target'  => 0,
+			'total'              => 0,
+			'broken'             => 0,
+			'redirect'           => 0,
+			'ok'                 => 0,
+			'unchecked'          => 0,
+			'http_insecure'      => 0,
+			'manual_locked'      => 0,
+			'empty_anchor'       => 0,
+			'generic_anchor'     => 0,
+			'unpublished_target' => 0,
 		);
-		$stats = $row ? array_map( 'absint', $row ) : $defaults;
+		$stats    = $row ? array_map( 'absint', $row ) : $defaults;
 		if ( 'external' === $scope ) {
 			$stats['unpublished_target'] = 0;
 		} elseif ( $post_id > 0 ) {
@@ -2616,7 +2708,11 @@ class TSOLIIN_DB {
 		return $this->query_aggregate_stats( $scope, 0 );
 	}
 
-	/** @return int */
+	/**
+	 * Get the scanned post count.
+	 *
+	 * @return int
+	 */
 	public function get_scanned_post_count() {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -2628,7 +2724,11 @@ class TSOLIIN_DB {
 	 */
 	public function self_test() {
 		global $wpdb;
-		$result = array( 'table_exists' => false, 'insert_ok' => false, 'error' => '' );
+		$result = array(
+			'table_exists' => false,
+			'insert_ok'    => false,
+			'error'        => '',
+		);
 		if ( ! $this->table_exists() ) {
 			$result['error'] = 'Table missing: ' . $this->table;
 			return $result;
@@ -2637,12 +2737,23 @@ class TSOLIIN_DB {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$ins = $wpdb->insert(
 			$this->table,
-			array( 'post_id' => 0, 'link_url' => 'https://tsoliin-test.invalid', 'anchor_text' => '__tsoliin_test__', 'status_code' => 0, 'redirect_url' => '', 'is_broken' => 0, 'link_type' => 'link', 'source_key' => '', 'last_checked' => null, 'date_found' => current_time( 'mysql', true ) ),
+			array(
+				'post_id'      => 0,
+				'link_url'     => 'https://tsoliin-test.invalid',
+				'anchor_text'  => '__tsoliin_test__',
+				'status_code'  => 0,
+				'redirect_url' => '',
+				'is_broken'    => 0,
+				'link_type'    => 'link',
+				'source_key'   => '',
+				'last_checked' => null,
+				'date_found'   => current_time( 'mysql', true ),
+			),
 			array( '%d', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		if ( ! $ins ) {
-			$result['error'] = $wpdb->last_error ?: 'Insert failed';
+			$result['error'] = $wpdb->last_error ? $wpdb->last_error : 'Insert failed';
 			return $result;
 		}
 		$result['insert_ok'] = true;
@@ -2664,6 +2775,9 @@ class TSOLIIN_DB {
 		return (int) $this->get_cron_queue_counts( $ok_days, $broken )['total'];
 	}
 
+	/**
+	 * Cleanup misclassified plain image rows.
+	 */
 	public function cleanup_misclassified_plain_image_rows() {
 		global $wpdb;
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -2870,12 +2984,13 @@ class TSOLIIN_DB {
 
 			if ( TSOLIIN_HTTP::hostname_has_no_dns( $url ) ) {
 				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$verdict = TSOLIIN_HTTP::dns_failure_verdict( $url );
 				$changed = $wpdb->update(
 					$this->table,
 					array(
-						'status_code'  => -2,
+						'status_code'  => (int) $verdict['status_code'],
 						'redirect_url' => '',
-						'is_broken'    => 1,
+						'is_broken'    => (int) $verdict['is_broken'],
 					),
 					array( 'id' => (int) $row->id ),
 					array( '%d', '%s', '%d' ),
@@ -2883,7 +2998,7 @@ class TSOLIIN_DB {
 				);
 				// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				if ( false !== $changed ) {
-					$updated++;
+					++$updated;
 				}
 				continue;
 			}
@@ -2903,7 +3018,7 @@ class TSOLIIN_DB {
 				);
 				// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				if ( false !== $changed ) {
-					$updated++;
+					++$updated;
 				}
 				continue;
 			}
@@ -2914,8 +3029,8 @@ class TSOLIIN_DB {
 
 			$r = $http->check( $url, (int) $row->post_id );
 			$this->update_check_result( (int) $row->id, $r['status_code'], $r['redirect_url'], $r['is_broken'], isset( $r['redirect_chain'] ) ? $r['redirect_chain'] : '' );
-			$updated++;
-			$checked++;
+			++$updated;
+			++$checked;
 		}
 
 		if ( $updated > 0 ) {
@@ -2964,7 +3079,7 @@ class TSOLIIN_DB {
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			if ( false !== $changed ) {
-				$updated++;
+				++$updated;
 			}
 		}
 
@@ -3012,7 +3127,7 @@ class TSOLIIN_DB {
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			if ( false !== $changed ) {
-				$updated++;
+				++$updated;
 			}
 		}
 
@@ -3047,12 +3162,13 @@ class TSOLIIN_DB {
 				continue;
 			}
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$verdict = TSOLIIN_HTTP::dns_failure_verdict( $url );
 			$changed = $wpdb->update(
 				$this->table,
 				array(
-					'status_code'  => -2,
+					'status_code'  => (int) $verdict['status_code'],
 					'redirect_url' => '',
-					'is_broken'    => 1,
+					'is_broken'    => (int) $verdict['is_broken'],
 				),
 				array( 'id' => (int) $row->id ),
 				array( '%d', '%s', '%d' ),
@@ -3060,7 +3176,7 @@ class TSOLIIN_DB {
 			);
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			if ( false !== $changed ) {
-				$updated++;
+				++$updated;
 			}
 		}
 

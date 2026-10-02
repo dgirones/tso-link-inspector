@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * WP_List_Table subclass for link results.
  *
@@ -19,23 +19,43 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  */
 class TSOLIIN_List_Table extends WP_List_Table {
 
-	/** @var TSOLIIN_DB */
+	/**
+	 * Database service instance.
+	 *
+	 * @var TSOLIIN_DB
+	 */
 	private $db;
 
-	/** @var TSOLIIN_HTTP|null */
+	/**
+	 * HTTP.
+	 *
+	 * @var TSOLIIN_HTTP|null
+	 */
 	private $http;
 
-	/** @var array<string, mixed>|null Cached tab nav context for one render pass. */
+	/**
+	 * Mixed>|null Cached tab nav context for one render pass.
+	 *
+	 * @var array<string,
+	 */
 	private $list_tabnav_context = null;
 
+	/**
+	 * Set up the class dependencies.
+	 *
+	 * @param TSOLIIN_DB        $db Database.
+	 * @param TSOLIIN_HTTP|null $http HTTP.
+	 */
 	public function __construct( TSOLIIN_DB $db, ?TSOLIIN_HTTP $http = null ) {
 		$this->db   = $db;
 		$this->http = $http;
-		parent::__construct( array(
-			'singular' => __( 'Link', 'tso-link-inspector' ),
-			'plural'   => __( 'Links', 'tso-link-inspector' ),
-			'ajax'     => false,
-		) );
+		parent::__construct(
+			array(
+				'singular' => __( 'Link', 'tso-link-inspector' ),
+				'plural'   => __( 'Links', 'tso-link-inspector' ),
+				'ajax'     => false,
+			)
+		);
 	}
 
 	/**
@@ -254,6 +274,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		return $base . ( false !== strpos( $base, '?' ) ? '&' : '?' ) . 'paged=%#%';
 	}
 
+	/**
+	 * Get the columns.
+	 */
 	public function get_columns() {
 		return array(
 			'cb'           => '<input type="checkbox" />',
@@ -266,6 +289,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get the sortable columns.
+	 */
 	protected function get_sortable_columns() {
 		return array(
 			'link_type'    => array( 'link_type', false ),
@@ -276,6 +302,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get the bulk actions.
+	 */
 	protected function get_bulk_actions() {
 		$actions = array(
 			'recheck'       => __( 'Recheck selected', 'tso-link-inspector' ),
@@ -298,14 +327,17 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		return $actions;
 	}
 
+	/**
+	 * Prepare items.
+	 */
 	public function prepare_items() {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		$filter    = $this->read_request_status_filter();
 		$quality   = $this->read_request_quality_filter();
 		$link_type = $this->read_request_type_filter();
-		$search  = isset( $_REQUEST['s'] )        ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) )         : '';
-		$orderby = isset( $_REQUEST['orderby'] )  ? sanitize_key( $_REQUEST['orderby'] )                        : 'date_found';
-		$order   = isset( $_REQUEST['order'] )    ? sanitize_key( $_REQUEST['order'] )                          : 'DESC';
+		$search    = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '';
+		$orderby   = isset( $_REQUEST['orderby'] ) ? sanitize_key( $_REQUEST['orderby'] ) : 'date_found';
+		$order     = isset( $_REQUEST['order'] ) ? sanitize_key( $_REQUEST['order'] ) : 'DESC';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$allowed_filters = array(
@@ -327,18 +359,20 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$post_id = isset( $_REQUEST['post_id'] ) ? absint( $_REQUEST['post_id'] ) : 0;
 		$scope   = $this->read_request_scope();
-		$result = $this->db->get_links( array(
-			'filter'           => $filter,
-			'quality_filter'   => $quality,
-			'link_type_filter' => $link_type,
-			'scope'            => $scope,
-			'search'   => $search,
-			'orderby'  => $orderby,
-			'order'    => $order,
-			'per_page' => $per_page,
-			'paged'    => $paged,
-			'post_id'  => $post_id,
-		) );
+		$result  = $this->db->get_links(
+			array(
+				'filter'           => $filter,
+				'quality_filter'   => $quality,
+				'link_type_filter' => $link_type,
+				'scope'            => $scope,
+				'search'           => $search,
+				'orderby'          => $orderby,
+				'order'            => $order,
+				'per_page'         => $per_page,
+				'paged'            => $paged,
+				'post_id'          => $post_id,
+			)
+		);
 
 		$this->items = $result['items'];
 
@@ -388,34 +422,47 @@ class TSOLIIN_List_Table extends WP_List_Table {
 				_prime_comment_caches( array_unique( $comment_ids ), false );
 			}
 		}
-		$this->set_pagination_args( array(
-			'total_items' => $result['total'],
-			'per_page'    => $per_page,
-			'total_pages' => max( 1, (int) ceil( $result['total'] / $per_page ) ),
-		) );
+		$this->set_pagination_args(
+			array(
+				'total_items' => $result['total'],
+				'per_page'    => $per_page,
+				'total_pages' => max( 1, (int) ceil( $result['total'] / $per_page ) ),
+			)
+		);
 		$this->_column_headers = array( $this->get_columns(), array(), $this->get_sortable_columns(), 'link_url' );
 	}
 
+	/**
+	 * Render the bulk-action checkbox column.
+	 *
+	 * @param mixed $item Item.
+	 */
 	protected function column_cb( $item ) {
 		return sprintf( '<input type="checkbox" name="link_ids[]" value="%d" />', absint( $item->id ) );
 	}
 
+	/**
+	 * Render a column that has no dedicated renderer.
+	 *
+	 * @param mixed $item Item.
+	 * @param mixed $column_name Column name.
+	 */
 	protected function column_default( $item, $column_name ) {
 		switch ( $column_name ) {
 			case 'link_type':
-				$type   = isset( $item->link_type ) ? (string) $item->link_type : 'link';
-				$icons  = array(
-					'link'     => array( 'dashicons-admin-links',    __( 'Link', 'tso-link-inspector' ) ),
-					'plain'    => array( 'dashicons-text',           __( 'Plain text URL', 'tso-link-inspector' ) ),
-					'image'    => array( 'dashicons-format-image',   __( 'Image', 'tso-link-inspector' ) ),
-					'iframe'   => array( 'dashicons-video-alt3',     __( 'Iframe', 'tso-link-inspector' ) ),
+				$type  = isset( $item->link_type ) ? (string) $item->link_type : 'link';
+				$icons = array(
+					'link'     => array( 'dashicons-admin-links', __( 'Link', 'tso-link-inspector' ) ),
+					'plain'    => array( 'dashicons-text', __( 'Plain text URL', 'tso-link-inspector' ) ),
+					'image'    => array( 'dashicons-format-image', __( 'Image', 'tso-link-inspector' ) ),
+					'iframe'   => array( 'dashicons-video-alt3', __( 'Iframe', 'tso-link-inspector' ) ),
 					'comment'  => array( 'dashicons-admin-comments', __( 'Comment', 'tso-link-inspector' ) ),
-					'menu'     => array( 'dashicons-menu',           __( 'Menu', 'tso-link-inspector' ) ),
+					'menu'     => array( 'dashicons-menu', __( 'Menu', 'tso-link-inspector' ) ),
 					'widget'   => array( 'dashicons-welcome-widgets-menus', __( 'Widget', 'tso-link-inspector' ) ),
-					'term'     => array( 'dashicons-tag',            __( 'Term', 'tso-link-inspector' ) ),
-					'template' => array( 'dashicons-layout',         __( 'Template / Navigation', 'tso-link-inspector' ) ),
-					'wp_block' => array( 'dashicons-block-default',  __( 'Reusable block', 'tso-link-inspector' ) ),
-					'acf'      => array( 'dashicons-index-card',     __( 'ACF Options', 'tso-link-inspector' ) ),
+					'term'     => array( 'dashicons-tag', __( 'Term', 'tso-link-inspector' ) ),
+					'template' => array( 'dashicons-layout', __( 'Template / Navigation', 'tso-link-inspector' ) ),
+					'wp_block' => array( 'dashicons-block-default', __( 'Reusable block', 'tso-link-inspector' ) ),
+					'acf'      => array( 'dashicons-index-card', __( 'ACF Options', 'tso-link-inspector' ) ),
 				);
 				$icon  = isset( $icons[ $type ] ) ? $icons[ $type ][0] : 'dashicons-admin-links';
 				$label = isset( $icons[ $type ] ) ? $icons[ $type ][1] : esc_html( $type );
@@ -443,15 +490,20 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		}
 	}
 
+	/**
+	 * Render the link URL column.
+	 *
+	 * @param mixed $item Item.
+	 */
 	protected function column_link_url( $item ) {
-		$nonce    = wp_create_nonce( 'tsoliin_action' );
-		$url      = (string) $item->link_url;
+		$nonce = wp_create_nonce( 'tsoliin_action' );
+		$url   = (string) $item->link_url;
 		// Show up to 80 chars in the cell; full URL always visible on hover via title attribute.
-		$display  = strlen( $url ) > 110 ? substr( $url, 0, 107 ) . '...' : $url;
+		$display   = strlen( $url ) > 110 ? substr( $url, 0, 107 ) . '...' : $url;
 		$is_broken = (int) $item->is_broken;
 		$code      = (int) $item->status_code;
 
-		$is_action = TSOLIIN_HTTP::is_action_url( $url ) || -6 === $code;
+		$is_action  = TSOLIIN_HTTP::is_action_url( $url ) || -6 === $code;
 		$link_title = $is_action
 			? __( 'Warning: this link logs you out. Open only if you intend to end your session.', 'tso-link-inspector' )
 			: $url;
@@ -484,9 +536,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 				|| ! empty( $item->redirect_url )
 			);
 
-		$type    = isset( $item->link_type ) ? (string) $item->link_type : 'link';
-		$sk_item = isset( $item->source_key ) ? (string) $item->source_key : '';
-		$is_woo_source = class_exists( 'TSOLIIN_WooCommerce', false ) && TSOLIIN_WooCommerce::is_woocommerce_source_key( $sk_item );
+		$type             = isset( $item->link_type ) ? (string) $item->link_type : 'link';
+		$sk_item          = isset( $item->source_key ) ? (string) $item->source_key : '';
+		$is_woo_source    = class_exists( 'TSOLIIN_WooCommerce', false ) && TSOLIIN_WooCommerce::is_woocommerce_source_key( $sk_item );
 		$not_broken_title = __( 'Mark as OK: moves this link to Manual locks. Background checks still run; it returns to Broken/Redirect only if the URL or redirect changes, or a check finds it broken.', 'tso-link-inspector' );
 
 		$can_inline = ( 'comment' === $type ) ? true : TSOLIIN_Support::can_inline_edit_link( $item );
@@ -553,7 +605,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$actions['not_broken'] = sprintf( '<a href="#" class="tsoliin-not-broken" data-id="%d" data-nonce="%s" title="%s" style="color:#0a7d33;font-weight:600;">%s</a>', absint( $item->id ), esc_attr( $nonce ), esc_attr( $not_broken_title ), esc_html__( 'Not broken', 'tso-link-inspector' ) );
 
 		if ( $can_unlink ) {
-			$unlink_title = TSOLIIN_Support::is_comment_author_url_row( $item )
+			$unlink_title      = TSOLIIN_Support::is_comment_author_url_row( $item )
 				? __( 'Clear the comment author website field (URL)', 'tso-link-inspector' )
 				: __( 'Remove the link (or image) from the source; visible text is kept when it is a text link.', 'tso-link-inspector' );
 			$actions['unlink'] = sprintf(
@@ -614,6 +666,11 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		return $out . $this->row_actions( $actions );
 	}
 
+	/**
+	 * Render the post title column.
+	 *
+	 * @param mixed $item Item.
+	 */
 	protected function column_post_title( $item ) {
 		$type  = isset( $item->link_type ) ? (string) $item->link_type : 'link';
 		$title = ! empty( $item->post_title ) ? (string) $item->post_title : __( '(no title)', 'tso-link-inspector' );
@@ -677,11 +734,19 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			return esc_html( $title );
 		}
 		$view     = TSOLIIN_Support::get_post_frontend_view_url_for_link( $item );
-		$post_url = esc_url( add_query_arg( array( 'page' => 'tso-link-inspector', 'post_id' => absint( $item->post_id ) ), admin_url( 'tools.php' ) ) );
+		$post_url = esc_url(
+			add_query_arg(
+				array(
+					'page'    => 'tso-link-inspector',
+					'post_id' => absint( $item->post_id ),
+				),
+				admin_url( 'tools.php' )
+			)
+		);
 
-		$out  = '<a href="' . esc_url( $edit ) . '" target="_blank" rel="noopener noreferrer" title="' . esc_attr__( 'Edit post', 'tso-link-inspector' ) . '">' . esc_html( $title ) . '</a>';
+		$out = '<a href="' . esc_url( $edit ) . '" target="_blank" rel="noopener noreferrer" title="' . esc_attr__( 'Edit post', 'tso-link-inspector' ) . '">' . esc_html( $title ) . '</a>';
 		// Icons row: view post + list links for this post.
-		$out .= '<div class="tsoliin-post-icons">';
+		$out       .= '<div class="tsoliin-post-icons">';
 		$view_title = __( 'View post', 'tso-link-inspector' );
 		if ( 'comment' === $type ) {
 			$view_title = __( 'View post at this comment', 'tso-link-inspector' );
@@ -704,10 +769,18 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		return $out;
 	}
 
+	/**
+	 * Render the status code column.
+	 *
+	 * @param mixed $item Item.
+	 */
 	protected function column_status_code( $item ) {
 		return TSOLIIN_Support::render_link_status_html( $item, $this->http );
 	}
 
+	/**
+	 * Message shown when the list is empty.
+	 */
 	public function no_items() {
 		esc_html_e( 'No links found. Run a scan first.', 'tso-link-inspector' );
 	}
@@ -767,13 +840,13 @@ class TSOLIIN_List_Table extends WP_List_Table {
 
 		$filters = array(
 			/* translators: %s: number of links */
-			'all'       => sprintf( __( 'All (%s)', 'tso-link-inspector' ),        TSOLIIN_Support::format_display_number( $stats['total'] ) ),
+			'all'           => sprintf( __( 'All (%s)', 'tso-link-inspector' ), TSOLIIN_Support::format_display_number( $stats['total'] ) ),
 			/* translators: %s: number of broken links */
-			'broken'    => sprintf( __( 'Broken (%s)', 'tso-link-inspector' ),    TSOLIIN_Support::format_display_number( $stats['broken'] ) ),
+			'broken'        => sprintf( __( 'Broken (%s)', 'tso-link-inspector' ), TSOLIIN_Support::format_display_number( $stats['broken'] ) ),
 			/* translators: %s: number of redirected links */
-			'redirect'  => sprintf( __( 'Redirect (%s)', 'tso-link-inspector' ),  TSOLIIN_Support::format_display_number( $stats['redirect'] ) ),
+			'redirect'      => sprintf( __( 'Redirect (%s)', 'tso-link-inspector' ), TSOLIIN_Support::format_display_number( $stats['redirect'] ) ),
 			/* translators: %s: number of OK links */
-			'ok'        => sprintf( __( 'OK (%s)', 'tso-link-inspector' ),   TSOLIIN_Support::format_display_number( $stats['ok'] ) ),
+			'ok'            => sprintf( __( 'OK (%s)', 'tso-link-inspector' ), TSOLIIN_Support::format_display_number( $stats['ok'] ) ),
 			/* translators: %s: number of unchecked links */
 			'unchecked'     => sprintf( __( 'Unchecked (%s)', 'tso-link-inspector' ), TSOLIIN_Support::format_display_number( $stats['unchecked'] ) ),
 			/* translators: %s: number of HTTP insecure links */
@@ -877,9 +950,9 @@ class TSOLIIN_List_Table extends WP_List_Table {
 	 * @return void
 	 */
 	private function render_scope_tabs() {
-		$ctx             = $this->get_list_tabnav_context();
-		$current         = $ctx['current'];
-		$scope_current   = $ctx['scope_current'];
+		$ctx           = $this->get_list_tabnav_context();
+		$current       = $ctx['current'];
+		$scope_current = $ctx['scope_current'];
 
 		$scope_labels = array(
 			'all'      => __( 'All links', 'tso-link-inspector' ),

@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Link quality helpers (anchor text, unpublished targets).
  *
@@ -24,7 +24,7 @@ class TSOLIIN_Quality {
 		// Exact match after trim + lowercase. Prefer multi-word phrases; avoid
 		// ambiguous singles such as "web", "entrar", or "visitar".
 		$phrases = array(
-			// English
+			// English.
 			'click here',
 			'click this link',
 			'click me',
@@ -53,7 +53,7 @@ class TSOLIIN_Quality {
 			'follow this link',
 			'download here',
 			'download now',
-			// Spanish (accented + unaccented)
+			// Spanish (accented + unaccented).
 			'aquí',
 			'aqui',
 			'pincha aquí',
@@ -94,7 +94,7 @@ class TSOLIIN_Quality {
 			'descarga aqui',
 			'descargar aquí',
 			'descargar aqui',
-			// Catalan (accented + unaccented)
+			// Catalan (accented + unaccented).
 			'clica aquí',
 			'clica aqui',
 			'fes clic aquí',

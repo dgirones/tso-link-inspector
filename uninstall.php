@@ -19,8 +19,8 @@ global $wpdb;
 $tsoliin_tables = array(
 	$wpdb->prefix . 'tso_link_inspector',
 	$wpdb->prefix . 'tso_link_inspector_history',
-	$wpdb->prefix . 'pc_tso_link_inspector', // leftover 2.3.x table name
-	$wpdb->prefix . 'pc_tso_link_inspector_history', // leftover 2.3.x history name
+	$wpdb->prefix . 'pc_tso_link_inspector', // leftover 2.3.x table name.
+	$wpdb->prefix . 'pc_tso_link_inspector_history', // leftover 2.3.x history name.
 );
 foreach ( $tsoliin_tables as $tsoliin_table ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter

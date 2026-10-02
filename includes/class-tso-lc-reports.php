@@ -1,4 +1,4 @@
-<?php
+<?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName -- Existing file names kept for backwards compatibility.
 /**
  * Export reports (CSV, printable PDF/HTML).
  *
@@ -51,7 +51,7 @@ class TSOLIIN_Reports {
 		if ( ! empty( $item->is_broken ) ) {
 			return __( 'Broken', 'tso-link-inspector' );
 		}
-		$code = isset( $item->status_code ) ? (int) $item->status_code : 0;
+		$code  = isset( $item->status_code ) ? (int) $item->status_code : 0;
 		$redir = isset( $item->redirect_url ) ? trim( (string) $item->redirect_url ) : '';
 		if ( ( $code >= 301 && $code < 400 ) || '' !== $redir ) {
 			return __( 'Redirect', 'tso-link-inspector' );
@@ -231,16 +231,16 @@ class TSOLIIN_Reports {
 	 */
 	public static function get_filter_label( $filter ) {
 		$labels = array(
-			'all'                 => __( 'All links', 'tso-link-inspector' ),
-			'broken'              => __( 'Broken links', 'tso-link-inspector' ),
-			'redirect'            => __( 'Redirects', 'tso-link-inspector' ),
-			'ok'                  => __( 'OK links', 'tso-link-inspector' ),
-			'unchecked'           => __( 'Unchecked links', 'tso-link-inspector' ),
-			'http_insecure'       => __( 'HTTP insecure links', 'tso-link-inspector' ),
-			'manual_locked'       => __( 'Manual locks', 'tso-link-inspector' ),
-			'empty_anchor'        => __( 'Empty anchor text', 'tso-link-inspector' ),
-			'generic_anchor'      => __( 'Generic anchor text', 'tso-link-inspector' ),
-			'unpublished_target'  => __( 'Unpublished targets', 'tso-link-inspector' ),
+			'all'                => __( 'All links', 'tso-link-inspector' ),
+			'broken'             => __( 'Broken links', 'tso-link-inspector' ),
+			'redirect'           => __( 'Redirects', 'tso-link-inspector' ),
+			'ok'                 => __( 'OK links', 'tso-link-inspector' ),
+			'unchecked'          => __( 'Unchecked links', 'tso-link-inspector' ),
+			'http_insecure'      => __( 'HTTP insecure links', 'tso-link-inspector' ),
+			'manual_locked'      => __( 'Manual locks', 'tso-link-inspector' ),
+			'empty_anchor'       => __( 'Empty anchor text', 'tso-link-inspector' ),
+			'generic_anchor'     => __( 'Generic anchor text', 'tso-link-inspector' ),
+			'unpublished_target' => __( 'Unpublished targets', 'tso-link-inspector' ),
 		);
 		$filter = sanitize_key( (string) $filter );
 		return isset( $labels[ $filter ] ) ? $labels[ $filter ] : $labels['all'];
@@ -304,7 +304,7 @@ class TSOLIIN_Reports {
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title><?php echo esc_html( get_bloginfo( 'name' ) . ' — ' . __( 'Link report', 'tso-link-inspector' ) ); ?></title>
-	<?php wp_print_styles( array( 'tsoliin-report' ) ); ?>
+		<?php wp_print_styles( array( 'tsoliin-report' ) ); ?>
 </head>
 <body class="tsoliin-report">
 	<div class="tsoliin-report-actions">
@@ -332,7 +332,7 @@ class TSOLIIN_Reports {
 	</div>
 
 	<h2><?php echo esc_html( $section_title ); ?></h2>
-	<?php if ( empty( $items ) ) : ?>
+		<?php if ( empty( $items ) ) : ?>
 		<p><?php esc_html_e( 'No links match this report.', 'tso-link-inspector' ); ?></p>
 	<?php else : ?>
 		<table>
@@ -384,7 +384,7 @@ class TSOLIIN_Reports {
 		);
 		?>
 	</footer>
-	<?php wp_print_scripts( array( 'tsoliin-report' ) ); ?>
+		<?php wp_print_scripts( array( 'tsoliin-report' ) ); ?>
 </body>
 </html>
 		<?php

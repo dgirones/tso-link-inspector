@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.1
+Stable tag: 2.5.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,7 @@ Find and fix broken links across your entire WordPress site without opening each
 * **Scan user comments**: optionally check links in approved comments.
 * **Custom fields (ACF)**: optionally scan URL fields added by plugins like Advanced Custom Fields.
 * **Daily automatic scan** and **hourly batch check** via WP-Cron. Can close the browser while checking.
+* **Paced background work**: one batch at a time with a pause between batches, so scans stay usable on shared hosting.
 * **Email alerts** for fully broken links (no redirect): send one summary after automated checks, or a periodic digest (7 / 15 / 30 days), with an optional notification address.
 * **Nofollow broken links**: automatically adds `rel="nofollow"` to broken links so search engines ignore them.
 * **Preserve post dates**: editing a link does not update the post modification date.
@@ -97,8 +98,17 @@ Only if you want it to. Enable **Do not update modification date** in Settings t
 = What does "Mark as OK" do? =
 It sets the link status to 200 OK manually without making an HTTP request. The post is not modified. Useful for URLs that are temporarily blocked but you know they work.
 
+= Why does the progress bar stay on the same number for a while? =
+It is pausing, not stuck. Only one batch runs at a time and each batch is followed by a pause of a similar length, so the plugin never uses more than about half of one PHP process. Posts take the first 70% of the bar; comments, menus, terms, templates and widgets share the rest, and the bar names the source it is working on. A source with many items can hold the same number for minutes. You can close the browser: the work continues on the server.
+
+= Does the plugin slow down my site? =
+Scanning and checking only run in the WordPress admin and via WP-Cron, never on pages your visitors see. While a scan runs, one PHP process is busy about half of the time. If your host is very limited, lower the hourly batch size in Settings.
+
+= What happens right after a scan? =
+The links the scan just found are checked automatically. Links checked earlier keep their status, so the dashboard counts stay meaningful during the run. Use Restart from zero when you want every link tested again.
+
 = What is Continue check vs Restart from zero? =
-If a check was stopped and unchecked links remain, **Continue check** resumes from where it left off (already-checked links stay as they are). **Restart from zero** clears check progress and rechecks every link from scratch. **Continue check** starts immediately; **Restart from zero** asks for confirmation.
+If a check was stopped and unchecked links remain, **Continue check** resumes from where it left off (already-checked links stay as they are). **Restart from zero** clears check progress and rechecks every link from scratch. **Continue check** starts immediately; **Restart from zero** asks for confirmation. The check that starts automatically after a scan behaves like **Continue check**.
 
 = Where is the URL change History? =
 Open **Tools → TSO Link Inspector → Settings → History**. It lists recent changes from Edit link, Suggest apply, Convert to /path, and Upgrade to HTTPS (including bulk actions). The log keeps a limited number of rows (oldest removed automatically). You can delete all history records; this does not change posts or the link list.
@@ -116,6 +126,10 @@ When a check runs, the plugin sends HTTP HEAD and, if needed, HTTP GET requests 
 
 Those destinations are websites already linked from your content, not a service chosen by the plugin. Terms of use and privacy policy: those of each destination site.
 
+= Optional DNS second opinion (Cloudflare) =
+
+Disabled by default. When an administrator enables "DNS second opinion" in Settings and this server cannot resolve a domain, the plugin asks Cloudflare public DNS (DNS-over-HTTPS, `https://cloudflare-dns.com/dns-query`) whether that domain exists, before reporting "Domain does not exist". Data sent: only the hostname of the link being checked (no page content, no site data). The answer is cached for 6 hours. Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ — Privacy policy: https://www.cloudflare.com/privacypolicy/
+
 = DNS lookups =
 
 Before requesting a hostname, the plugin may resolve A/AAAA records on the server (`dns_get_record` / `gethostbynamel`) so private, loopback, or reserved addresses are not contacted. This is a DNS lookup from your server; post content and user accounts are not sent.
@@ -127,32 +141,22 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
+= 2.5.4 =
+* Improvement: when this server cannot resolve a domain, the link is now shown as "Domain not resolved by this server (DNS, unconfirmed)" and is not counted as broken; "Domain does not exist" is reported only when confirmed. New optional setting "DNS second opinion" confirms with Cloudflare public DNS (off by default, hostname only).
+* Fix: a working domain could be reported as "Domain does not exist (DNS)" after a single failed or temporary DNS lookup; the check now queries A and AAAA separately, retries, lets the real HTTP request decide, and only reports a DNS failure once it is confirmed.
+* Fix: a plain-text URL split by inline formatting tags (e.g. http://www.<strong>Youtube</strong>.com/...) was reported as a broken link "http://www"; the URL is now read as visitors see it, and incomplete bare "www" hosts are ignored.
+
+= 2.5.3 =
+* Fix: the coming-soon detection no longer requests a made-up /tsoliin-nx-…/ URL, so it stops adding 404 entries to 404-monitor and redirect logs.
+
+= 2.5.2 =
+* Fix: the Link Inspector screen could keep showing the WordPress maintenance page (until a hard refresh) if it reloaded itself while WordPress was installing updates; it now waits for the updates to finish and never caches that page under its URL.
+* Improvement: background scans/checks pause while WordPress installs updates.
+
 = 2.5.1 =
 * Fix: the admin froze (and could hit "Maximum execution time exceeded") while a scan or check was running, because every admin page load ran a batch inline.
 * Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
 * Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
-* Improvement: the check that starts after a manual scan now only checks new links instead of rechecking every link from scratch, so the dashboard counts no longer drop to zero; "Restart check" still forces a full recheck.
-* Improvement: the plugin screens load faster: the dashboard counts are cached between requests instead of running the slowest query on every page load, and the table/column checks no longer run on every admin request.
-* Improvement: the scan progress bar no longer sits at 99% while comments, menus, terms, templates and widgets are scanned, and it names the source being scanned and moves while a long source is in progress.
-* Fix: the scan progress text flickered between two different wordings, and the new source names were missing from the Spanish and Catalan translations.
-
-= 2.5.0 =
-* Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
-* Fix: on posts with many links, the list re-queried the same post's content from the database for every row that belonged to it (up to 3 times per row across the title, view, and edit links), instead of reusing the post already fetched for an earlier row; a request-level cache now keeps this to one lookup per post per page load.
-* Fix: the "Edit post" and "View post" links for each row asked WordPress for the post by ID, which re-queries the database when that post isn't already in WordPress's own cache; they now reuse the post already fetched for that row, removing another source of repeated queries.
-* Fix: some of the plugin's own background scan/check progress options could still be marked to autoload in the database from older versions, so WordPress reloaded its entire options table on every scan/check "tick" that updated them; these are now normalized to not autoload on upgrade, matching what the code already requests.
-
-= 2.4.9 =
-* Fix: link list column headers (e.g. Last checked) could drift out of alignment with their own column depending on how long that site's URLs/titles were; column widths are now fixed instead of recalculated from content.
-* Improvement: Last checked now always shows dd/mm/yyyy 24h time, instead of following each site's own date/time format setting.
-* Fix: disabling WooCommerce product scanning no longer leaves "Product" permanently and silently checked in the Content types list; products are only scanned as generic content while WooCommerce scanning is enabled.
-* Fix: the "Last checked" column header could wrap onto two lines, pushing its sort arrow below the text instead of beside it like the other columns; the column is now wide enough for the label to stay on one line.
-* Improvement: added a Type filter dropdown (Link, Image, Iframe, Comment, Menu, etc.) to the link list, independent of the Status/Quality/Internal-External filters and the dashboard stat cards.
-* Fix: enabling "Media (attachment)" under Content types scanned almost no media items, because WordPress stores attachments with post_status "inherit" (not "publish"); the scan now also accepts "inherit" for attachments.
-* Fix: an absolute server filesystem path stored in another plugin's postmeta (e.g. a backup-file path starting with "/home/.../public_html/...") could be mistaken for a site-relative URL and checked as a bogus link at the domain root (always reporting 404 even though the real file exists); such paths are now recognized and skipped.
-
-= 2.4.8 =
-* Fix: Mobile and web view in night mode
-* Fix: Unresolved template placeholders (e.g. `${sec.image}`, `{{state.logo}}`) are no longer scanned as broken links; a rescan clears any already-stored placeholder rows.
+* Improvement: faster plugin screens, a progress bar that names the source being scanned, and the check after a scan now only tests new links instead of rechecking everything.
 
 See changelog.txt in the plugin folder for older versions
