@@ -1676,4 +1676,77 @@ class TSOLIIN_Support {
 
 		return $html;
 	}
+
+	/**
+	 * Normalise the list context saved when opening "all links for this post" (the `ret` URL argument).
+	 *
+	 * Only the known list arguments survive, each sanitised, so the Back button can restore the list the
+	 * user came from (Broken tab, search, page, sorting…) without ever following an arbitrary URL.
+	 *
+	 * @param string $raw Query string as stored in `ret`.
+	 * @return string Normalised query string, or '' when there is nothing to restore.
+	 */
+	public static function sanitize_return_context( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw || strlen( $raw ) > 600 ) {
+			return '';
+		}
+		$parsed = array();
+		parse_str( $raw, $parsed );
+		$out = array();
+		foreach ( array( 'filter', 'quality_filter', 'link_type_filter', 'scope', 'orderby', 'list_view' ) as $key ) {
+			if ( isset( $parsed[ $key ] ) && is_string( $parsed[ $key ] ) ) {
+				$val = sanitize_key( $parsed[ $key ] );
+				if ( '' !== $val ) {
+					$out[ $key ] = $val;
+				}
+			}
+		}
+		if ( isset( $parsed['order'] ) && is_string( $parsed['order'] ) ) {
+			$order = strtoupper( sanitize_key( $parsed['order'] ) );
+			if ( in_array( $order, array( 'ASC', 'DESC' ), true ) ) {
+				$out['order'] = $order;
+			}
+		}
+		if ( isset( $parsed['s'] ) && is_string( $parsed['s'] ) ) {
+			$search = sanitize_text_field( $parsed['s'] );
+			if ( '' !== $search ) {
+				$out['s'] = $search;
+			}
+		}
+		if ( isset( $parsed['paged'] ) ) {
+			$paged = absint( $parsed['paged'] );
+			if ( $paged > 1 ) {
+				$out['paged'] = $paged;
+			}
+		}
+		return http_build_query( $out );
+	}
+
+	/**
+	 * Return context carried by the current request (`ret`), normalised.
+	 *
+	 * @return string
+	 */
+	public static function get_request_return_context() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only list navigation argument, sanitised below.
+		$raw = isset( $_REQUEST['ret'] ) && is_string( $_REQUEST['ret'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['ret'] ) ) : '';
+		return self::sanitize_return_context( $raw );
+	}
+
+	/**
+	 * URL of the list the user came from when viewing one post's links (plain list when unknown).
+	 *
+	 * @return string
+	 */
+	public static function get_post_view_back_url() {
+		$args = array( 'page' => 'tso-link-inspector' );
+		$ctx  = self::get_request_return_context();
+		if ( '' !== $ctx ) {
+			$parsed = array();
+			parse_str( $ctx, $parsed );
+			$args = array_merge( $args, $parsed );
+		}
+		return add_query_arg( urlencode_deep( $args ), admin_url( 'tools.php' ) );
+	}
 }

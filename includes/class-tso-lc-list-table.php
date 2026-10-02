@@ -182,6 +182,13 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			$query['post_id'] = $post_id;
 		}
 
+		if ( $post_id > 0 && ! in_array( 'ret', $omit_keys, true ) && ! isset( $args['ret'] ) ) {
+			$return_ctx = TSOLIIN_Support::get_request_return_context();
+			if ( '' !== $return_ctx ) {
+				$query['ret'] = rawurlencode( $return_ctx );
+			}
+		}
+
 		if ( ! isset( $args['filter'] ) && ! in_array( 'filter', $omit_keys, true ) ) {
 			$filter = $this->read_request_status_filter();
 			if ( 'all' !== $filter ) {
@@ -734,15 +741,17 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			return esc_html( $title );
 		}
 		$view     = TSOLIIN_Support::get_post_frontend_view_url_for_link( $item );
-		$post_url = esc_url(
-			add_query_arg(
-				array(
-					'page'    => 'tso-link-inspector',
-					'post_id' => absint( $item->post_id ),
-				),
-				admin_url( 'tools.php' )
-			)
+		// Remember the list this link was opened from (tab, search, page, sorting) so Back can restore it.
+		$return_url   = $this->build_admin_list_url( array(), array( 'post_id', 'ret' ) );
+		$return_query = TSOLIIN_Support::sanitize_return_context( (string) wp_parse_url( $return_url, PHP_URL_QUERY ) );
+		$post_args    = array(
+			'page'    => 'tso-link-inspector',
+			'post_id' => absint( $item->post_id ),
 		);
+		if ( '' !== $return_query ) {
+			$post_args['ret'] = rawurlencode( $return_query ); // add_query_arg() does not encode values.
+		}
+		$post_url = esc_url( add_query_arg( $post_args, admin_url( 'tools.php' ) ) );
 
 		$out = '<a href="' . esc_url( $edit ) . '" target="_blank" rel="noopener noreferrer" title="' . esc_attr__( 'Edit post', 'tso-link-inspector' ) . '">' . esc_html( $title ) . '</a>';
 		// Icons row: view post + list links for this post.
@@ -759,7 +768,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$is_post_view = isset( $_REQUEST['post_id'] ) && absint( $_REQUEST['post_id'] ) === absint( $item->post_id );
 		if ( $is_post_view ) {
 			// Currently viewing this post — show "back" icon in accent colour.
-			$out .= '<a href="' . esc_url( admin_url( 'tools.php?page=tso-link-inspector' ) ) . '" title="' . esc_attr__( 'Back to all links', 'tso-link-inspector' ) . '" class="tsoliin-post-icon tsoliin-post-icon--back">';
+			$out .= '<a href="' . esc_url( TSOLIIN_Support::get_post_view_back_url() ) . '" title="' . esc_attr__( 'Back to all links', 'tso-link-inspector' ) . '" class="tsoliin-post-icon tsoliin-post-icon--back">';
 			$out .= '<span class="dashicons dashicons-arrow-left-alt"></span></a>';
 		} else {
 			$out .= '<a href="' . $post_url . '" title="' . esc_attr__( 'View all links for this post', 'tso-link-inspector' ) . '" class="tsoliin-post-icon tsoliin-post-icon--list">';

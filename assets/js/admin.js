@@ -439,7 +439,8 @@
 					post_id        : postId,
 					view           : view,
 					orderby        : url.searchParams.get( 'orderby' ) || '',
-					order          : url.searchParams.get( 'order' ) || ''
+					order          : url.searchParams.get( 'order' ) || '',
+					ret            : url.searchParams.get( 'ret' ) || ''
 				};
 			} catch ( e ) {
 				return null;
@@ -459,6 +460,7 @@
 			tsoliinData.listScope = params.scope || 'all';
 			tsoliinData.viewPostId = parseInt( params.post_id, 10 ) || 0;
 			tsoliinData.listView = params.view || 'links';
+			tsoliinData.listReturn = params.ret || '';
 			if ( params.orderby ) {
 				tsoliinData.listOrderby = params.orderby;
 			}
@@ -617,7 +619,8 @@
 					view           : params.view || tsoliinData.listView || 'links',
 					paged          : params.paged || 1,
 					orderby        : params.orderby || tsoliinData.listOrderby || 'date_found',
-					order          : params.order || tsoliinData.listOrder || 'DESC'
+					order          : params.order || tsoliinData.listOrder || 'DESC',
+					ret            : params.ret !== undefined ? params.ret : ( tsoliinData.listReturn || '' )
 				},
 				success: function ( r ) {
 					if ( r.success && r.data && r.data.html ) {

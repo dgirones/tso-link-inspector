@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Improvement: after opening "View all links for this post" from a filtered list (e.g. Broken), the Back button now returns to that list with the same tab, search, sorting and page, instead of the unfiltered All links view.
 * Fix: Smart Suggest no longer offers the www / non-www alias of a link that already works, and never offers a domain-for-sale or parking page (HugeDomains, Sedo, Dan, Afternic…) as the fix for a broken link.
 * Fix: Smart Suggest and the Edit link confirmation could fail with a generic "upstream request failed" error on slow or unreachable hosts, because the many checks outlasted the web server's gateway limit; they now have an 8-second budget for starting new checks and shorter per-request waits, so they finish well under 30 seconds.
 * Fix: Edit link on an http:// link asked "This server cannot confirm the URL… Save it anyway?" even when the new https:// URL worked (200); it only matched the single URL the plugin itself suggested. The URL you type is now checked directly, and the confirmation appears only when this server really cannot verify it. It is also faster, because the extra suggestion checks are skipped.

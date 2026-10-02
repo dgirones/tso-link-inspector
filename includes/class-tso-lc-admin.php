@@ -540,6 +540,7 @@ class TSOLIIN_Admin {
 				'lat'               => $theme_coords['lat'],
 				'lng'               => $theme_coords['lng'],
 				'viewPostId'        => $view_post_id,
+				'listReturn'        => $view_post_id > 0 ? TSOLIIN_Support::get_request_return_context() : '',
 				'listView'          => $list_view,
 				'listFilter'        => $list_filter,
 				'listQualityFilter' => $list_quality,
@@ -1202,6 +1203,10 @@ class TSOLIIN_Admin {
 		);
 		if ( $post_id > 0 ) {
 			$args['post_id'] = absint( $post_id );
+			$return_ctx      = TSOLIIN_Support::get_request_return_context();
+			if ( '' !== $return_ctx ) {
+				$args['ret'] = rawurlencode( $return_ctx );
+			}
 		}
 		if ( 'all' !== $filter_key && in_array( $filter_key, $this->get_allowed_status_filters(), true ) ) {
 			$args['filter'] = $filter_key;
@@ -2526,7 +2531,7 @@ class TSOLIIN_Admin {
 			echo '<div class="tsoliin-action-bar__left">';
 			echo '<a href="' . esc_url( (string) get_edit_post_link( $view_post_id ) ) . '" class="button button-secondary" target="_blank">' . esc_html__( 'Edit post', 'tso-link-inspector' ) . '</a> ';
 			echo '<a href="' . esc_url( (string) get_permalink( $view_post_id ) ) . '" class="button button-secondary" target="_blank">' . esc_html__( 'View post', 'tso-link-inspector' ) . '</a> ';
-			echo '<a href="' . esc_url( admin_url( 'tools.php?page=tso-link-inspector' ) ) . '" class="button button-secondary tsoliin-post-scope-link tsoliin-post-scope-link--back">&#8592; ' . esc_html__( 'Back', 'tso-link-inspector' ) . '</a>';
+			echo '<a href="' . esc_url( TSOLIIN_Support::get_post_view_back_url() ) . '" class="button button-secondary tsoliin-post-scope-link tsoliin-post-scope-link--back">&#8592; ' . esc_html__( 'Back', 'tso-link-inspector' ) . '</a>';
 			echo '</div>';
 			echo '</div>';
 		}
@@ -2704,9 +2709,14 @@ class TSOLIIN_Admin {
 		$_REQUEST['paged']            = $paged;
 		$_REQUEST['orderby']          = $orderby;
 		$_REQUEST['order']            = $order;
-		unset( $_REQUEST['post_id'], $_REQUEST['view'] );
+		unset( $_REQUEST['post_id'], $_REQUEST['view'], $_REQUEST['ret'] );
 		if ( $post_id ) {
 			$_REQUEST['post_id'] = $post_id;
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified by check_nonce_and_cap(); value is normalised to known list arguments.
+			$ret_ctx = isset( $_POST['ret'] ) && is_string( $_POST['ret'] ) ? TSOLIIN_Support::sanitize_return_context( sanitize_text_field( wp_unslash( $_POST['ret'] ) ) ) : '';
+			if ( '' !== $ret_ctx ) {
+				$_REQUEST['ret'] = $ret_ctx;
+			}
 		} elseif ( in_array( $list_view, array( 'posts', 'products' ), true ) ) {
 			$_REQUEST['view'] = $list_view;
 		}
