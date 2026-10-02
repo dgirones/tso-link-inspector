@@ -69,6 +69,13 @@ class TSOLIIN_HTTP {
 	private static $dns_pins = array();
 
 	/**
+	 * Unix time (float) after which check() gives up immediately, or null for no limit.
+	 *
+	 * @var float|null
+	 */
+	private $deadline = null;
+
+	/**
 	 * Set up the class dependencies.
 	 */
 	public function __construct() {
@@ -85,6 +92,25 @@ class TSOLIIN_HTTP {
 	 */
 	public function begin_bulk_timeout( $seconds = 8 ) {
 		$this->timeout_override = max( 3, min( absint( $seconds ), max( 3, (int) $this->timeout ) ) );
+	}
+
+	/**
+	 * Stop starting new HTTP checks after this many seconds (interactive Smart Suggest / Edit link).
+	 *
+	 * Each check can wait for several timeouts; a suggestion run that probes many candidates for a dead
+	 * host would otherwise outlast the web server's gateway limit and fail with a generic error.
+	 *
+	 * @param int $seconds Time budget.
+	 */
+	public function begin_deadline( $seconds ) {
+		$this->deadline = microtime( true ) + max( 5, absint( $seconds ) );
+	}
+
+	/**
+	 * Remove the time budget set by begin_deadline().
+	 */
+	public function end_deadline() {
+		$this->deadline = null;
 	}
 
 	/**
@@ -2114,6 +2140,14 @@ class TSOLIIN_HTTP {
 	 * @return array { status_code: int, redirect_url: string, is_broken: int }
 	 */
 	public function check( $url, $post_id = 0 ) {
+		if ( null !== $this->deadline && microtime( true ) > $this->deadline ) {
+			// Time budget used up (see begin_deadline()): report a timeout without starting another request.
+			return array(
+				'status_code'  => -3,
+				'redirect_url' => '',
+				'is_broken'    => 1,
+			);
+		}
 		$url = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $url ) );
 		$url = self::idn_url_to_ascii( TSOLIIN_Scanner::resolve_to_absolute_url( $url, $post_id ) );
 
@@ -2685,7 +2719,7 @@ class TSOLIIN_HTTP {
 		// 1. Final destination after following redirects from the original URL (e.g. twitter.com → x.com).
 		if ( ! empty( $r_orig['redirect_url'] ) && ! $this->is_trivial_redirect( $url, $r_orig['redirect_url'] ) ) {
 			$final = trim( (string) $r_orig['redirect_url'] );
-			if ( '' !== $final && ! in_array( $final, $tested, true ) ) {
+			if ( '' !== $final && ! in_array( $final, $tested, true ) && ! self::is_domain_for_sale_url( $final ) ) {
 				$r_final = $this->check( $final, $post_id );
 				if ( self::suggestion_fixes_broken_link( $r_orig, $r_final ) ) {
 					$final_status  = (int) $r_final['status_code'];
@@ -2761,8 +2795,10 @@ class TSOLIIN_HTTP {
 			}
 		}
 
-		// 3. www variant — never for dead resources (404/410); toggling www cannot restore missing files.
-		if ( ! self::is_plain_http_url( $url ) && ! self::is_resource_not_found_status( (int) $r_orig['status_code'] ) ) {
+		// 3. www variant — never for dead resources (404/410), and never for a link that already works:
+		// toggling www cannot restore missing files and would only swap a working URL for its alias.
+		$orig_needs_fix = ! empty( $r_orig['is_broken'] ) || self::is_unverified_remote_status( (int) $r_orig['status_code'] );
+		if ( $orig_needs_fix && ! self::is_plain_http_url( $url ) && ! self::is_resource_not_found_status( (int) $r_orig['status_code'] ) ) {
 			$parts = wp_parse_url( $url );
 			if ( $parts && isset( $parts['host'] ) ) {
 				$host   = (string) $parts['host'];
@@ -3182,6 +3218,29 @@ class TSOLIIN_HTTP {
 			return 'tsoliin-status--ok';
 		}
 		return 'tsoliin-status--unknown';
+	}
+
+	/**
+	 * Whether a URL is on a domain-for-sale / parking marketplace.
+	 *
+	 * A dead domain that now redirects to one of these answers 200 but is not a replacement for the link,
+	 * so it must never be offered as a fix.
+	 *
+	 * @param string $url Absolute URL.
+	 * @return bool
+	 */
+	public static function is_domain_for_sale_url( $url ) {
+		$host = strtolower( (string) wp_parse_url( (string) $url, PHP_URL_HOST ) );
+		if ( '' === $host ) {
+			return false;
+		}
+		$markets = array( 'hugedomains.com', 'sedo.com', 'sedoparking.com', 'dan.com', 'afternic.com', 'parkingcrew.net', 'bodis.com', 'above.com', 'uniregistry.com', 'undeveloped.com', 'buydomains.com', 'domainsponsor.com' );
+		foreach ( $markets as $market ) {
+			if ( $host === $market || substr( $host, -strlen( '.' . $market ) ) === '.' . $market ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

@@ -3353,9 +3353,30 @@ class TSOLIIN_Admin {
 		if ( ! preg_match( '#\Ahttps://#i', $new_url ) ) {
 			return false;
 		}
-		// The URL typed in the editor is what gets saved, so verify that URL itself: if it answers 2xx (or a
-		// normal redirect that ends on a working page) from this server there is nothing to confirm. Only a
-		// URL this server cannot verify (timeout, bot wall, error) falls back to the suggested-upgrade check.
+		// Cap the waits while verifying so a dead host cannot outlast the gateway limit; the cap must not leak
+		// into the checks that follow when the link is saved.
+		$this->http->begin_bulk_timeout( 8 );
+		$this->http->begin_deadline( 30 );
+		try {
+			return $this->https_upgrade_needs_confirmation( $link, $new_url );
+		} finally {
+			$this->http->end_deadline();
+			$this->http->end_bulk_timeout();
+		}
+	}
+
+	/**
+	 * Whether saving this http→https edit needs the "save anyway" confirmation.
+	 *
+	 * The URL typed in the editor is what gets saved, so that URL is verified first: if it answers 2xx (or a
+	 * normal redirect that ends on a working page) from this server there is nothing to confirm. Only a URL
+	 * this server cannot verify (timeout, bot wall, error) falls back to the suggested-upgrade check.
+	 *
+	 * @param object $link    Link row.
+	 * @param string $new_url New https URL.
+	 * @return bool
+	 */
+	private function https_upgrade_needs_confirmation( $link, $new_url ) {
 		$typed = TSOLIIN_HTTP::sanitize_external_http_url( $new_url );
 		if ( false !== $typed ) {
 			$r_typed = $this->http->check( $typed, (int) $link->post_id );
@@ -4598,6 +4619,10 @@ class TSOLIIN_Admin {
 			);
 		}
 
+		// Interactive request: cap each wait and the whole run so a dead host cannot outlast the gateway limit.
+		$this->http->begin_bulk_timeout( 8 );
+		$this->http->begin_deadline( 30 );
+
 		$suggestions       = array();
 		$seen_urls         = array( (string) $link->link_url );
 		$bot_blocked       = false;
@@ -4611,6 +4636,7 @@ class TSOLIIN_Admin {
 		if ( ! empty( $link->redirect_url ) ) {
 			$rurl                  = (string) $link->redirect_url;
 			$skip_redirect_suggest = $this->http->is_transparent_redirect( (string) $link->link_url, $rurl )
+				|| TSOLIIN_HTTP::is_domain_for_sale_url( $rurl )
 				|| TSOLIIN_HTTP::is_chrome_webstore_unavailable_url( $rurl )
 				|| (
 					TSOLIIN_HTTP::is_plain_http_url( $orig_abs )
@@ -4676,7 +4702,7 @@ class TSOLIIN_Admin {
 		$safe_suggestions = array();
 		foreach ( $suggestions as $suggestion ) {
 			$safe_url = TSOLIIN_HTTP::sanitize_external_http_url( isset( $suggestion['url'] ) ? $suggestion['url'] : '' );
-			if ( false === $safe_url ) {
+			if ( false === $safe_url || TSOLIIN_HTTP::is_domain_for_sale_url( $safe_url ) ) {
 				continue;
 			}
 			$r_live = $this->http->check( $safe_url, (int) $link->post_id );

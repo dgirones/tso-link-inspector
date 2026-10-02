@@ -142,6 +142,8 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: Smart Suggest no longer offers the www / non-www alias of a link that already works, and never offers a domain-for-sale or parking page (HugeDomains, Sedo, Dan, Afternic…) as the fix for a broken link.
+* Fix: Smart Suggest and the Edit link confirmation could fail with a generic "upstream request failed" error on slow or unreachable hosts, because the many checks outlasted the web server's gateway limit; they now have a 30-second budget and shorter per-request waits.
 * Fix: Edit link on an http:// link asked "This server cannot confirm the URL… Save it anyway?" even when the new https:// URL worked (200); it only matched the single URL the plugin itself suggested. The URL you type is now checked directly, and the confirmation appears only when this server really cannot verify it. It is also faster, because the extra suggestion checks are skipped.
 * Fix: cookies are now kept between redirect hops, like a browser; sites with a silent login/consent redirect chain (e.g. developer.android.com) are no longer reported as a redirect loop. 999 is labelled "Access blocked (bot?)".
 * Fix: a redirect loop (more than 8 redirects) was shown as a normal redirect; it is now reported as broken "Too many redirects (loop)".
