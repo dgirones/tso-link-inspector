@@ -5086,6 +5086,11 @@ class TSOLIIN_Admin {
 			$lines[] = 'WARN ' . __( 'Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses.', 'tso-link-inspector' );
 		}
 
+		$trace = TSOLIIN_HTTP::get_second_opinion_trace();
+		if ( null !== $trace ) {
+			$lines[] = 'INFO ' . __( 'Last check using the DNS second opinion:', 'tso-link-inspector' ) . ' ' . $trace['host'] . ' — ' . $trace['result'] . ' (' . wp_date( 'Y-m-d H:i:s', (int) $trace['time'] ) . ')';
+		}
+
 		$last_scan = (string) get_option( 'tsoliin_last_full_scan', '' );
 		if ( '' !== $last_scan ) {
 			$lines[] = 'OK ' . __( 'Last full scan:', 'tso-link-inspector' ) . ' ' . $last_scan;

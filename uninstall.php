@@ -97,9 +97,16 @@ $tsoliin_transients = array(
 	'tsoliin_stats_cache',
 	'tsoliin_schema_rechecked',
 	'tsoliin_legacy_pc_checked',
+	'tsoliin_dns_trace',
 );
 foreach ( $tsoliin_transients as $tsoliin_transient_name ) {
 	delete_transient( $tsoliin_transient_name );
+}
+
+// Per-host DNS second-opinion cache (tsoliin_dns4_<hash>) and its timeouts.
+foreach ( array( '_transient_tsoliin_dns4_', '_transient_timeout_tsoliin_dns4_' ) as $tsoliin_dns_prefix ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( $tsoliin_dns_prefix ) . '%' ) );
 }
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

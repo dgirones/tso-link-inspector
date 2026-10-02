@@ -3815,3 +3815,7 @@ msgstr "Este servidor ignora las conexiones fijadas a una dirección IP (un prox
 #: includes/class-tso-lc-admin.php
 msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
 msgstr "No se pudo conectar a una dirección IP de prueba. El alojamiento puede bloquear las conexiones salientes a direcciones arbitrarias."
+
+#: includes/class-tso-lc-admin.php
+msgid "Last check using the DNS second opinion:"
+msgstr "Última comprobación con la segunda opinión DNS:"

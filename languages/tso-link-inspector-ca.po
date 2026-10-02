@@ -3635,3 +3635,7 @@ msgstr "Aquest servidor ignora les connexions fixades a una adreça IP (un servi
 #: includes/class-tso-lc-admin.php
 msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
 msgstr "No s'ha pogut connectar a una adreça IP de prova. L'allotjament pot bloquejar les connexions sortints a adreces arbitràries."
+
+#: includes/class-tso-lc-admin.php
+msgid "Last check using the DNS second opinion:"
+msgstr "Última comprovació amb la segona opinió DNS:"

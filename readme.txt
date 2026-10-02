@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Improvement: Diagnostics shows the outcome of the latest check that used the DNS second opinion (host name, addresses and result), and uninstall removes its cached answers.
 * Improvement: Diagnostics now reports whether this server honours connections pinned to an IP address (and any WP_PROXY_HOST), which decides if domains that only a public DNS can resolve can be checked directly.
 * Improvement: when the DNS second opinion finds that a domain this server cannot resolve exists, the plugin now checks the page itself using the public IP addresses Cloudflare returned, so 404 pages, SSL errors and dead servers are reported instead of showing "200 OK by Cloudflare". Private/reserved addresses, non-standard ports and credentials are blocked.
 * Fix: a search containing &, # or spaces (e.g. a URL with a query string) broke sorting, tabs and pagination, because the search term was not encoded in the list URLs; the term is now encoded and kept.

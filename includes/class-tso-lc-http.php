@@ -1434,9 +1434,11 @@ class TSOLIIN_HTTP {
 			}
 			$fallback = self::use_second_opinion_ips( $url );
 			if ( 'none' === $fallback ) {
+				self::record_second_opinion_trace( (string) wp_parse_url( (string) $url, PHP_URL_HOST ), 'no usable answer from the DNS second opinion' );
 				return 'dns';
 			}
 			if ( 'ok' !== $fallback || ! self::is_safe_remote_url( $url, true ) ) {
+				self::record_second_opinion_trace( (string) wp_parse_url( (string) $url, PHP_URL_HOST ), 'blocked (non-public address or URL not allowed)' );
 				return 'blocked';
 			}
 		}
@@ -2061,6 +2063,37 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Remember the outcome of the latest check that relied on the DNS second opinion (shown in Diagnostics).
+	 *
+	 * Stores only the host name, the addresses and the result text for one day.
+	 *
+	 * @param string $host   Host name.
+	 * @param string $result Short outcome text.
+	 * @return void
+	 */
+	private static function record_second_opinion_trace( $host, $result ) {
+		set_transient(
+			'tsoliin_dns_trace',
+			array(
+				'time'   => time(),
+				'host'   => substr( (string) $host, 0, 120 ),
+				'result' => substr( (string) $result, 0, 240 ),
+			),
+			DAY_IN_SECONDS
+		);
+	}
+
+	/**
+	 * Latest second-opinion outcome recorded by record_second_opinion_trace().
+	 *
+	 * @return array{time:int,host:string,result:string}|null
+	 */
+	public static function get_second_opinion_trace() {
+		$trace = get_transient( 'tsoliin_dns_trace' );
+		return ( is_array( $trace ) && isset( $trace['time'], $trace['host'], $trace['result'] ) ) ? $trace : null;
+	}
+
+	/**
 	 * Diagnostics: does this server honour connections pinned to an IP address?
 	 *
 	 * The DNS second opinion checks pages of domains this server cannot resolve by connecting to the addresses
@@ -2446,6 +2479,11 @@ class TSOLIIN_HTTP {
 					$code     = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 				}
 
+				if ( self::url_uses_fallback_ips( $final_url ) ) {
+					$trace_host = strtolower( (string) wp_parse_url( $final_url, PHP_URL_HOST ) );
+					$trace_ips  = isset( self::$fallback_ips[ $trace_host ] ) ? implode( ',', self::$fallback_ips[ $trace_host ] ) : '';
+					self::record_second_opinion_trace( $trace_host, $trace_ips . ' -> ' . ( is_wp_error( $response ) ? 'error: ' . $response->get_error_message() : 'HTTP ' . (int) $code ) );
+				}
 				if ( ! is_wp_error( $response ) ) {
 					foreach ( wp_remote_retrieve_cookies( $response ) as $cookie ) {
 						if ( $cookie instanceof WP_Http_Cookie ) {
