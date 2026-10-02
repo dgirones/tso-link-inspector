@@ -128,7 +128,7 @@ Those destinations are websites already linked from your content, not a service 
 
 = Optional DNS second opinion (Cloudflare) =
 
-Disabled by default. When an administrator enables "DNS second opinion" in Settings and this server cannot resolve a domain, the plugin asks Cloudflare public DNS (DNS-over-HTTPS, `https://cloudflare-dns.com/dns-query`) whether that domain exists, before reporting "Domain does not exist". Data sent: only the hostname of the link being checked (no page content, no site data). The answer is cached for 6 hours. Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ — Privacy policy: https://www.cloudflare.com/privacypolicy/
+Disabled by default. When an administrator enables "DNS second opinion" in Settings and this server cannot resolve a domain, the plugin asks Cloudflare public DNS (DNS-over-HTTPS, `https://cloudflare-dns.com/dns-query`) whether that domain resolves to an address (A or AAAA record), before reporting "Domain does not exist". Data sent: only the hostname of the link being checked (no page content, no site data). The answer is cached for 6 hours. Service: Cloudflare, Inc. Terms: https://www.cloudflare.com/website-terms/ — Privacy policy: https://www.cloudflare.com/privacypolicy/
 
 = DNS lookups =
 
@@ -142,7 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
-* Improvement: when Cloudflare DNS second opinion confirms that a domain this server cannot resolve exists, the link is shown as "Domain not resolved by this server (200 OK by Cloudflare)" and counted under OK; Recheck applies the same verification. Catalan and Spanish translations added.
+* Improvement: when Cloudflare DNS second opinion confirms that a domain this server cannot resolve exists, the link is shown as "Domain not resolved by this server (200 OK by Cloudflare)" and counted under OK; Recheck applies the same verification. Cloudflare's answer only counts as OK when the domain has an A or AAAA record; a domain with no address records, or whose name servers fail, is reported as "Domain does not exist (DNS)". Catalan and Spanish translations added.
 * Improvement: when this server cannot resolve a domain, the link is now shown as "Domain not resolved by this server (DNS, unconfirmed)" and is not counted as broken; "Domain does not exist" is reported only when confirmed. New optional setting "DNS second opinion" confirms with Cloudflare public DNS (off by default, hostname only).
 * Fix: a working domain could be reported as "Domain does not exist (DNS)" after a single failed or temporary DNS lookup; the check now queries A and AAAA separately, retries, lets the real HTTP request decide, and only reports a DNS failure once it is confirmed.
 * Fix: a plain-text URL split by inline formatting tags (e.g. http://www.<strong>Youtube</strong>.com/...) was reported as a broken link "http://www"; the URL is now read as visitors see it, and incomplete bare "www" hosts are ignored.

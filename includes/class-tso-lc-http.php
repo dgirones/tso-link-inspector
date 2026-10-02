@@ -1774,12 +1774,16 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
-	 * Ask a public DNS-over-HTTPS resolver whether a domain exists (second opinion).
+	 * Ask a public DNS-over-HTTPS resolver whether a domain is reachable (second opinion).
 	 *
 	 * Opt-in (Settings): sends only the hostname to Cloudflare DNS (cloudflare-dns.com).
 	 *
+	 * "Exists" means the name has at least one A or AAAA record. A domain that is registered but has no
+	 * address records (expired / parked without DNS) or whose name servers fail (SERVFAIL on A and AAAA)
+	 * is reported as unreachable, because visitors cannot reach it either.
+	 *
 	 * @param string $host Hostname.
-	 * @return bool|null True = NXDOMAIN confirmed, false = domain exists, null = unknown / disabled.
+	 * @return bool|null True = unreachable confirmed, false = resolves to an address, null = unknown / disabled.
 	 */
 	private static function public_dns_says_nxdomain( $host ) {
 		$s = get_option( 'tsoliin_settings', array() );
@@ -1790,7 +1794,7 @@ class TSOLIIN_HTTP {
 		if ( '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) || false === strpos( $host, '.' ) ) {
 			return null;
 		}
-		$key    = 'tsoliin_dns2_' . md5( $host );
+		$key    = 'tsoliin_dns3_' . md5( $host );
 		$cached = get_transient( $key );
 		if ( 'nx' === $cached ) {
 			return true;
@@ -1798,11 +1802,51 @@ class TSOLIIN_HTTP {
 		if ( 'ok' === $cached ) {
 			return false;
 		}
+		$a = self::doh_query( $host, 'A' );
+		if ( null === $a ) {
+			return null;
+		}
+		if ( 3 === $a['status'] ) {
+			set_transient( $key, 'nx', 6 * HOUR_IN_SECONDS );
+			return true;
+		}
+		if ( 0 === $a['status'] && $a['has_address'] ) {
+			set_transient( $key, 'ok', 6 * HOUR_IN_SECONDS );
+			return false;
+		}
+		if ( 0 !== $a['status'] && 2 !== $a['status'] ) {
+			return null;
+		}
+		// NOERROR without an A record, or SERVFAIL: the AAAA answer decides.
+		$aaaa = self::doh_query( $host, 'AAAA' );
+		if ( null === $aaaa ) {
+			return null;
+		}
+		if ( 0 === $aaaa['status'] && $aaaa['has_address'] ) {
+			set_transient( $key, 'ok', 6 * HOUR_IN_SECONDS );
+			return false;
+		}
+		if ( $aaaa['status'] === $a['status'] || 3 === $aaaa['status'] ) {
+			// No address records (NOERROR/NODATA), or name servers failing on both lookups (SERVFAIL).
+			set_transient( $key, 'nx', ( 2 === $a['status'] ) ? HOUR_IN_SECONDS : 6 * HOUR_IN_SECONDS );
+			return true;
+		}
+		return null;
+	}
+
+	/**
+	 * One DNS-over-HTTPS lookup against Cloudflare.
+	 *
+	 * @param string $host Hostname.
+	 * @param string $type Record type: A or AAAA.
+	 * @return array{status:int,has_address:bool}|null Null when the answer is unusable.
+	 */
+	private static function doh_query( $host, $type ) {
 		$response = wp_remote_get(
 			add_query_arg(
 				array(
 					'name' => $host,
-					'type' => 'A',
+					'type' => $type,
 				),
 				'https://cloudflare-dns.com/dns-query'
 			),
@@ -1819,16 +1863,20 @@ class TSOLIIN_HTTP {
 		if ( ! is_array( $data ) || ! isset( $data['Status'] ) ) {
 			return null;
 		}
-		$status = (int) $data['Status'];
-		if ( 3 === $status ) {
-			set_transient( $key, 'nx', 6 * HOUR_IN_SECONDS );
-			return true;
+		$want        = ( 'AAAA' === $type ) ? 28 : 1;
+		$has_address = false;
+		if ( ! empty( $data['Answer'] ) && is_array( $data['Answer'] ) ) {
+			foreach ( $data['Answer'] as $record ) {
+				if ( is_array( $record ) && isset( $record['type'] ) && $want === (int) $record['type'] ) {
+					$has_address = true;
+					break;
+				}
+			}
 		}
-		if ( 0 === $status ) {
-			set_transient( $key, 'ok', 6 * HOUR_IN_SECONDS );
-			return false;
-		}
-		return null;
+		return array(
+			'status'      => (int) $data['Status'],
+			'has_address' => $has_address,
+		);
 	}
 
 	/**
