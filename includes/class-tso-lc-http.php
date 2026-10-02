@@ -2495,6 +2495,7 @@ class TSOLIIN_HTTP {
 				if ( is_wp_error( $response ) ) {
 					$error_code = $this->classify_error( $response );
 					if ( -2 === $error_code ) {
+						self::record_second_opinion_trace( (string) wp_parse_url( $final_url, PHP_URL_HOST ), 'HTTP request failed to resolve the host: ' . $response->get_error_message() );
 						return $this->dns_failure_result( $final_url );
 					}
 					return array(
