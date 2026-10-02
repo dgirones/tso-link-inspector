@@ -3775,3 +3775,19 @@ msgstr "El botón se engancha al escaneo que ya está en marcha y muestra su est
 #: includes/class-tso-lc-admin.php
 msgid "WordPress is installing updates. This page will reload when they finish…"
 msgstr "WordPress está instalando actualizaciones. Esta página se recargará cuando terminen…"
+
+#: includes/class-tso-lc-http.php
+msgid "Domain not resolved by this server (DNS, unconfirmed)"
+msgstr "Dominio no resuelto por este servidor (DNS, sin confirmar)"
+
+#: includes/class-tso-lc-http.php
+msgid "Domain not resolved by this server (200 OK by Cloudflare)"
+msgstr "Dominio no resuelto por este servidor (200 OK por Cloudflare)"
+
+#: includes/class-tso-lc-http.php
+msgid "DNS second opinion"
+msgstr "Segunda opinión DNS"
+
+#: includes/class-tso-lc-http.php
+msgid "When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting \"Domain does not exist\". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as \"not resolved by this server (unconfirmed)\" and are not counted as broken."
+msgstr "Cuando este servidor no puede resolver un dominio, consulta el DNS público de Cloudflare (cloudflare-dns.com) antes de informar de que \"El dominio no existe\". Si Cloudflare lo resuelve, el enlace se muestra como OK. Solo se envía el nombre de host. Sin esta opción, estos enlaces se muestran como \"no resuelto por este servidor (sin confirmar)\" y no se cuentan como rotos."

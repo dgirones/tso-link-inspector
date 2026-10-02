@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Improvement: when Cloudflare DNS second opinion confirms that a domain this server cannot resolve exists, the link is shown as "Domain not resolved by this server (200 OK by Cloudflare)" and counted under OK; Recheck applies the same verification. Catalan and Spanish translations added.
 * Improvement: when this server cannot resolve a domain, the link is now shown as "Domain not resolved by this server (DNS, unconfirmed)" and is not counted as broken; "Domain does not exist" is reported only when confirmed. New optional setting "DNS second opinion" confirms with Cloudflare public DNS (off by default, hostname only).
 * Fix: a working domain could be reported as "Domain does not exist (DNS)" after a single failed or temporary DNS lookup; the check now queries A and AAAA separately, retries, lets the real HTTP request decide, and only reports a DNS failure once it is confirmed.
 * Fix: a plain-text URL split by inline formatting tags (e.g. http://www.<strong>Youtube</strong>.com/...) was reported as a broken link "http://www"; the URL is now read as visitors see it, and incomplete bare "www" hosts are ignored.

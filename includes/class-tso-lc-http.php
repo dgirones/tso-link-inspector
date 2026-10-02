@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *  -7   = blocked (SSRF / private or reserved host)
  *  -9   = site gated (coming soon / maintenance intercepts internal URLs)
  * -10   = DNS lookup failed from this server but not confirmed (not reported as broken)
+ * -11   = DNS lookup failed from this server but Cloudflare DNS resolves it (shown as OK, not broken)
  * 2-5   = legacy (stored by old absint() bug, same meaning as -2 to -5)
  */
 class TSOLIIN_HTTP {
@@ -31,6 +32,9 @@ class TSOLIIN_HTTP {
 
 	/** Internal status: this server cannot resolve the domain, but no independent source confirmed it is gone. */
 	const STATUS_DNS_UNCONFIRMED = -10;
+
+	/** Internal status: this server cannot resolve the domain, but Cloudflare public DNS resolves it (not broken). */
+	const STATUS_DNS_CF_OK = -11;
 
 	/**
 	 * Request timeout in seconds.
@@ -1746,11 +1750,20 @@ class TSOLIIN_HTTP {
 	 */
 	public static function dns_failure_verdict( $url ) {
 		$host = strtolower( (string) wp_parse_url( (string) $url, PHP_URL_HOST ) );
-		if ( '' !== $host && true === self::public_dns_says_nxdomain( $host ) ) {
+		$nx   = ( '' !== $host ) ? self::public_dns_says_nxdomain( $host ) : null;
+		if ( true === $nx ) {
 			return array(
 				'status_code'  => -2,
 				'redirect_url' => '',
 				'is_broken'    => 1,
+			);
+		}
+		if ( false === $nx ) {
+			// Cloudflare resolves it: not broken, shown as OK.
+			return array(
+				'status_code'  => self::STATUS_DNS_CF_OK,
+				'redirect_url' => '',
+				'is_broken'    => 0,
 			);
 		}
 		return array(
@@ -2420,7 +2433,7 @@ class TSOLIIN_HTTP {
 	 */
 	public static function is_hard_broken_status( $code ) {
 		$code = (int) $code;
-		if ( in_array( $code, array( -1, -5, -6, -7, -8, self::STATUS_SITE_GATED, self::STATUS_DNS_UNCONFIRMED ), true ) ) {
+		if ( in_array( $code, array( -1, -5, -6, -7, -8, self::STATUS_SITE_GATED, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK ), true ) ) {
 			return false;
 		}
 		if ( $code <= 0 ) {
@@ -2463,7 +2476,7 @@ class TSOLIIN_HTTP {
 		if ( self::is_bot_block_status( $code ) ) {
 			return true;
 		}
-		return in_array( $code, array( 0, -3, -4, -5, -7, self::STATUS_DNS_UNCONFIRMED ), true );
+		return in_array( $code, array( 0, -3, -4, -5, -7, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK ), true );
 	}
 
 	/**
@@ -2966,6 +2979,7 @@ class TSOLIIN_HTTP {
 			-8  => __( 'Not checkable (non-HTTP URL)', 'tso-link-inspector' ),
 			-9  => __( 'Unverifiable (coming soon / maintenance)', 'tso-link-inspector' ),
 			-10 => __( 'Domain not resolved by this server (DNS, unconfirmed)', 'tso-link-inspector' ),
+			-11 => __( 'Domain not resolved by this server (200 OK by Cloudflare)', 'tso-link-inspector' ),
 			0   => __( 'Cannot connect', 'tso-link-inspector' ),
 			-2  => __( 'Domain does not exist (DNS)', 'tso-link-inspector' ),
 			-3  => __( 'Timed out', 'tso-link-inspector' ),
@@ -3027,6 +3041,9 @@ class TSOLIIN_HTTP {
 		}
 		if ( in_array( $code, array( -5, self::STATUS_DNS_UNCONFIRMED ), true ) && ! $is_broken ) {
 			return 'tsoliin-status--warning';
+		}
+		if ( self::STATUS_DNS_CF_OK === $code && ! $is_broken ) {
+			return 'tsoliin-status--ok';
 		}
 		if ( 0 === $code && ! $is_broken ) {
 			return 'tsoliin-status--unknown';

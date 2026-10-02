@@ -1978,7 +1978,7 @@ class TSOLIIN_Admin {
 		// DNS second opinion (opt-in, external service).
 		echo '<tr><th scope="row">' . esc_html__( 'DNS second opinion', 'tso-link-inspector' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="tsoliin_dns_second_opinion" value="1" ' . checked( $dns_second_opinion, true, false ) . ' /> ';
-		echo esc_html__( 'When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting "Domain does not exist". Only the hostname is sent. Without this option, such links are shown as "not resolved by this server (unconfirmed)" and are not counted as broken.', 'tso-link-inspector' ) . '</label></td></tr>';
+		echo esc_html__( 'When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting "Domain does not exist". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as "not resolved by this server (unconfirmed)" and are not counted as broken.', 'tso-link-inspector' ) . '</label></td></tr>';
 
 		// Extended content scanning (phase 1).
 		echo '<tr><th scope="row">' . esc_html__( 'Extended scanning', 'tso-link-inspector' ) . '</th><td>';

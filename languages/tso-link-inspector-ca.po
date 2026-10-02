@@ -3595,3 +3595,19 @@ msgstr "El botó s'enganxa a l'escaneig que ja hi ha en marxa i en mostra l'esta
 #: includes/class-tso-lc-admin.php
 msgid "WordPress is installing updates. This page will reload when they finish…"
 msgstr "WordPress està instal·lant actualitzacions. Aquesta pàgina es tornarà a carregar quan acabin…"
+
+#: includes/class-tso-lc-http.php
+msgid "Domain not resolved by this server (DNS, unconfirmed)"
+msgstr "Domini no resolt per aquest servidor (DNS, no confirmat)"
+
+#: includes/class-tso-lc-http.php
+msgid "Domain not resolved by this server (200 OK by Cloudflare)"
+msgstr "Domini no resolt per aquest servidor (200 OK per Cloudflare)"
+
+#: includes/class-tso-lc-http.php
+msgid "DNS second opinion"
+msgstr "Segona opinió DNS"
+
+#: includes/class-tso-lc-http.php
+msgid "When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting \"Domain does not exist\". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as \"not resolved by this server (unconfirmed)\" and are not counted as broken."
+msgstr "Quan aquest servidor no pot resoldre un domini, consulta el DNS públic de Cloudflare (cloudflare-dns.com) abans d'informar que \"El domini no existeix\". Si Cloudflare el resol, l'enllaç es mostra com a OK. Només s'envia el nom d'amfitrió. Sense aquesta opció, aquests enllaços es mostren com a \"no resolt per aquest servidor (no confirmat)\" i no es compten com a trencats."

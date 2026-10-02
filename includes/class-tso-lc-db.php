@@ -1828,7 +1828,7 @@ class TSOLIIN_DB {
 				$where .= ' AND ' . self::sql_redirect_match( 'l.' );
 				break;
 			case 'ok':
-				$where   .= ' AND l.last_checked IS NOT NULL AND l.is_broken = 0 AND l.status_code = 200 AND l.link_url NOT LIKE %s AND l.user_verified = 0';
+				$where   .= ' AND l.last_checked IS NOT NULL AND l.is_broken = 0 AND l.status_code IN (200,-11) AND l.link_url NOT LIKE %s AND l.user_verified = 0';
 				$params[] = 'http://%';
 				break;
 			case 'unchecked':
@@ -2501,7 +2501,7 @@ class TSOLIIN_DB {
 				return null !== $last_checked
 					&& '' !== (string) $last_checked
 					&& 0 === $is_broken
-					&& 200 === $status_code
+					&& in_array( $status_code, array( 200, TSOLIIN_HTTP::STATUS_DNS_CF_OK ), true )
 					&& 0 === $user_verified
 					&& 0 !== strpos( $link_url, 'http://' );
 			case 'unchecked':
@@ -2651,7 +2651,7 @@ class TSOLIIN_DB {
 		$sql = 'SELECT COUNT(*) AS total,'
 			. ' SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=1 AND user_verified=0 THEN 1 ELSE 0 END) AS broken,'
 			. ' SUM(CASE WHEN ' . self::sql_redirect_match() . ' THEN 1 ELSE 0 END) AS redirect,'
-			. ' SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=0 AND status_code=200 AND link_url NOT LIKE %s AND user_verified=0 THEN 1 ELSE 0 END) AS ok,'
+			. ' SUM(CASE WHEN last_checked IS NOT NULL AND is_broken=0 AND status_code IN (200,-11) AND link_url NOT LIKE %s AND user_verified=0 THEN 1 ELSE 0 END) AS ok,'
 			. ' SUM(CASE WHEN last_checked IS NULL AND user_verified=0 THEN 1 ELSE 0 END) AS unchecked,'
 			. ' SUM(CASE WHEN last_checked IS NOT NULL AND link_url LIKE %s AND is_broken=0 AND user_verified=0 THEN 1 ELSE 0 END) AS http_insecure,'
 			. ' SUM(CASE WHEN user_verified=1 THEN 1 ELSE 0 END) AS manual_locked,'
