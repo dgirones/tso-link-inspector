@@ -1141,6 +1141,46 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Convert an internationalized hostname (e.g. español.es) to its ASCII/punycode form.
+	 *
+	 * DNS lookups and wp_http_validate_url() need the ASCII form; without it a working IDN domain
+	 * looks like "Domain does not exist". Returns the host unchanged when it is already ASCII or intl is missing.
+	 *
+	 * @param string $host Hostname.
+	 * @return string
+	 */
+	public static function idn_host_to_ascii( $host ) {
+		$host = (string) $host;
+		if ( '' === $host || ! preg_match( '/[^\x20-\x7e]/', $host ) || ! function_exists( 'idn_to_ascii' ) ) {
+			return $host;
+		}
+		// The IDNA variant argument is deprecated / removed in newer PHP; the default (UTS #46) is what we want.
+		$ascii = defined( 'INTL_IDNA_VARIANT_UTF8' ) ? @idn_to_ascii( $host, 0, INTL_IDNA_VARIANT_UTF8 ) : @idn_to_ascii( $host ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		return ( is_string( $ascii ) && '' !== $ascii ) ? $ascii : $host;
+	}
+
+	/**
+	 * Same as idn_host_to_ascii() for the host part of an http(s) URL.
+	 *
+	 * @param string $url Absolute URL.
+	 * @return string
+	 */
+	public static function idn_url_to_ascii( $url ) {
+		$url = (string) $url;
+		if ( ! preg_match( '/[^\x20-\x7e]/', $url ) ) {
+			return $url;
+		}
+		$out = preg_replace_callback(
+			'#^(https?://)([^/?\#:@]+)#iu',
+			static function ( $m ) {
+				return $m[1] . TSOLIIN_HTTP::idn_host_to_ascii( $m[2] );
+			},
+			$url
+		);
+		return is_string( $out ) ? $out : $url;
+	}
+
+	/**
 	 * Resolve host ips.
 	 *
 	 * @param string $host  Hostname.
@@ -1148,7 +1188,7 @@ class TSOLIIN_HTTP {
 	 * @return string[]
 	 */
 	private static function resolve_host_ips( $host, $fresh = false ) {
-		$host         = strtolower( (string) $host );
+		$host         = strtolower( self::idn_host_to_ascii( (string) $host ) );
 		static $cache = array();
 		if ( ! $fresh && isset( $cache[ $host ] ) ) {
 			return $cache[ $host ];
@@ -1790,7 +1830,7 @@ class TSOLIIN_HTTP {
 		if ( ! is_array( $s ) || empty( $s['dns_second_opinion'] ) ) {
 			return null;
 		}
-		$host = strtolower( trim( (string) $host, '.' ) );
+		$host = strtolower( self::idn_host_to_ascii( trim( (string) $host, '.' ) ) );
 		if ( '' === $host || filter_var( $host, FILTER_VALIDATE_IP ) || false === strpos( $host, '.' ) ) {
 			return null;
 		}
@@ -2072,7 +2112,7 @@ class TSOLIIN_HTTP {
 	 */
 	public function check( $url, $post_id = 0 ) {
 		$url = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $url ) );
-		$url = TSOLIIN_Scanner::resolve_to_absolute_url( $url, $post_id );
+		$url = self::idn_url_to_ascii( TSOLIIN_Scanner::resolve_to_absolute_url( $url, $post_id ) );
 
 		if ( self::is_internal_link_url( $url, $post_id ) && ! $this->is_static_asset_url( $url ) && $this->is_site_gated() ) {
 			return $this->site_gated_result();
@@ -2184,7 +2224,7 @@ class TSOLIIN_HTTP {
 			do {
 				$guard = $this->guard_remote_url_for_request( $final_url );
 				if ( 'ok' !== $guard ) {
-					return ( 'dns' === $guard ) ? $this->dns_failure_result() : $this->blocked_url_result();
+					return ( 'dns' === $guard ) ? $this->dns_failure_result( $final_url ) : $this->blocked_url_result();
 				}
 
 				$response = wp_remote_head( $final_url, $args );
@@ -2192,11 +2232,9 @@ class TSOLIIN_HTTP {
 
 				// Retry with GET if HEAD returned error or blocking code.
 				// Some hosts return 401 to HEAD but 200 to GET; same-site URLs may return 404 to HEAD only.
-				$retry_get_codes = array( 0, 401, 403, 405 );
-				if ( self::is_internal_link_url( $final_url ) || $this->is_static_asset_url( $final_url ) ) {
-					$retry_get_codes[] = 404;
-				}
-				if ( is_wp_error( $response ) || in_array( $code, $retry_get_codes, true ) ) {
+				// Any 4xx/5xx to HEAD is re-checked with GET: many servers and CDNs answer HEAD with 404, 500 or 501
+				// but serve the page normally to GET. The GET result only replaces HEAD when it is better.
+				if ( is_wp_error( $response ) || $code >= 400 ) {
 					$get_r = wp_remote_get( $final_url, array_merge( $args, array( 'stream' => false ) ) );
 					if ( ! is_wp_error( $get_r ) ) {
 						$get_code = (int) wp_remote_retrieve_response_code( $get_r );
@@ -2246,7 +2284,7 @@ class TSOLIIN_HTTP {
 					}
 					$loc_guard = $this->guard_remote_url_for_request( $loc );
 					if ( 'ok' !== $loc_guard ) {
-						return ( 'dns' === $loc_guard ) ? $this->dns_failure_result() : $this->blocked_url_result();
+						return ( 'dns' === $loc_guard ) ? $this->dns_failure_result( $loc ) : $this->blocked_url_result();
 					}
 
 					if ( 0 === $hops ) {

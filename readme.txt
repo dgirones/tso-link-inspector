@@ -142,6 +142,11 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: links with app/protocol schemes (whatsapp:, tg:, geo:, callto:, market:, webcal:, magnet:, file:…) were resolved as relative paths and reported as 404; they are now skipped like mailto: and tel:.
+* Fix: bare URLs in comments and plain text lost their closing bracket (Wikipedia-style .../Foo_(bar)) and kept trailing quotes, ellipsis or non-breaking spaces, so working links were reported as broken; the end of the URL is now cut correctly.
+* Fix: internationalized domains (e.g. español.es, 日本語.jp) were reported as "Domain does not exist"; they are now converted to punycode before the DNS and HTTP checks.
+* Fix: a redirect to a domain this server cannot resolve skipped the DNS second opinion; it now gets the same verification.
+* Fix: servers that answer HEAD with 404, 500 or 501 but serve the page to GET were reported as broken; any 4xx/5xx to HEAD is now re-checked with GET.
 * Improvement: when Cloudflare DNS second opinion confirms that a domain this server cannot resolve exists, the link is shown as "Domain not resolved by this server (200 OK by Cloudflare)" and counted under OK; Recheck applies the same verification. Cloudflare's answer only counts as OK when the domain has an A or AAAA record; a domain with no address records, or whose name servers fail, is reported as "Domain does not exist (DNS)". Catalan and Spanish translations added.
 * Improvement: when this server cannot resolve a domain, the link is now shown as "Domain not resolved by this server (DNS, unconfirmed)" and is not counted as broken; "Domain does not exist" is reported only when confirmed. New optional setting "DNS second opinion" confirms with Cloudflare public DNS (off by default, hostname only).
 * Fix: a working domain could be reported as "Domain does not exist (DNS)" after a single failed or temporary DNS lookup; the check now queries A and AAAA separately, retries, lets the real HTTP request decide, and only reports a DNS failure once it is confirmed.

@@ -518,7 +518,7 @@ class TSOLIIN_Scanner {
 		$items = array();
 		if ( preg_match_all( '#https?://[^\s<>"\']+#i', $scan_text, $matches ) ) {
 			foreach ( $matches[0] as $raw ) {
-				$url = $this->clean_url( rtrim( (string) $raw, '.,;:!?)' ) );
+				$url = $this->trim_plain_url_end( $this->clean_url( (string) $raw ) );
 				if ( '' === $url || $this->skip_url( $url ) ) {
 					continue;
 				}
@@ -537,6 +537,37 @@ class TSOLIIN_Scanner {
 			}
 		}
 		return $this->dedup( $items );
+	}
+
+	/**
+	 * Cut a bare URL found in prose at the point where the sentence continues.
+	 *
+	 * Drops trailing punctuation and quotes, and a closing bracket only when it has no opening
+	 * partner inside the URL, so Wikipedia-style .../Foo_(bar) links stay intact.
+	 *
+	 * @param string $url URL candidate.
+	 * @return string
+	 */
+	private function trim_plain_url_end( $url ) {
+		$url = (string) $url;
+		$cut = preg_split( '/[\x{00A0}\x{200B}\x{2028}\x{2029}]/u', $url, 2 );
+		if ( is_array( $cut ) && isset( $cut[0] ) ) {
+			$url = $cut[0];
+		}
+		$pairs = array(
+			')' => '(',
+			']' => '[',
+			'}' => '{',
+		);
+		do {
+			$before = $url;
+			$url    = (string) preg_replace( '/[.,;:!?\x{2026}\x{2019}\x{201D}\x{00BB}\x{201C}\x{2018}\x{00AB}]+$/u', '', $url );
+			$last   = substr( $url, -1 );
+			if ( isset( $pairs[ $last ] ) && substr_count( $url, $last ) > substr_count( $url, $pairs[ $last ] ) ) {
+				$url = substr( $url, 0, -1 );
+			}
+		} while ( $url !== $before && '' !== $url );
+		return $url;
 	}
 
 	/**
@@ -2059,9 +2090,16 @@ class TSOLIIN_Scanner {
 		if ( false !== strpos( $url, '${' ) || false !== strpos( $url, '{{' ) ) {
 			return true;
 		}
-		$scheme       = strtolower( (string) wp_parse_url( $url, PHP_URL_SCHEME ) );
+		// Regex instead of wp_parse_url(): parse_url() reads "callto:123" as host:port, not as a scheme.
+		$scheme       = preg_match( '#^([a-z][a-z0-9+.\-]*):#i', $url, $scheme_match ) ? strtolower( $scheme_match[1] ) : '';
 		$skip_schemes = array( 'mailto', 'tel', 'javascript', 'data', 'sms', 'ftp', 'ftps', 'skype', 'blob' );
 		if ( in_array( $scheme, $skip_schemes, true ) ) {
+			return true;
+		}
+		// Any other app / protocol scheme (whatsapp:, tg:, geo:, callto:, market:, webcal:, magnet:, file:…)
+		// is not an http(s) page; otherwise it would be resolved as a relative path and reported as a 404.
+		// A "scheme" containing a dot is a host:port without protocol (example.com:8080), not a protocol.
+		if ( '' !== $scheme && ! in_array( $scheme, array( 'http', 'https' ), true ) && false === strpos( $scheme, '.' ) ) {
 			return true;
 		}
 		if ( 0 === strpos( $url, 'data:' ) ) {
