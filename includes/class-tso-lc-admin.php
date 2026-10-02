@@ -5077,6 +5077,7 @@ class TSOLIIN_Admin {
 		if ( defined( 'WP_PROXY_HOST' ) && '' !== (string) WP_PROXY_HOST ) {
 			$lines[] = 'INFO ' . __( 'HTTP proxy configured (WP_PROXY_HOST):', 'tso-link-inspector' ) . ' ' . WP_PROXY_HOST;
 		}
+		$trace   = TSOLIIN_HTTP::get_second_opinion_trace(); // Read before the self-test below, which records its own trace.
 		$pinning = $this->http->diagnose_ip_pinning();
 		if ( 'works' === $pinning ) {
 			$lines[] = 'OK ' . __( 'Connections pinned to an IP address work (needed to check domains only a public DNS can resolve).', 'tso-link-inspector' );
@@ -5086,7 +5087,6 @@ class TSOLIIN_Admin {
 			$lines[] = 'WARN ' . __( 'Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses.', 'tso-link-inspector' );
 		}
 
-		$trace = TSOLIIN_HTTP::get_second_opinion_trace();
 		if ( null !== $trace ) {
 			$lines[] = 'INFO ' . __( 'Last check using the DNS second opinion:', 'tso-link-inspector' ) . ' ' . $trace['host'] . ' — ' . $trace['result'] . ' (' . wp_date( 'Y-m-d H:i:s', (int) $trace['time'] ) . ')';
 		}
