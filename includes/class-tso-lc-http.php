@@ -1590,15 +1590,14 @@ class TSOLIIN_HTTP {
 	private function get_site_gate_probe_url( $home ) {
 		$ids       = get_posts(
 			array(
-				'post_type'        => array( 'post', 'page' ),
-				'post_status'      => 'publish',
-				'has_password'     => false,
-				'posts_per_page'   => 5,
-				'orderby'          => 'date',
-				'order'            => 'DESC',
-				'fields'           => 'ids',
-				'no_found_rows'    => true,
-				'suppress_filters' => true,
+				'post_type'      => array( 'post', 'page' ),
+				'post_status'    => 'publish',
+				'has_password'   => false,
+				'posts_per_page' => 5,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
 			)
 		);
 		$home_norm = untrailingslashit( (string) $home );
