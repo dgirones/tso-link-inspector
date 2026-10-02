@@ -2726,7 +2726,7 @@ class TSOLIIN_HTTP {
 			'error resolving',
 			'dns lookup failed',
 			'resolve host',
-			'curl error 6',
+			'curl error 6:', // With the colon: "curl error 60" is an SSL certificate error, not a DNS one.
 		);
 		foreach ( $dns_needles as $needle ) {
 			if ( false !== strpos( $msg, $needle ) ) {
