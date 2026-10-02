@@ -3353,6 +3353,20 @@ class TSOLIIN_Admin {
 		if ( ! preg_match( '#\Ahttps://#i', $new_url ) ) {
 			return false;
 		}
+		// The URL typed in the editor is what gets saved, so verify that URL itself: if it answers 2xx (or a
+		// normal redirect that ends on a working page) from this server there is nothing to confirm. Only a
+		// URL this server cannot verify (timeout, bot wall, error) falls back to the suggested-upgrade check.
+		$typed = TSOLIIN_HTTP::sanitize_external_http_url( $new_url );
+		if ( false !== $typed ) {
+			$r_typed = $this->http->check( $typed, (int) $link->post_id );
+			if ( TSOLIIN_HTTP::is_actionable_suggestion_result( $r_typed ) ) {
+				return false;
+			}
+			$typed_code = isset( $r_typed['status_code'] ) ? (int) $r_typed['status_code'] : 0;
+			if ( empty( $r_typed['is_broken'] ) && in_array( $typed_code, array( 301, 302, 303, 307, 308 ), true ) ) {
+				return false;
+			}
+		}
 		$verified = $this->http->get_verified_https_upgrade_url( (string) $link->link_url, (int) $link->post_id );
 		return '' === $verified || $verified !== $new_url;
 	}

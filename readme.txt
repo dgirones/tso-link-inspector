@@ -142,6 +142,7 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 == Changelog ==
 
 = 2.5.4 =
+* Fix: Edit link on an http:// link asked "This server cannot confirm the URL… Save it anyway?" even when the new https:// URL worked (200); it only matched the single URL the plugin itself suggested. The URL you type is now checked directly, and the confirmation appears only when this server really cannot verify it. It is also faster, because the extra suggestion checks are skipped.
 * Fix: cookies are now kept between redirect hops, like a browser; sites with a silent login/consent redirect chain (e.g. developer.android.com) are no longer reported as a redirect loop. 999 is labelled "Access blocked (bot?)".
 * Fix: a redirect loop (more than 8 redirects) was shown as a normal redirect; it is now reported as broken "Too many redirects (loop)".
 * Fix: when a server answers HEAD with 405 or 501, the GET answer is now used; LinkedIn's anti-bot code 999 is treated as "blocked by bot protection", not as broken.
