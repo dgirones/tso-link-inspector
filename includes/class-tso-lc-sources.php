@@ -42,15 +42,6 @@ class TSOLIIN_Sources {
 	}
 
 	/**
-	 * Get the registered.
-	 *
-	 * @return array<string, callable>
-	 */
-	public static function get_registered() {
-		return self::$sources;
-	}
-
-	/**
 	 * Invoke registered collectors during a scan batch.
 	 *
 	 * @param TSOLIIN_Scanner $scanner Scanner instance.

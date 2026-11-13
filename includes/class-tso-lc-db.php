@@ -76,7 +76,7 @@ class TSOLIIN_DB {
 	/**
 	 * Transient holding the per-request stats cache between requests.
 	 */
-	const STATS_TRANSIENT = 'tsoliin_stats_cache';
+	const STATS_TRANSIENT = 'tsoliin_stats_cache_' . TSOLIIN_VERSION . '_2';
 
 	/**
 	 * Option remembering the plugin version whose schema was already verified.
@@ -139,15 +139,6 @@ class TSOLIIN_DB {
 	 */
 	public function get_table() {
 		return $this->table;
-	}
-
-	/**
-	 * Get the history table.
-	 *
-	 * @return string
-	 */
-	public function get_history_table() {
-		return $this->history_table;
 	}
 
 	// -------------------------------------------------------------------------
@@ -609,29 +600,6 @@ class TSOLIIN_DB {
 		return $this->table_exists_cache;
 	}
 
-	/**
-	 * Drop plugin tables (canonical + leftover pc_ names). Used by uninstall.
-	 */
-	public function drop_table() {
-		delete_option( self::SCHEMA_OK_OPTION );
-		global $wpdb;
-
-		$tables = array(
-			$this->table,
-			$this->history_table,
-			$wpdb->prefix . 'pc_tso_link_inspector',
-			$wpdb->prefix . 'pc_tso_link_inspector_history',
-		);
-		$tables = array_unique( array_filter( $tables ) );
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		foreach ( $tables as $table_name ) {
-			$quoted = esc_sql( $table_name );
-			$wpdb->query( "DROP TABLE IF EXISTS `{$quoted}`" );
-		}
-		// phpcs:enable
-	}
-
 	// -------------------------------------------------------------------------
 	// Write operations
 	// -------------------------------------------------------------------------
@@ -681,10 +649,6 @@ class TSOLIIN_DB {
 				return false;
 			}
 		} elseif ( '' === $link_url ) {
-			return false;
-		}
-
-		if ( $post_id && '' === $link_url ) {
 			return false;
 		}
 
@@ -1377,18 +1341,6 @@ class TSOLIIN_DB {
 	}
 
 	/**
-	 * Count URL change history.
-	 *
-	 * @return int
-	 */
-	public function count_url_change_history() {
-		global $wpdb;
-		$this->ensure_history_table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name from $wpdb->prefix + fixed suffix.
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->history_table}" );
-	}
-
-	/**
 	 * Get the URL change history.
 	 *
 	 * @param int $limit Max rows.
@@ -1518,6 +1470,59 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Delete every link row of the given link types (e.g. when its scan source is switched off).
+	 *
+	 * @param string[] $types Link types; unknown values are ignored.
+	 * @return int Rows deleted.
+	 */
+	public function delete_links_by_types( array $types ) {
+		global $wpdb;
+		$types = array_values( array_intersect( array_map( 'sanitize_key', $types ), self::allowed_link_types() ) );
+		if ( empty( $types ) ) {
+			return 0;
+		}
+		$placeholders = implode( ',', array_fill( 0, count( $types ), '%s' ) );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = (int) $wpdb->query(
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Placeholders built from the validated type count above.
+			$wpdb->prepare( "DELETE FROM {$this->table} WHERE link_type IN ({$placeholders})", ...$types )
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $deleted > 0 ) {
+			self::clear_stats_cache();
+		}
+		return $deleted;
+	}
+
+	/**
+	 * Delete the content links (link, image, iframe, plain URL) of every post of the given post types.
+	 *
+	 * Used when a post type is removed from Settings > Content types, so its links do not stay in the
+	 * list and keep being checked although the type is no longer scanned.
+	 *
+	 * @param string[] $post_types Post type slugs.
+	 * @return int Rows deleted.
+	 */
+	public function delete_links_for_post_types( array $post_types ) {
+		global $wpdb;
+		$post_types = array_values( array_filter( array_map( 'sanitize_key', $post_types ) ) );
+		if ( empty( $post_types ) ) {
+			return 0;
+		}
+		$placeholders = implode( ',', array_fill( 0, count( $post_types ), '%s' ) );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = (int) $wpdb->query(
+			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Placeholders built from the post type count above.
+			$wpdb->prepare( "DELETE l FROM {$this->table} l INNER JOIN {$wpdb->posts} p ON p.ID = l.post_id WHERE l.link_type IN ('link','image','iframe','plain') AND p.post_type IN ({$placeholders})", ...$post_types )
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $deleted > 0 ) {
+			self::clear_stats_cache();
+		}
+		return $deleted;
+	}
+
+	/**
 	 * Reset last_checked to NULL so links are queued for HTTP check again.
 	 *
 	 * @param int $post_id When > 0, only links for that post; otherwise the whole table.
@@ -1537,15 +1542,6 @@ class TSOLIIN_DB {
 		}
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		self::clear_stats_cache();
-	}
-
-	/**
-	 * Reset all last_checked to NULL (forces full re-check).
-	 *
-	 * @deprecated 1.9.8 Use reset_for_recheck() instead.
-	 */
-	public function reset_all_for_recheck() {
-		$this->reset_for_recheck( 0 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -1873,9 +1869,66 @@ class TSOLIIN_DB {
 		}
 
 		if ( '' !== $args['search'] ) {
-			$term     = '%' . $wpdb->esc_like( sanitize_text_field( $args['search'] ) ) . '%';
-			$where   .= ' AND l.link_url LIKE %s';
-			$params[] = $term;
+			$search_term = sanitize_text_field( $args['search'] );
+			$url_pieces  = array();
+			$word_pieces = array();
+			foreach ( preg_split( '/\s+/', $search_term, -1, PREG_SPLIT_NO_EMPTY ) as $search_piece ) {
+				// A pasted address (http://, https:// or //) finds the links that start with it, however
+				// they were saved: http or https, with or without "www." (not CDN copies that merely contain it).
+				if ( preg_match( '#^(?:https?:)?//(?:www\.)?(\S+)$#i', $search_piece, $address ) ) {
+					$url_pieces[] = $address[1];
+				} else {
+					$word_pieces[] = $search_piece;
+				}
+			}
+			foreach ( $url_pieces as $url_piece ) {
+				$address_like = $wpdb->esc_like( $url_piece ) . '%';
+				$where       .= ' AND ( l.link_url LIKE %s OR l.link_url LIKE %s OR l.link_url LIKE %s OR l.link_url LIKE %s OR l.link_url LIKE %s OR l.link_url LIKE %s )';
+				$params[]     = 'http://' . $address_like;
+				$params[]     = 'https://' . $address_like;
+				$params[]     = 'http://www.' . $address_like;
+				$params[]     = 'https://www.' . $address_like;
+				$params[]     = '//' . $address_like;
+				$params[]     = '//www.' . $address_like;
+			}
+
+			// Every word must appear in the same place, in any order, so "fondo pantalla 3" finds
+			// ".../fondo-de-pantalla-3-1024x576.jpg" whether or not hyphens are typed. The place is
+			// the URL or the link text (never words split between them); a pasted address only looks
+			// at the URL. The post title is not searched: it would list every link of the post.
+			$search_tokens = self::get_search_tokens( implode( ' ', $word_pieces ) );
+			$search_multi  = count( $search_tokens ) + count( $url_pieces ) > 1;
+			$search_fields = array( 'l.link_url' );
+			if ( empty( $search_tokens ) ) {
+				// Only separators (for example "-"): literal search in the URL, as before.
+				$search_tokens = empty( $url_pieces ) ? array( $search_term ) : array();
+			} elseif ( empty( $url_pieces ) ) {
+				$search_fields[] = 'l.anchor_text';
+			}
+			if ( ! empty( $search_tokens ) ) {
+				$field_sql = array();
+				foreach ( $search_fields as $search_field ) {
+					$field_parts = array();
+					foreach ( $search_tokens as $search_token ) {
+						$variants = ( 'l.link_url' === $search_field ) ? self::get_search_url_variants( $search_token ) : array( $search_token );
+						$any_of   = array();
+						foreach ( $variants as $variant ) {
+							if ( $search_multi && ctype_digit( $variant ) ) {
+								// Short numbers are whole numbers ("3" finds "pantalla-3-1024x576", not "1536",
+								// "683", the year 2023 or "blog3"); from 3 digits on they may be partial ("102" finds "1024").
+								$any_of[] = $search_field . ' REGEXP %s';
+								$params[] = '(^|[^0-9a-zA-Z])' . $variant . ( strlen( $variant ) >= 3 ? '' : '([^0-9]|$)' );
+								continue;
+							}
+							$any_of[] = $search_field . ' LIKE %s';
+							$params[] = '%' . $wpdb->esc_like( $variant ) . '%';
+						}
+						$field_parts[] = '( ' . implode( ' OR ', $any_of ) . ' )';
+					}
+					$field_sql[] = '( ' . implode( ' AND ', $field_parts ) . ' )';
+				}
+				$where .= ' AND ( ' . implode( ' OR ', $field_sql ) . ' )';
+			}
 		}
 
 		return array(
@@ -1885,6 +1938,43 @@ class TSOLIIN_DB {
 			'order'      => $order,
 			'posts_join' => " LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id ",
 		);
+	}
+
+	/**
+	 * Split a search term into words (spaces, hyphens, underscores and "+" count as separators).
+	 *
+	 * Every word is matched on its own, so a search keeps working whatever separator the URL uses.
+	 *
+	 * @param string $term Search term.
+	 * @return string[] Up to 8 distinct words.
+	 */
+	private static function get_search_tokens( $term ) {
+		$tokens = preg_split( '/[\s\-_+]+/u', trim( (string) $term ), -1, PREG_SPLIT_NO_EMPTY );
+		if ( ! is_array( $tokens ) ) {
+			return array();
+		}
+		return array_slice( array_values( array_unique( $tokens ) ), 0, 8 );
+	}
+
+	/**
+	 * Spellings of one search word to look for in a stored URL.
+	 *
+	 * URLs keep accented letters percent-encoded ("año" is stored as "a%C3%B1o"), so both
+	 * the typed word and its encoded/decoded form are tried.
+	 *
+	 * @param string $token Search word.
+	 * @return string[]
+	 */
+	private static function get_search_url_variants( $token ) {
+		$token    = (string) $token;
+		$variants = array( $token );
+		if ( preg_match( '/[^\x00-\x7F]/', $token ) ) {
+			$variants[] = str_replace( '%2F', '/', rawurlencode( $token ) );
+		}
+		if ( false !== strpos( $token, '%' ) ) {
+			$variants[] = rawurldecode( $token );
+		}
+		return array_values( array_unique( array_filter( $variants, 'strlen' ) ) );
 	}
 
 	/**
@@ -1915,7 +2005,7 @@ class TSOLIIN_DB {
 			$total = (int) $wpdb->get_var( $count_sql ); // $count_sql built with known table name, no user input.
 		}
 
-		$items_sql    = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id $where ORDER BY l.$orderby $order LIMIT %d OFFSET %d";
+		$items_sql    = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id $where ORDER BY l.$orderby $order, l.id $order LIMIT %d OFFSET %d";
 		$items_params = array_merge( $params, array( $per_page, $offset ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$items = $wpdb->get_results( $wpdb->prepare( $items_sql, $items_params ) ); // $items_sql built from known table + whitelisted orderby/filter.
@@ -1978,7 +2068,7 @@ class TSOLIIN_DB {
 		$list_per_page = max( 0, (int) $list_per_page );
 
 		while ( true ) {
-			$items_sql = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l{$posts_join}{$where} ORDER BY l.{$orderby} {$order} LIMIT %d OFFSET %d";
+			$items_sql = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l{$posts_join}{$where} ORDER BY l.{$orderby} {$order}, l.id {$order} LIMIT %d OFFSET %d";
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$batch = $wpdb->get_results( $wpdb->prepare( $items_sql, array_merge( $params, array( $batch_size, $cursor ) ) ) );
 			if ( empty( $batch ) ) {
@@ -2003,7 +2093,7 @@ class TSOLIIN_DB {
 			}
 		}
 
-		if ( empty( $args['post_id'] ) && '' === (string) $args['search'] && 'all' === sanitize_key( (string) $args['filter'] ) ) {
+		if ( empty( $args['post_id'] ) && '' === (string) $args['search'] && empty( $args['link_type_filter'] ) && 'all' === sanitize_key( (string) $args['filter'] ) ) {
 			set_transient( 'tsoliin_unpub_cnt_v3_all', $match_index, 15 * MINUTE_IN_SECONDS );
 		}
 
@@ -2539,7 +2629,7 @@ class TSOLIIN_DB {
 
 		switch ( $quality ) {
 			case 'empty_anchor':
-				return 0 === $user_verified && TSOLIIN_Quality::is_empty_anchor( $anchor_text, $link_url );
+				return 0 === $user_verified && TSOLIIN_Quality::is_empty_anchor( $anchor_text, $link_url, $link );
 			case 'generic_anchor':
 				return 0 === $user_verified && TSOLIIN_Quality::is_generic_anchor( $anchor_text );
 			case 'unpublished_target':
@@ -2758,21 +2848,30 @@ class TSOLIIN_DB {
 		}
 		$result['insert_ok'] = true;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( $this->table, array( 'anchor_text' => '__tsoliin_test__' ), array( '%s' ) );
+		$deleted = $wpdb->delete( $this->table, array( 'anchor_text' => '__tsoliin_test__' ), array( '%s' ) );
+		if ( false === $deleted ) {
+			$result['error'] = $wpdb->last_error ? $wpdb->last_error : 'Test row could not be deleted';
+		}
 		return $result;
 	}
 
 	/**
-	 * Count links that need checking (alias for cron queue total).
+	 * Number of stored links per link type (Diagnostics).
 	 *
-	 * @param int $stale_days OK-link recheck interval (legacy param name).
-	 * @return int
+	 * @return array<string,int> link_type => rows, largest first.
 	 */
-	public function count_stale_links( $stale_days = 7 ) {
-		$settings = class_exists( 'TSOLIIN_Schedule' ) ? TSOLIIN_Schedule::get_settings() : array();
-		$ok_days  = isset( $settings['recheck_days'] ) ? (int) $settings['recheck_days'] : absint( $stale_days );
-		$broken   = isset( $settings['broken_recheck_days'] ) ? (int) $settings['broken_recheck_days'] : 7;
-		return (int) $this->get_cron_queue_counts( $ok_days, $broken )['total'];
+	public function get_link_type_counts() {
+		global $wpdb;
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name from $wpdb->prefix + fixed suffix.
+		$rows = $wpdb->get_results( "SELECT link_type, COUNT(*) AS total FROM {$this->table} GROUP BY link_type ORDER BY total DESC", ARRAY_A );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$counts = array();
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$counts[ (string) $row['link_type'] ] = (int) $row['total'];
+			}
+		}
+		return $counts;
 	}
 
 	/**
@@ -2950,6 +3049,56 @@ class TSOLIIN_DB {
 
 		self::$transparent_rd_cleanup_attempted = $this->cleanup_transparent_redirects();
 		return self::$transparent_rd_cleanup_attempted;
+	}
+
+	/**
+	 * Bring stored rows in line with the current ignore list.
+	 *
+	 * Rows whose URL is now ignored become "Skipped" (not broken); rows still marked "Skipped"
+	 * whose URL is no longer ignored are queued for a new check.
+	 *
+	 * @param int $limit Max rows examined per direction.
+	 * @return int Rows changed.
+	 */
+	public function apply_ignore_list_change( $limit = 5000 ) {
+		global $wpdb;
+		$limit   = max( 1, absint( $limit ) );
+		$changed = 0;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results(
+			$wpdb->prepare( "SELECT id, link_url FROM {$this->table} WHERE status_code <> -1 AND user_verified = 0 ORDER BY id ASC LIMIT %d", $limit )
+		);
+		foreach ( (array) $rows as $row ) {
+			if ( TSOLIIN_HTTP::is_ignored_url( (string) $row->link_url ) ) {
+				$this->update_check_result( (int) $row->id, -1, '', 0, '' );
+				++$changed;
+			}
+		}
+
+		$skipped = $wpdb->get_results(
+			$wpdb->prepare( "SELECT id, link_url FROM {$this->table} WHERE status_code = -1 AND last_checked IS NOT NULL ORDER BY id ASC LIMIT %d", $limit )
+		);
+		$requeue = array();
+		foreach ( (array) $skipped as $row ) {
+			if ( ! TSOLIIN_HTTP::is_ignored_url( (string) $row->link_url ) ) {
+				$requeue[] = (int) $row->id;
+			}
+		}
+		if ( ! empty( $requeue ) ) {
+			$placeholders = implode( ',', array_fill( 0, count( $requeue ), '%d' ) );
+			$wpdb->query(
+				// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Placeholders built from the integer ID count above.
+				$wpdb->prepare( "UPDATE {$this->table} SET last_checked = NULL WHERE id IN ({$placeholders})", ...$requeue )
+			);
+			$changed += count( $requeue );
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		if ( $changed > 0 ) {
+			self::clear_stats_cache();
+		}
+		return $changed;
 	}
 
 	/**

@@ -411,26 +411,6 @@ class TSOLIIN_Support {
 	}
 
 	/**
-	 * Whether the list table should offer the inline Edit link modal action.
-	 *
-	 * @param object|null $link DB link row.
-	 * @return bool
-	 */
-	public static function shows_edit_link_row_action( $link ) {
-		if ( ! $link || empty( $link->link_type ) ) {
-			return false;
-		}
-		$type = (string) $link->link_type;
-		if ( in_array( $type, array( 'comment', 'widget', 'term', 'acf' ), true ) ) {
-			return false;
-		}
-		if ( 'menu' === $type ) {
-			return self::is_custom_menu_url_row( $link ) && self::can_inline_edit_link( $link );
-		}
-		return self::can_inline_edit_link( $link );
-	}
-
-	/**
 	 * Whether the list table should offer Go to edit widget.
 	 *
 	 * @param object|null $link DB link row.
@@ -493,42 +473,6 @@ class TSOLIIN_Support {
 			return false;
 		}
 		return true;
-	}
-
-	/**
-	 * Whether stored anchor text is an internal inspector label, not visible comment link text.
-	 *
-	 * @param object|null $link DB link row.
-	 * @return bool
-	 */
-	public static function is_comment_internal_anchor_label( $link ) {
-		if ( ! $link || 'comment' !== (string) $link->link_type ) {
-			return false;
-		}
-		$sk = isset( $link->source_key ) ? (string) $link->source_key : '';
-		if ( '' !== $sk && preg_match( '/-author$/', $sk ) ) {
-			return true;
-		}
-		$anchor = trim( (string) ( $link->anchor_text ?? '' ) );
-		if ( '' === $anchor ) {
-			return true;
-		}
-		$comment_id = self::get_comment_id_from_link_row( $link );
-		if ( $comment_id > 0 ) {
-			$placeholders = array(
-				/* translators: %d: comment ID */
-				sprintf( __( 'Comment #%d', 'tso-link-inspector' ), $comment_id ),
-				/* translators: %d: comment ID */
-				sprintf( __( 'Comment author #%d', 'tso-link-inspector' ), $comment_id ),
-			);
-			if ( in_array( $anchor, $placeholders, true ) ) {
-				return true;
-			}
-		}
-		return (bool) preg_match(
-			'/^(?:Comment|Comentari|Comentario|Autor comentario)(?:\s+author|\s+autor)?\s*#\d+$/iu',
-			$anchor
-		);
 	}
 
 	/**

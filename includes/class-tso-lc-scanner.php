@@ -99,6 +99,57 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Results of the pure extraction / URL helpers for the unit being scanned.
+	 *
+	 * Scanning a post asks the same questions once per found URL (extract the
+	 * links of this HTML, normalise this URL, is this URL an attachment page…),
+	 * so the work grew with the square of the number of links and a long post
+	 * could exhaust the PHP time limit. While a scan unit runs, each answer is
+	 * computed once and reused. Null outside a scan unit: nothing is cached then,
+	 * so edits made between two calls are always seen.
+	 *
+	 * @var array<string,array<string,mixed>>|null
+	 */
+	private $scan_memo = null;
+
+	/**
+	 * Nesting depth of scan_memo_begin() calls.
+	 *
+	 * @var int
+	 */
+	private $scan_memo_depth = 0;
+
+	/**
+	 * WordPress KSES "%" placeholder hash (constant for the request); null until first use.
+	 *
+	 * @var string|null
+	 */
+	private $kses_percent_hash = null;
+
+	/**
+	 * Start caching helper results for one scan unit (re-entrant).
+	 */
+	private function scan_memo_begin() {
+		if ( 0 === $this->scan_memo_depth ) {
+			$this->scan_memo = array();
+			if ( class_exists( 'TSOLIIN_HTTP' ) ) {
+				TSOLIIN_HTTP::flush_site_hosts_cache();
+			}
+		}
+		++$this->scan_memo_depth;
+	}
+
+	/**
+	 * Stop caching helper results (drops everything when the outermost unit ends).
+	 */
+	private function scan_memo_end() {
+		$this->scan_memo_depth = max( 0, $this->scan_memo_depth - 1 );
+		if ( 0 === $this->scan_memo_depth ) {
+			$this->scan_memo = null;
+		}
+	}
+
+	/**
 	 * Request cache for get_total_posts().
 	 *
 	 * @var int|null
@@ -112,6 +163,17 @@ class TSOLIIN_Scanner {
 	 */
 	public function __construct( TSOLIIN_DB $db ) {
 		$this->db = $db;
+		// Drop the request-scoped post copy whenever WordPress drops its own (post saved, deleted, cache cleaned).
+		add_action( 'clean_post_cache', array( $this, 'forget_cached_post' ) );
+	}
+
+	/**
+	 * Forget the request-scoped copy of a post (see get_post_for_scan()).
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public function forget_cached_post( $post_id ) {
+		unset( $this->scan_post_cache[ absint( $post_id ) ] );
 	}
 
 	// -------------------------------------------------------------------------
@@ -244,7 +306,7 @@ class TSOLIIN_Scanner {
 	 */
 	private function opt( $key, $default_value = false ) {
 		$s = get_option( 'tsoliin_settings', array() );
-		if ( ! array_key_exists( $key, $s ) ) {
+		if ( ! is_array( $s ) || ! array_key_exists( $key, $s ) ) {
 			return (bool) $default_value;
 		}
 		return ! empty( $s[ $key ] );
@@ -414,6 +476,28 @@ class TSOLIIN_Scanner {
 	 * @return array[]
 	 */
 	private function dom_extract( $html, $tag, $attr, $type, $text_key ) {
+		if ( null === $this->scan_memo ) {
+			return $this->dom_extract_uncached( $html, $tag, $attr, $type, $text_key );
+		}
+		$html     = (string) $html;
+		$memo_key = 'dom|' . $tag . '|' . $attr . '|' . $type . '|' . $text_key;
+		if ( ! isset( $this->scan_memo[ $memo_key ][ $html ] ) ) {
+			$this->scan_memo[ $memo_key ][ $html ] = $this->dom_extract_uncached( $html, $tag, $attr, $type, $text_key );
+		}
+		return $this->scan_memo[ $memo_key ][ $html ];
+	}
+
+	/**
+	 * Generic DOMDocument extractor (always parses; see dom_extract()).
+	 *
+	 * @param string $html      HTML content.
+	 * @param string $tag       Tag name.
+	 * @param string $attr      URL attribute.
+	 * @param string $type      link_type value.
+	 * @param string $text_key  'textContent' or attribute name for anchor text.
+	 * @return array[]
+	 */
+	private function dom_extract_uncached( $html, $tag, $attr, $type, $text_key ) {
 		if ( '' === trim( $html ) ) {
 			return array();
 		}
@@ -476,6 +560,23 @@ class TSOLIIN_Scanner {
 	 * @return array[]
 	 */
 	private function regex_links( $html ) {
+		if ( null === $this->scan_memo ) {
+			return $this->regex_links_uncached( $html );
+		}
+		$memo_key = (string) $html;
+		if ( ! isset( $this->scan_memo['regex_links'][ $memo_key ] ) ) {
+			$this->scan_memo['regex_links'][ $memo_key ] = $this->regex_links_uncached( $html );
+		}
+		return $this->scan_memo['regex_links'][ $memo_key ];
+	}
+
+	/**
+	 * Regex fallback for link extraction (always runs; see regex_links()).
+	 *
+	 * @param string $html HTML string.
+	 * @return array[]
+	 */
+	private function regex_links_uncached( $html ) {
 		$items = array();
 		if ( preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $html, $m ) ) {
 			foreach ( $m[1] as $i => $href ) {
@@ -504,6 +605,23 @@ class TSOLIIN_Scanner {
 	 * @return array[]
 	 */
 	private function extract_plain_urls( $text ) {
+		if ( null === $this->scan_memo ) {
+			return $this->extract_plain_urls_uncached( $text );
+		}
+		$memo_key = (string) $text;
+		if ( ! isset( $this->scan_memo['plain_urls'][ $memo_key ] ) ) {
+			$this->scan_memo['plain_urls'][ $memo_key ] = $this->extract_plain_urls_uncached( $text );
+		}
+		return $this->scan_memo['plain_urls'][ $memo_key ];
+	}
+
+	/**
+	 * Extract bare http(s) URLs from plain text (always runs; see extract_plain_urls()).
+	 *
+	 * @param string $text Comment or other plain/HTML text.
+	 * @return array[]
+	 */
+	private function extract_plain_urls_uncached( $text ) {
 		$text = (string) $text;
 		if ( '' === trim( $text ) ) {
 			return array();
@@ -606,6 +724,23 @@ class TSOLIIN_Scanner {
 		if ( '' === $content || '' === $url_key ) {
 			return false;
 		}
+		if ( null !== $this->scan_memo ) {
+			// Same answer as the loops below, from one set of hyperlink keys per content
+			// instead of normalising every link of the post again for each URL asked.
+			$memo_key = 'hyperlink_keys|' . (int) $post_id;
+			if ( ! isset( $this->scan_memo[ $memo_key ][ $content ] ) ) {
+				$keys  = array();
+				$links = $this->extract_links( $content );
+				if ( false !== stripos( $content, 'href=' ) ) {
+					$links = array_merge( $links, $this->regex_links( $content ) );
+				}
+				foreach ( $links as $item ) {
+					$keys[ $this->scan_url_key( $item['url'], $post_id ) ] = true;
+				}
+				$this->scan_memo[ $memo_key ][ $content ] = $keys;
+			}
+			return isset( $this->scan_memo[ $memo_key ][ $content ][ $url_key ] );
+		}
 		foreach ( $this->extract_links( $content ) as $item ) {
 			if ( $this->scan_url_key( $item['url'], $post_id ) === $url_key ) {
 				return true;
@@ -699,7 +834,62 @@ class TSOLIIN_Scanner {
 		if ( '' === $url_key ) {
 			return false;
 		}
+		if ( null !== $this->scan_memo ) {
+			// Parse the blocks once per content and keep the keys of every media-block URL.
+			$memo_key = 'media_block_keys|' . (int) $post_id;
+			if ( ! isset( $this->scan_memo[ $memo_key ][ $raw ] ) ) {
+				$keys = array();
+				$this->collect_media_block_url_keys( parse_blocks( $raw ), $post_id, $keys );
+				$this->scan_memo[ $memo_key ][ $raw ] = $keys;
+			}
+			return isset( $this->scan_memo[ $memo_key ][ $raw ][ $url_key ] );
+		}
 		return $this->block_tree_has_media_url( parse_blocks( $raw ), $url_key, $post_id );
+	}
+
+	/**
+	 * Media block names for block_tree_has_media_url() / collect_media_block_url_keys().
+	 *
+	 * @return string[]
+	 */
+	private function get_media_block_names() {
+		return array(
+			'core/image',
+			'core/gallery',
+			'core/cover',
+			'core/media-text',
+			'core/file',
+			'core/video',
+			'core/audio',
+			'core/post-featured-image',
+		);
+	}
+
+	/**
+	 * Collect the URL keys held by media blocks (same walk and rules as block_tree_has_media_url()).
+	 *
+	 * @param array[] $blocks  Parsed blocks.
+	 * @param int     $post_id Post context.
+	 * @param array   $keys    Map of URL key => true (by reference).
+	 */
+	private function collect_media_block_url_keys( array $blocks, $post_id, array &$keys ) {
+		$media_blocks = $this->get_media_block_names();
+		foreach ( $blocks as $block ) {
+			if ( ! is_array( $block ) ) {
+				continue;
+			}
+			$name           = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
+			$is_media_block = in_array( $name, $media_blocks, true )
+				|| ( '' !== $name && false !== strpos( $name, 'gallery' ) );
+			if ( $is_media_block && ! empty( $block['attrs'] ) && is_array( $block['attrs'] ) ) {
+				foreach ( $this->urls_from_array( $block['attrs'] ) as $candidate ) {
+					$keys[ $this->scan_url_key( $candidate, $post_id ) ] = true;
+				}
+			}
+			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+				$this->collect_media_block_url_keys( $block['innerBlocks'], $post_id, $keys );
+			}
+		}
 	}
 
 	/**
@@ -711,16 +901,7 @@ class TSOLIIN_Scanner {
 	 * @return bool
 	 */
 	private function block_tree_has_media_url( array $blocks, $url_key, $post_id ) {
-		$media_blocks = array(
-			'core/image',
-			'core/gallery',
-			'core/cover',
-			'core/media-text',
-			'core/file',
-			'core/video',
-			'core/audio',
-			'core/post-featured-image',
-		);
+		$media_blocks = $this->get_media_block_names();
 		foreach ( $blocks as $block ) {
 			if ( ! is_array( $block ) ) {
 				continue;
@@ -1085,13 +1266,24 @@ class TSOLIIN_Scanner {
 		}
 
 		$haystacks = array( $raw );
-		$decoded   = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		if ( null !== $this->scan_memo ) {
+			if ( ! isset( $this->scan_memo['entity_decoded'][ $raw ] ) ) {
+				$this->scan_memo['entity_decoded'][ $raw ] = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			}
+			$decoded = $this->scan_memo['entity_decoded'][ $raw ];
+		} else {
+			$decoded = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		}
 		if ( $decoded !== $raw ) {
 			$haystacks[] = $decoded;
 		}
 
 		foreach ( array_unique( array_filter( $needles ) ) as $needle ) {
 			foreach ( $haystacks as $haystack ) {
+				// The pattern contains the needle literally: no needle in the text, no match.
+				if ( ! $this->content_may_hold_attr_value( $haystack, '', (string) $needle, false ) ) {
+					continue;
+				}
 				$pattern = '#<a\s[^>]*href\s*=\s*["\'][^"\']*' . preg_quote( $needle, '#' ) . '[^"\']*["\'][^>]*>(.*?)</a>#is';
 				if ( ! preg_match( $pattern, $haystack, $match ) ) {
 					continue;
@@ -1578,6 +1770,23 @@ class TSOLIIN_Scanner {
 	 * @return array[]
 	 */
 	private function extract_responsive_media_urls( $html ) {
+		if ( null === $this->scan_memo ) {
+			return $this->extract_responsive_media_urls_uncached( $html );
+		}
+		$memo_key = (string) $html;
+		if ( ! isset( $this->scan_memo['responsive'][ $memo_key ] ) ) {
+			$this->scan_memo['responsive'][ $memo_key ] = $this->extract_responsive_media_urls_uncached( $html );
+		}
+		return $this->scan_memo['responsive'][ $memo_key ];
+	}
+
+	/**
+	 * Extract responsive image / media URLs (always runs; see extract_responsive_media_urls()).
+	 *
+	 * @param string $html Rendered HTML.
+	 * @return array[]
+	 */
+	private function extract_responsive_media_urls_uncached( $html ) {
 		$html = (string) $html;
 		if ( '' === trim( $html ) ) {
 			return array();
@@ -1673,6 +1882,24 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function scan_url_key( $url, $post_id = 0 ) {
+		if ( null === $this->scan_memo ) {
+			return $this->scan_url_key_uncached( $url, $post_id );
+		}
+		$memo_key = (int) $post_id . '|' . (string) $url;
+		if ( ! isset( $this->scan_memo['url_key'][ $memo_key ] ) ) {
+			$this->scan_memo['url_key'][ $memo_key ] = $this->scan_url_key_uncached( $url, $post_id );
+		}
+		return $this->scan_memo['url_key'][ $memo_key ];
+	}
+
+	/**
+	 * Normalized key for deduplicating the same target (always computes; see scan_url_key()).
+	 *
+	 * @param string $url     Raw URL.
+	 * @param int    $post_id Post context.
+	 * @return string
+	 */
+	private function scan_url_key_uncached( $url, $post_id = 0 ) {
 		$url     = $this->clean_url( (string) $url );
 		$play_id = TSOLIIN_HTTP::parse_play_store_app_id( $url );
 		if ( '' !== $play_id ) {
@@ -2077,6 +2304,22 @@ class TSOLIIN_Scanner {
 	 * @return bool True if should be skipped.
 	 */
 	private function skip_url( $url ) {
+		if ( null === $this->scan_memo || ! is_string( $url ) ) {
+			return $this->skip_url_uncached( $url );
+		}
+		if ( ! isset( $this->scan_memo['skip_url'][ $url ] ) ) {
+			$this->scan_memo['skip_url'][ $url ] = $this->skip_url_uncached( $url );
+		}
+		return $this->scan_memo['skip_url'][ $url ];
+	}
+
+	/**
+	 * Skip URL (always computes; see skip_url()).
+	 *
+	 * @param string $url Raw URL.
+	 * @return bool True if should be skipped.
+	 */
+	private function skip_url_uncached( $url ) {
 		if ( '' === $url ) {
 			return true;
 		}
@@ -2492,9 +2735,29 @@ class TSOLIIN_Scanner {
 	 * @return int Number of items found.
 	 */
 	public function scan_post( $post_id, $force_all = false ) {
+		$this->scan_memo_begin();
+		try {
+			return $this->scan_post_unit( $post_id, $force_all );
+		} finally {
+			$this->scan_memo_end();
+		}
+	}
+
+	/**
+	 * Scan a single post (body of scan_post(), run inside one scan unit).
+	 *
+	 * @param int  $post_id   Post ID.
+	 * @param bool $force_all Force scan all types.
+	 * @return int Number of items found.
+	 */
+	private function scan_post_unit( $post_id, $force_all = false ) {
 		$post_id = absint( $post_id );
 		clean_post_cache( $post_id );
 		$post = get_post( $post_id );
+		// The per-URL helpers below read the post through get_post_for_scan(). Hand them
+		// the copy just loaded: a copy cached earlier in this request (before an edit)
+		// made every link of the edited post look "not in the content" and dropped it.
+		$this->scan_post_cache[ $post_id ] = $post ? $post : false;
 		// Attachments are almost always 'inherit' (not 'publish'); see
 		// get_scan_post_statuses() for why that status is valid for media.
 		$status_ok = $post && (
@@ -2693,6 +2956,7 @@ class TSOLIIN_Scanner {
 
 		$active      = array();
 		$active_keys = array();
+		$active_urls = array();
 		foreach ( $items as $item ) {
 			$url = isset( $item['url'] ) ? (string) $item['url'] : '';
 			if ( '' === $url || $this->is_ignored( $url ) ) {
@@ -2714,7 +2978,8 @@ class TSOLIIN_Scanner {
 				&& ! $this->is_url_editable_in_post( $post_id, $url, $type ) ) {
 				continue;
 			}
-			$active[ $this->scan_url_key( $url, $post_id ) ] = true;
+			$active[ $this->scan_url_key( $url, $post_id ) ]        = true;
+			$active_urls[ $this->scan_url_key( $url, $post_id ) ][] = $url;
 			if ( '' !== $sk ) {
 				$active_keys[ $sk ] = true;
 			}
@@ -2749,6 +3014,21 @@ class TSOLIIN_Scanner {
 			if ( ! isset( $active[ $key ] ) ) {
 				$this->db->delete_link( (int) $row->id );
 				continue;
+			}
+			// Same URL key (case-insensitive) but the content now spells an uploads path with other
+			// upper/lower case: drop the stale row so the scan stores the current URL.
+			if ( ! empty( $active_urls[ $key ] ) && ! in_array( (string) $row->link_url, $active_urls[ $key ], true ) ) {
+				$stale_case = false;
+				foreach ( $active_urls[ $key ] as $active_url ) {
+					if ( $this->local_upload_urls_differ_only_by_path_case( (string) $row->link_url, (string) $active_url, $post_id ) ) {
+						$stale_case = true;
+						break;
+					}
+				}
+				if ( $stale_case ) {
+					$this->db->delete_link( (int) $row->id );
+					continue;
+				}
 			}
 			if ( ! isset( $keepers[ $key ] ) ) {
 				$keepers[ $key ] = $row;
@@ -2940,7 +3220,7 @@ class TSOLIIN_Scanner {
 				|| false !== stripos( $val, 'data-href' )
 				|| false !== stripos( $val, 'data-src' )
 				|| $this->looks_like_link_url( $val )
-				|| ( $this->opt( 'scan_meta_plain', true ) && false !== preg_match( '#https?://#i', $val ) )
+				|| ( $this->opt( 'scan_meta_plain', true ) && 1 === preg_match( '#https?://#i', $val ) )
 				|| ( class_exists( 'TSOLIIN_Elementor', false ) && TSOLIIN_Elementor::value_might_contain_dynamic_tags( $val ) );
 		}
 		if ( is_array( $val ) ) {
@@ -3455,6 +3735,104 @@ class TSOLIIN_Scanner {
 	}
 
 	/**
+	 * Whether a host is this site's own host (ignoring case and a leading "www.").
+	 *
+	 * @param string $host Host name.
+	 * @return bool
+	 */
+	private function url_host_is_this_site( $host ) {
+		$home = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+		if ( ! is_string( $home ) || '' === $home || ! is_string( $host ) || '' === $host ) {
+			return false;
+		}
+		return TSOLIIN_HTTP::normalize_registrable_host( $host ) === TSOLIIN_HTTP::normalize_registrable_host( $home );
+	}
+
+	/**
+	 * Decoded path of a URL of this site's uploads folder, or '' for any other URL.
+	 *
+	 * Uploads live on a case-sensitive file system on most hosts, so for these files
+	 * "Photo.jpg" and "photo.jpg" are different resources.
+	 *
+	 * @param string $url     URL (absolute or relative).
+	 * @param int    $post_id Post context for relative URLs.
+	 * @return string
+	 */
+	private function local_uploads_url_path( $url, $post_id = 0 ) {
+		$abs = self::resolve_to_absolute_url( (string) $url, $post_id );
+		if ( '' === $abs ) {
+			return '';
+		}
+		$parts = wp_parse_url( $abs );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || empty( $parts['path'] ) || ! $this->url_host_is_this_site( (string) $parts['host'] ) ) {
+			return '';
+		}
+		$path = rawurldecode( (string) $parts['path'] );
+		return ( false !== stripos( $path, '/uploads/' ) ) ? $path : '';
+	}
+
+	/**
+	 * Whether two URLs of this site's uploads folder differ only by upper/lower case in the path
+	 * (for example after renaming Photo.jpg to photo.jpg).
+	 *
+	 * @param string $a       First URL.
+	 * @param string $b       Second URL.
+	 * @param int    $post_id Post context for relative URLs.
+	 * @return bool
+	 */
+	private function local_upload_urls_differ_only_by_path_case( $a, $b, $post_id = 0 ) {
+		$path_a = $this->local_uploads_url_path( $a, $post_id );
+		if ( '' === $path_a ) {
+			return false;
+		}
+		$path_b = $this->local_uploads_url_path( $b, $post_id );
+		if ( '' === $path_b ) {
+			return false;
+		}
+		return $path_a !== $path_b && 0 === strcasecmp( $path_a, $path_b );
+	}
+
+	/**
+	 * Whether post_content holds an uploads URL only with different upper/lower case than the stored one.
+	 *
+	 * True only when the exact-case path is absent but a case-insensitive match exists, so rows
+	 * kept in other places (custom fields, page builders) are not affected.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $url     Stored URL.
+	 * @return bool
+	 */
+	private function post_content_has_only_other_case_of_upload_url( $post_id, $url ) {
+		$post = $this->get_post_for_scan( $post_id );
+		if ( ! $post || ! is_string( $post->post_content ) || '' === $post->post_content ) {
+			return false;
+		}
+		$path = $this->local_uploads_url_path( $url, $post_id );
+		if ( '' === $path ) {
+			return false;
+		}
+		$needles = array_unique(
+			array(
+				$path,
+				str_replace( '/', '\\/', $path ),
+				implode( '/', array_map( 'rawurlencode', explode( '/', $path ) ) ),
+			)
+		);
+		$content = (string) $post->post_content;
+		foreach ( $needles as $needle ) {
+			if ( false !== strpos( $content, $needle ) ) {
+				return false;
+			}
+		}
+		foreach ( $needles as $needle ) {
+			if ( false !== stripos( $content, $needle ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Whether the stored URL still appears in its WordPress source.
 	 *
 	 * @param object $link DB row.
@@ -3469,7 +3847,17 @@ class TSOLIIN_Scanner {
 			return ! empty( $link->post_id )
 				&& $this->is_url_editable_in_post( (int) $link->post_id, (string) $link->link_url, 'plain' );
 		}
-		return $this->is_url_editable_in_source( $link );
+		$present = $this->is_url_editable_in_source( $link );
+		// URL comparison ignores case, but uploads paths are case-sensitive: after a rename that
+		// only changes upper/lower case the content holds the new spelling, so this row is stale.
+		if ( $present
+			&& ! empty( $link->post_id )
+			&& in_array( $type, array( 'link', 'image', 'iframe' ), true )
+			&& $this->post_content_has_only_other_case_of_upload_url( (int) $link->post_id, (string) $link->link_url )
+		) {
+			return false;
+		}
+		return $present;
 	}
 
 	/**
@@ -3504,7 +3892,7 @@ class TSOLIIN_Scanner {
 				$hint = $this->rescan_term_link( $link );
 				break;
 			case in_array( $link_type, array( 'template', 'wp_block' ), true ):
-				$hint = $this->resync_storage_post_link( $link );
+				$hint = $this->rescan_storage_post_link( $link );
 				break;
 			case 'acf' === $link_type:
 				$this->scan_acf_options();
@@ -3637,6 +4025,24 @@ class TSOLIIN_Scanner {
 	 * @return string[]
 	 */
 	private function build_url_replace_candidates( $old_url, $post_id = 0 ) {
+		if ( null === $this->scan_memo ) {
+			return $this->build_url_replace_candidates_uncached( $old_url, $post_id );
+		}
+		$memo_key = absint( $post_id ) . '|' . (string) $old_url;
+		if ( ! isset( $this->scan_memo['candidates'][ $memo_key ] ) ) {
+			$this->scan_memo['candidates'][ $memo_key ] = $this->build_url_replace_candidates_uncached( $old_url, $post_id );
+		}
+		return $this->scan_memo['candidates'][ $memo_key ];
+	}
+
+	/**
+	 * URL spellings to try when locating a stored URL (always computes; see build_url_replace_candidates()).
+	 *
+	 * @param string $old_url Stored URL.
+	 * @param int    $post_id Post ID.
+	 * @return string[]
+	 */
+	private function build_url_replace_candidates_uncached( $old_url, $post_id = 0 ) {
 		$old_url    = (string) $old_url;
 		$post_id    = absint( $post_id );
 		$decoded    = urldecode( $old_url );
@@ -3709,7 +4115,10 @@ class TSOLIIN_Scanner {
 		if ( ! function_exists( 'wp_salt' ) ) {
 			return '';
 		}
-		return hash_hmac( 'sha256', 'url', wp_salt( 'auth' ) );
+		if ( null === $this->kses_percent_hash ) {
+			$this->kses_percent_hash = (string) hash_hmac( 'sha256', 'url', wp_salt( 'auth' ) );
+		}
+		return $this->kses_percent_hash;
 	}
 
 	/**
@@ -3745,6 +4154,23 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function normalize_url_for_matching( $url ) {
+		if ( null === $this->scan_memo ) {
+			return $this->normalize_url_for_matching_uncached( $url );
+		}
+		$memo_key = (string) $url;
+		if ( ! isset( $this->scan_memo['norm'][ $memo_key ] ) ) {
+			$this->scan_memo['norm'][ $memo_key ] = $this->normalize_url_for_matching_uncached( $url );
+		}
+		return $this->scan_memo['norm'][ $memo_key ];
+	}
+
+	/**
+	 * Normalize a URL for fuzzy equivalence checks (always computes; see normalize_url_for_matching()).
+	 *
+	 * @param string $url URL.
+	 * @return string
+	 */
+	private function normalize_url_for_matching_uncached( $url ) {
 		$url  = html_entity_decode( (string) $url, ENT_QUOTES, 'UTF-8' );
 		$url  = str_replace( '&amp;', '&', $url );
 		$url  = preg_replace( '/\{[a-f0-9]{64}\}/i', '%', $url );
@@ -3866,34 +4292,55 @@ class TSOLIIN_Scanner {
 	 * @return string[]
 	 */
 	private function get_content_url_spellings_for_stored( $content, $stored_url, $post_id = 0 ) {
-		$content    = (string) $content;
-		$stored_url = (string) $stored_url;
-		if ( '' === $content || '' === $stored_url ) {
-			return array();
+		if ( null === $this->scan_memo ) {
+			return $this->get_content_url_spellings_for_stored_uncached( $content, $stored_url, $post_id );
 		}
+		$content  = (string) $content;
+		$memo_key = 'spellings|' . absint( $post_id ) . '|' . (string) $stored_url;
+		if ( ! isset( $this->scan_memo[ $memo_key ][ $content ] ) ) {
+			$this->scan_memo[ $memo_key ][ $content ] = $this->get_content_url_spellings_for_stored_uncached( $content, $stored_url, $post_id );
+		}
+		return $this->scan_memo[ $memo_key ][ $content ];
+	}
 
-		$spellings = array();
-		$dom       = $this->load_dom_for_html( $content );
+	/**
+	 * Every URL-bearing attribute value in an HTML fragment, in document order.
+	 *
+	 * Per element: the editable URL attributes first, then each srcset candidate,
+	 * then the child elements. Reused for every stored URL of the unit being scanned
+	 * instead of parsing the same HTML again for each of them.
+	 *
+	 * @param string $content HTML fragment.
+	 * @return string[] Trimmed, non-empty values (duplicates kept).
+	 */
+	private function get_content_url_attribute_values( $content ) {
+		$content = (string) $content;
+		if ( null !== $this->scan_memo && isset( $this->scan_memo['attr_values'][ $content ] ) ) {
+			return $this->scan_memo['attr_values'][ $content ];
+		}
+		$values = array();
+		$dom    = $this->load_dom_for_html( $content );
 		if ( $dom && $dom->documentElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
 			$body = $dom->getElementsByTagName( 'body' )->item( 0 );
 			if ( $body ) {
-				$walk = function ( DOMNode $node ) use ( &$walk, &$spellings, $stored_url, $post_id ) {
+				$attrs = $this->get_editable_url_attributes();
+				$walk  = function ( DOMNode $node ) use ( &$walk, &$values, $attrs ) {
 					if ( XML_ELEMENT_NODE === $node->nodeType && $node instanceof DOMElement ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM API property.
-						foreach ( $this->get_editable_url_attributes() as $attr ) {
+						foreach ( $attrs as $attr ) {
 							if ( ! $node->hasAttribute( $attr ) ) {
 								continue;
 							}
 							$val = trim( (string) $node->getAttribute( $attr ) );
-							if ( '' !== $val && $this->url_attribute_matches_stored( $stored_url, $val, $post_id ) ) {
-								$spellings[] = $val;
+							if ( '' !== $val ) {
+								$values[] = $val;
 							}
 						}
 						if ( $node->hasAttribute( 'srcset' ) ) {
 							foreach ( preg_split( '/\s*,\s*/', (string) $node->getAttribute( 'srcset' ) ) as $part ) {
 								$chunks = preg_split( '/\s+/', trim( (string) $part ), 2 );
 								$val    = isset( $chunks[0] ) ? trim( (string) $chunks[0] ) : '';
-								if ( '' !== $val && $this->url_attribute_matches_stored( $stored_url, $val, $post_id ) ) {
-									$spellings[] = $val;
+								if ( '' !== $val ) {
+									$values[] = $val;
 								}
 							}
 						}
@@ -3905,6 +4352,37 @@ class TSOLIIN_Scanner {
 					}
 				};
 				$walk( $body );
+			}
+		}
+		if ( null !== $this->scan_memo ) {
+			$this->scan_memo['attr_values'][ $content ] = $values;
+		}
+		return $values;
+	}
+
+	/**
+	 * Exact href/src spellings matching a stored URL (always computes; see get_content_url_spellings_for_stored()).
+	 *
+	 * @param string $content    post_content.
+	 * @param string $stored_url URL from DB.
+	 * @param int    $post_id    Post ID.
+	 * @return string[]
+	 */
+	private function get_content_url_spellings_for_stored_uncached( $content, $stored_url, $post_id = 0 ) {
+		$content    = (string) $content;
+		$stored_url = (string) $stored_url;
+		if ( '' === $content || '' === $stored_url ) {
+			return array();
+		}
+
+		$spellings = array();
+		$matched   = array();
+		foreach ( $this->get_content_url_attribute_values( $content ) as $val ) {
+			if ( ! isset( $matched[ $val ] ) ) {
+				$matched[ $val ] = (bool) $this->url_attribute_matches_stored( $stored_url, $val, $post_id );
+			}
+			if ( $matched[ $val ] ) {
+				$spellings[] = $val;
 			}
 		}
 
@@ -3995,6 +4473,25 @@ class TSOLIIN_Scanner {
 	 * @return bool
 	 */
 	public function is_url_editable_in_post( $post_id, $url, $link_type = 'link' ) {
+		if ( null === $this->scan_memo ) {
+			return $this->is_url_editable_in_post_uncached( $post_id, $url, $link_type );
+		}
+		$memo_key = absint( $post_id ) . '|' . (string) $link_type . '|' . (string) $url;
+		if ( ! isset( $this->scan_memo['editable'][ $memo_key ] ) ) {
+			$this->scan_memo['editable'][ $memo_key ] = (bool) $this->is_url_editable_in_post_uncached( $post_id, $url, $link_type );
+		}
+		return $this->scan_memo['editable'][ $memo_key ];
+	}
+
+	/**
+	 * Whether a URL exists in editable post storage (always computes; see is_url_editable_in_post()).
+	 *
+	 * @param int    $post_id   Post ID.
+	 * @param string $url       Stored URL.
+	 * @param string $link_type link|image|iframe.
+	 * @return bool
+	 */
+	private function is_url_editable_in_post_uncached( $post_id, $url, $link_type = 'link' ) {
 		$post_id = absint( $post_id );
 		$url     = (string) $url;
 		if ( $post_id <= 0 || '' === $url ) {
@@ -4043,19 +4540,6 @@ class TSOLIIN_Scanner {
 	 */
 	public function url_is_visible_plain_text_in_post_content( $content, $url, $post_id = 0 ) {
 		return $this->url_is_plain_text_only_in_content( (string) $content, (string) $url, absint( $post_id ) );
-	}
-
-	/**
-	 * Exact [gallery] shortcode substring in post_content for editor focus (Classic Editor).
-	 *
-	 * @param string $content       Raw post_content.
-	 * @param int    $attachment_id Attachment post ID.
-	 * @param int    $post_id       Parent post ID.
-	 * @return string Full shortcode when the attachment is listed in ids/include.
-	 */
-	public function get_classic_gallery_focus_needle( $content, $attachment_id, $post_id = 0 ) {
-		$context = $this->get_classic_gallery_focus_context( $content, $attachment_id, $post_id );
-		return isset( $context['needle'] ) ? (string) $context['needle'] : '';
 	}
 
 	/**
@@ -4893,6 +5377,35 @@ class TSOLIIN_Scanner {
 	 * @return string
 	 */
 	private function extract_matching_tag_snippet( $content, $old_url, $post_id, $attr, &$matched_attr = null ) {
+		if ( null === $this->scan_memo ) {
+			return $this->extract_matching_tag_snippet_uncached( $content, $old_url, $post_id, $attr, $matched_attr );
+		}
+		if ( ! in_array( $attr, $this->get_editable_url_attributes(), true ) ) {
+			$attr = 'href';
+		}
+		$content  = (string) $content;
+		$memo_key = 'tag_snippet|' . absint( $post_id ) . '|' . $attr . '|' . (string) $old_url;
+		if ( ! isset( $this->scan_memo[ $memo_key ][ $content ] ) ) {
+			$found_attr = null;
+			$snippet    = $this->extract_matching_tag_snippet_uncached( $content, $old_url, $post_id, $attr, $found_attr );
+
+			$this->scan_memo[ $memo_key ][ $content ] = array( $snippet, $found_attr );
+		}
+		$matched_attr = $this->scan_memo[ $memo_key ][ $content ][1];
+		return $this->scan_memo[ $memo_key ][ $content ][0];
+	}
+
+	/**
+	 * Extract matching tag snippet (always computes; see extract_matching_tag_snippet()).
+	 *
+	 * @param string $content HTML.
+	 * @param string $old_url Stored URL.
+	 * @param int    $post_id Post ID.
+	 * @param string $attr    Preferred attribute (href|src|data-*).
+	 * @param string $matched_attr Out: attribute that actually matched (optional).
+	 * @return string
+	 */
+	private function extract_matching_tag_snippet_uncached( $content, $old_url, $post_id, $attr, &$matched_attr = null ) {
 		$allowed = $this->get_editable_url_attributes();
 		if ( ! in_array( $attr, $allowed, true ) ) {
 			$attr = 'href';
@@ -4922,13 +5435,24 @@ class TSOLIIN_Scanner {
 			if ( '' === $variant ) {
 				continue;
 			}
-			$pattern = '#(<[^>\s]+[^>]*\s' . preg_quote( $attr, '#' ) . '=(["\'])' . preg_quote( (string) $variant, '#' ) . '\2[^>]*)>#i';
-			if ( preg_match( $pattern, $content, $matches ) ) {
-				$matched_attr = $attr;
-				return (string) $matches[1];
+			// Each pattern below needs attr="variant" (or single-quoted) literally in the content;
+			// when that text is not there the regex cannot match, so its pass over the whole
+			// post is skipped. On a post with many links these passes were most of the scan time.
+			if ( ! $this->content_may_hold_attr_value( $content, '', (string) $variant, false ) ) {
+				continue;
+			}
+			if ( $this->content_may_hold_attr_value( $content, $attr, (string) $variant ) ) {
+				$pattern = '#(<[^>\s]+[^>]*\s' . preg_quote( $attr, '#' ) . '=(["\'])' . preg_quote( (string) $variant, '#' ) . '\2[^>]*)>#i';
+				if ( preg_match( $pattern, $content, $matches ) ) {
+					$matched_attr = $attr;
+					return (string) $matches[1];
+				}
 			}
 			foreach ( $allowed as $fallback_attr ) {
 				if ( $fallback_attr === $attr ) {
+					continue;
+				}
+				if ( ! $this->content_may_hold_attr_value( $content, $fallback_attr, (string) $variant ) ) {
 					continue;
 				}
 				$pattern = '#(<[^>\s]+[^>]*\s' . preg_quote( $fallback_attr, '#' ) . '=(["\'])' . preg_quote( (string) $variant, '#' ) . '\2[^>]*)>#i';
@@ -4939,6 +5463,30 @@ class TSOLIIN_Scanner {
 			}
 		}
 		return '';
+	}
+
+	/**
+	 * Cheap pre-check for the attr="value" regexes of extract_matching_tag_snippet().
+	 *
+	 * False only when the content certainly has no attr="value" / attr='value' text
+	 * (compared case-insensitively, like the regexes). Values with non-ASCII bytes
+	 * always return true, because byte case-folding can depend on the locale.
+	 *
+	 * @param string $content HTML.
+	 * @param string $attr    Attribute name.
+	 * @param string $value   Attribute value to look for.
+	 * @param bool   $as_attr False to only ask whether the bare value is in the content.
+	 * @return bool
+	 */
+	private function content_may_hold_attr_value( $content, $attr, $value, $as_attr = true ) {
+		if ( preg_match( '/[\x80-\xff]/', $value ) ) {
+			return true;
+		}
+		if ( ! $as_attr ) {
+			return false !== stripos( $content, $value );
+		}
+		return false !== stripos( $content, $attr . '="' . $value . '"' )
+			|| false !== stripos( $content, $attr . "='" . $value . "'" );
 	}
 
 	/**
@@ -5579,6 +6127,10 @@ class TSOLIIN_Scanner {
 		if ( '' === $stored_url || '' === $candidate_url ) {
 			return false;
 		}
+		// Uploads paths are case-sensitive: Photo.jpg -> photo.jpg is a real change.
+		if ( $this->local_upload_urls_differ_only_by_path_case( $stored_url, $candidate_url, $post_id ) ) {
+			return false;
+		}
 		if ( 0 === strcasecmp( $stored_url, $candidate_url ) ) {
 			return true;
 		}
@@ -5632,48 +6184,65 @@ class TSOLIIN_Scanner {
 		if ( 0 === strcasecmp( $a, $b ) ) {
 			return true;
 		}
-		$a_abs = self::resolve_to_absolute_url( $a, $post_id );
-		$b_abs = self::resolve_to_absolute_url( $b, $post_id );
-		if (
-			'' !== $a_abs
-			&& '' !== $b_abs
-			&& class_exists( 'TSOLIIN_HTTP' )
-		) {
-			if ( TSOLIIN_HTTP::is_http_same_resource_bar_www( $a_abs, $b_abs ) ) {
-				return true;
-			}
-			$a_strip = TSOLIIN_HTTP::strip_noise_query_params_from_url( $a_abs );
-			$b_strip = TSOLIIN_HTTP::strip_noise_query_params_from_url( $b_abs );
-			if ( TSOLIIN_HTTP::is_http_same_resource_bar_www( $a_strip, $b_strip ) ) {
+		$pa = $this->url_resource_profile( $a, $post_id );
+		$pb = $this->url_resource_profile( $b, $post_id );
+		// Same checks, in the same order, as comparing the URL pair form by form
+		// (absolute, without noise params, without #fragment, both); each form is
+		// reduced once per URL to the key is_http_same_resource_bar_www() compares.
+		foreach ( array( 'abs', 'abs_strip', 'nof', 'nof_strip' ) as $form ) {
+			if ( '' !== $pa[ $form ] && $pa[ $form ] === $pb[ $form ] ) {
 				return true;
 			}
 		}
-		if ( '' !== $a_abs && '' !== $b_abs ) {
-			$a_nof = $this->url_without_fragment( $a_abs );
-			$b_nof = $this->url_without_fragment( $b_abs );
-			if (
-				'' !== $a_nof
-				&& '' !== $b_nof
-				&& class_exists( 'TSOLIIN_HTTP' )
-			) {
-				if ( TSOLIIN_HTTP::is_http_same_resource_bar_www( $a_nof, $b_nof ) ) {
-					return true;
-				}
-				$a_strip = TSOLIIN_HTTP::strip_noise_query_params_from_url( $a_nof );
-				$b_strip = TSOLIIN_HTTP::strip_noise_query_params_from_url( $b_nof );
-				if ( TSOLIIN_HTTP::is_http_same_resource_bar_www( $a_strip, $b_strip ) ) {
-					return true;
-				}
-			}
-		}
-		$norm_a = $this->normalize_url_for_matching( $a );
-		$norm_b = $this->normalize_url_for_matching( $b );
-		if ( $norm_a === $norm_b ) {
+		if ( $pa['norm'] === $pb['norm'] ) {
 			return true;
 		}
-		$norm_a_nof = $this->normalize_url_for_matching( $this->url_without_fragment( $a ) );
-		$norm_b_nof = $this->normalize_url_for_matching( $this->url_without_fragment( $b ) );
-		return ( '' !== $norm_a_nof && $norm_a_nof === $norm_b_nof );
+		return ( '' !== $pa['norm_nof'] && $pa['norm_nof'] === $pb['norm_nof'] );
+	}
+
+	/**
+	 * Comparison forms of one URL for urls_are_same_resource().
+	 *
+	 * Keys abs / abs_strip / nof / nof_strip hold the same-resource key (see
+	 * TSOLIIN_HTTP::http_resource_key_bar_www()) of the absolute URL, of it without
+	 * noise query params, without #fragment, and without both; '' when that form
+	 * cannot match anything. norm / norm_nof are the fuzzy-normalised spellings.
+	 *
+	 * @param string $url     URL (non-empty).
+	 * @param int    $post_id Post ID for relative-path resolution.
+	 * @return array<string,string>
+	 */
+	private function url_resource_profile( $url, $post_id = 0 ) {
+		$url      = (string) $url;
+		$memo_key = '';
+		if ( null !== $this->scan_memo ) {
+			$memo_key = (int) $post_id . '|' . $url;
+			if ( isset( $this->scan_memo['profile'][ $memo_key ] ) ) {
+				return $this->scan_memo['profile'][ $memo_key ];
+			}
+		}
+		$profile = array(
+			'abs'       => '',
+			'abs_strip' => '',
+			'nof'       => '',
+			'nof_strip' => '',
+			'norm'      => $this->normalize_url_for_matching( $url ),
+			'norm_nof'  => $this->normalize_url_for_matching( $this->url_without_fragment( $url ) ),
+		);
+		$abs     = self::resolve_to_absolute_url( $url, $post_id );
+		if ( '' !== $abs && class_exists( 'TSOLIIN_HTTP' ) ) {
+			$profile['abs']       = TSOLIIN_HTTP::http_resource_key_bar_www( $abs );
+			$profile['abs_strip'] = TSOLIIN_HTTP::http_resource_key_bar_www( TSOLIIN_HTTP::strip_noise_query_params_from_url( $abs ) );
+			$nof                  = $this->url_without_fragment( $abs );
+			if ( '' !== $nof ) {
+				$profile['nof']       = TSOLIIN_HTTP::http_resource_key_bar_www( $nof );
+				$profile['nof_strip'] = TSOLIIN_HTTP::http_resource_key_bar_www( TSOLIIN_HTTP::strip_noise_query_params_from_url( $nof ) );
+			}
+		}
+		if ( null !== $this->scan_memo ) {
+			$this->scan_memo['profile'][ $memo_key ] = $profile;
+		}
+		return $profile;
 	}
 
 	/**
@@ -7057,6 +7626,22 @@ class TSOLIIN_Scanner {
 	 * @return int
 	 */
 	private function scan_storage_post( $post_id, $link_type ) {
+		$this->scan_memo_begin();
+		try {
+			return $this->scan_storage_post_unit( $post_id, $link_type );
+		} finally {
+			$this->scan_memo_end();
+		}
+	}
+
+	/**
+	 * Scan one template / reusable block (body of scan_storage_post(), run inside one scan unit).
+	 *
+	 * @param int    $post_id   Post ID.
+	 * @param string $link_type template|wp_block.
+	 * @return int
+	 */
+	private function scan_storage_post_unit( $post_id, $link_type ) {
 		$post_id   = absint( $post_id );
 		$link_type = sanitize_key( (string) $link_type );
 		if ( ! $post_id || ! in_array( $link_type, array( 'template', 'wp_block' ), true ) ) {
@@ -7066,6 +7651,7 @@ class TSOLIIN_Scanner {
 		if ( ! $post || 'publish' !== $post->post_status ) {
 			return 0;
 		}
+		$this->scan_post_cache[ $post_id ] = $post;
 
 		$prefix       = 'st-' . $post_id . '-';
 		$allowed_keys = array();
@@ -7259,15 +7845,6 @@ class TSOLIIN_Scanner {
 			++$deleted;
 		}
 		return $deleted;
-	}
-
-	/**
-	 * Delete widget rows whose source_key no longer maps to a registered widget.
-	 *
-	 * @return int Rows deleted.
-	 */
-	public function cleanup_orphan_widget_links() {
-		return $this->cleanup_stale_widget_links();
 	}
 
 	/**

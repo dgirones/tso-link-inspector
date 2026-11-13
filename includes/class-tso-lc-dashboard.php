@@ -61,8 +61,8 @@ class TSOLIIN_Dashboard {
 		echo '<ul class="tsoliin-dashboard-widget__stats">';
 		echo '<li><strong>' . esc_html( TSOLIIN_Support::format_display_number( $stats['broken'] ) ) . '</strong> ';
 		echo '<a href="' . esc_url( add_query_arg( 'filter', 'broken', $base ) ) . '">' . esc_html__( 'Broken links', 'tso-link-inspector' ) . '</a></li>';
-		echo '<li><strong>' . esc_html( TSOLIIN_Support::format_display_number( $stats['unchecked'] ) ) . '</strong> ';
-		echo '<a href="' . esc_url( add_query_arg( 'filter', 'unchecked', $base ) ) . '">' . esc_html__( 'Unchecked links', 'tso-link-inspector' ) . '</a></li>';
+		echo '<li><strong>' . esc_html( TSOLIIN_Support::format_display_number( $stats['redirect'] ) ) . '</strong> ';
+		echo '<a href="' . esc_url( add_query_arg( 'filter', 'redirect', $base ) ) . '">' . esc_html__( 'Redirects', 'tso-link-inspector' ) . '</a></li>';
 		echo '<li><strong>' . esc_html( TSOLIIN_Support::format_display_number( $stats['total'] ) ) . '</strong> ';
 		echo esc_html__( 'Total saved links', 'tso-link-inspector' ) . '</li>';
 		echo '</ul>';

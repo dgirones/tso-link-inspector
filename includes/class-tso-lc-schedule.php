@@ -26,6 +26,9 @@ class TSOLIIN_Schedule {
 	 */
 	public static function get_settings() {
 		$s = get_option( 'tsoliin_settings', array() );
+		if ( ! is_array( $s ) ) {
+			$s = array();
+		}
 		return array(
 			'recheck_days'        => isset( $s['recheck_days'] ) ? max( 1, min( 365, absint( $s['recheck_days'] ) ) ) : 7,
 			'broken_recheck_days' => isset( $s['broken_recheck_days'] ) ? max( 1, min( 90, absint( $s['broken_recheck_days'] ) ) ) : 7,

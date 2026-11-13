@@ -130,7 +130,11 @@ class TSOLIIN_Quality {
 		 */
 		$phrases = apply_filters( 'tsoliin_generic_anchor_phrases', $phrases );
 
-		return array_values( array_unique( array_map( 'strtolower', array_map( 'strval', $phrases ) ) ) );
+		$lower = function_exists( 'mb_strtolower' ) ? static function ( $phrase ) {
+			return mb_strtolower( (string) $phrase, 'UTF-8' );
+		} : 'strtolower';
+
+		return array_values( array_unique( array_map( $lower, array_map( 'strval', $phrases ) ) ) );
 	}
 
 	/**
@@ -138,15 +142,51 @@ class TSOLIIN_Quality {
 	 *
 	 * Plain pasted URLs (YouTube, etc.) are excluded — they have no separate anchor by design.
 	 *
-	 * @param string $anchor   Anchor text.
-	 * @param string $link_url Link URL (optional, for URL-only exceptions).
+	 * @param string            $anchor   Anchor text.
+	 * @param string            $link_url Link URL (optional, for URL-only exceptions).
+	 * @param object|array|null $link Optional link row (type/broken exceptions).
 	 * @return bool
 	 */
-	public static function is_empty_anchor( $anchor, $link_url = '' ) {
+	public static function is_empty_anchor( $anchor, $link_url = '', $link = null ) {
 		if ( '' !== trim( wp_strip_all_tags( (string) $anchor ) ) ) {
 			return false;
 		}
+		if ( null !== $link && self::is_empty_anchor_not_applicable( $link ) ) {
+			return false;
+		}
 		return ! self::is_url_only_expected_link( $link_url );
+	}
+
+	/**
+	 * Rows where an empty anchor is not a quality issue.
+	 *
+	 * Plain-text URLs and iframes have no anchor by design. A broken image has no
+	 * visible content, so its missing alt text is irrelevant until the file is fixed.
+	 *
+	 * @param object|array $link Link row (link_type, is_broken, last_checked).
+	 * @return bool
+	 */
+	public static function is_empty_anchor_not_applicable( $link ) {
+		$link = (object) $link;
+		$type = isset( $link->link_type ) ? (string) $link->link_type : '';
+		if ( in_array( $type, array( 'plain', 'iframe' ), true ) ) {
+			return true;
+		}
+		return 'image' === $type
+			&& ! empty( $link->is_broken )
+			&& isset( $link->last_checked )
+			&& null !== $link->last_checked;
+	}
+
+	/**
+	 * SQL fragment mirroring is_empty_anchor_not_applicable() (AND clause).
+	 *
+	 * @param string $prefix Column prefix incl. dot (e.g. "l." or "").
+	 * @return string
+	 */
+	public static function build_empty_anchor_type_exclusion_sql( $prefix = '' ) {
+		$p = preg_replace( '/[^a-zA-Z0-9_.]/', '', (string) $prefix );
+		return "{$p}link_type NOT IN ('plain','iframe') AND NOT ({$p}link_type = 'image' AND {$p}last_checked IS NOT NULL AND {$p}is_broken = 1)";
 	}
 
 	/**
@@ -205,7 +245,7 @@ class TSOLIIN_Quality {
 	 * @return string
 	 */
 	public static function build_empty_anchor_sql_where() {
-		$excl = self::build_empty_anchor_url_exclusion_sql( 'l.link_url' );
+		$excl = self::build_empty_anchor_url_exclusion_sql( 'l.link_url' ) . ' AND ' . self::build_empty_anchor_type_exclusion_sql( 'l.' );
 		return " AND TRIM(COALESCE(l.anchor_text, '')) = '' AND l.user_verified = 0 AND {$excl}";
 	}
 
@@ -215,7 +255,7 @@ class TSOLIIN_Quality {
 	 * @return string
 	 */
 	public static function build_empty_anchor_count_expr() {
-		$excl = self::build_empty_anchor_url_exclusion_sql( 'link_url' );
+		$excl = self::build_empty_anchor_url_exclusion_sql( 'link_url' ) . ' AND ' . self::build_empty_anchor_type_exclusion_sql();
 		return "SUM(CASE WHEN TRIM(COALESCE(anchor_text, '')) = '' AND user_verified=0 AND {$excl} THEN 1 ELSE 0 END)";
 	}
 
@@ -226,7 +266,7 @@ class TSOLIIN_Quality {
 	 * @return bool
 	 */
 	public static function is_generic_anchor( $anchor ) {
-		$norm = strtolower( trim( wp_strip_all_tags( (string) $anchor ) ) );
+		$norm = function_exists( 'mb_strtolower' ) ? mb_strtolower( trim( wp_strip_all_tags( (string) $anchor ) ), 'UTF-8' ) : strtolower( trim( wp_strip_all_tags( (string) $anchor ) ) );
 		if ( '' === $norm ) {
 			return false;
 		}

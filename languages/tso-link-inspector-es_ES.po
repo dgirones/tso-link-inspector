@@ -23,64 +23,8 @@ msgstr ""
 "Encuentra y corrige enlaces rotos en todo tu sitio WordPress sin abrir cada "
 "entrada."
 
-msgid ""
-"Comprova tots els enllaços trencats del lloc web i permet editar-los sense "
-"obrir l'article."
-msgstr ""
-"Comprueba todos los enlaces rotos del sitio web y permite editarlos sin "
-"abrir el artículo."
-
 msgid "TSO Link Inspector"
 msgstr "TSO Link Inspector"
-
-msgid "Configuració – TSO Link Inspector"
-msgstr "Configuración – TSO Link Inspector"
-
-msgid "Configuració"
-msgstr "Configuración"
-
-msgid "No tens permisos suficients per accedir a aquesta pàgina."
-msgstr "No tienes permisos suficientes para acceder a esta página."
-
-msgid "Escanejar ara"
-msgstr "Escanear ahora"
-
-msgid "Escaneig completat!"
-msgstr "¡Escaneo completado!"
-
-msgid "Escanejant..."
-msgstr "Escaneando..."
-
-msgid "Comprovant..."
-msgstr "Comprobando..."
-
-msgid "Desant..."
-msgstr "Guardando..."
-
-msgid ""
-"Segur que vols eliminar l'etiqueta d'aquest enllaç? El text es mantindrà "
-"però el link desapareixerà."
-msgstr ""
-"¿Seguro que deseas eliminar la etiqueta de este enlace? El texto se "
-"mantendrá pero el link desaparecerá."
-
-msgid "Segur que vols eliminar aquest registre de la llista?"
-msgstr "¿Seguro que deseas eliminar este registro de la lista?"
-
-msgid "S'ha produït un error. Torna-ho a intentar."
-msgstr "Se ha producido un error. Inténtalo de nuevo."
-
-msgid "Nova URL:"
-msgstr "Nueva URL:"
-
-msgid "Desar URL"
-msgstr "Guardar URL"
-
-msgid "Cancel·lar"
-msgstr "Cancelar"
-
-msgid "Editar URL de l'enllaç"
-msgstr "Editar URL del enlace"
 
 msgid "Current URL:"
 msgstr "URL actual:"
@@ -97,590 +41,17 @@ msgstr "Donar"
 msgid "Skipped (ignore list)"
 msgstr "Omitida (lista de ignorados)"
 
-msgid "Enllaços totals"
-msgstr "Total de enlaces"
-
-msgid "Trencats"
-msgstr "Rotos"
-
-msgid "Redirecció"
-msgstr "Redirección"
-
-msgid "Correctes"
-msgstr "Correctos"
-
-msgid "Pendents"
-msgstr "Pendientes"
-
-msgid "Posts escanejats"
-msgstr "Posts escaneados"
-
-msgid "URL de l'enllaç"
-msgstr "URL del enlace"
-
-msgid "Text de l'enllaç"
-msgstr "Texto del enlace"
-
-msgid "Article / Pàgina"
-msgstr "Artículo / Página"
-
-msgid "Estat"
-msgstr "Estado"
-
-msgid "Última comprovació"
-msgstr "Última comprobación"
-
-msgid "Enllaç"
-msgstr "Enlace"
-
-msgid "Enllaços"
-msgstr "Enlaces"
-
-msgid "Recomprovar seleccionats"
-msgstr "Recomprobar seleccionados"
-
-msgid "Eliminar de la llista"
-msgstr "Eliminar de la lista"
-
-msgid "No s'han trobat enllaços. Executa una escaneig primer."
-msgstr "No se han encontrado enlaces. Ejecuta un escaneo primero."
-
-msgid "Tots (%d)"
-msgstr "Todos (%d)"
-
-msgid "Trencats (%d)"
-msgstr "Rotos (%d)"
-
-msgid "Redirecció (%d)"
-msgstr "Redirección (%d)"
-
-msgid "Correctes (%d)"
-msgstr "Correctos (%d)"
-
-msgid "No comprovats (%d)"
-msgstr "No comprobados (%d)"
-
-msgid "Editar URL"
-msgstr "Editar URL"
-
-msgid "Recomprovar"
-msgstr "Recomprobar"
-
-msgid "Desenllaçar"
-msgstr "Desenlazar"
-
-msgid "(sense títol)"
-msgstr "(sin título)"
-
-msgid "Cercar URL"
-msgstr "Buscar URL"
-
-msgid "URL actualitzada correctament."
-msgstr "URL actualizada correctamente."
-
-msgid "Configuració desada."
-msgstr "Configuración guardada."
-
-msgid "Tots els registres han estat eliminats."
-msgstr "Todos los registros han sido eliminados."
-
-msgid ""
-"Segur que vols eliminar tots els registres? Hauràs de tornar a escanejar."
-msgstr ""
-"¿Seguro que deseas eliminar todos los registros? Tendrás que volver a "
-"escanear."
-
-msgid "Esborrar tots els registres d'enllaços"
-msgstr "Borrar todos los registros de enlaces"
-
-msgid "Eina de manteniment"
-msgstr "Herramienta de mantenimiento"
-
-msgid "Desar la configuració"
-msgstr "Guardar la configuración"
-
-msgid "Tipus de contingut a escanejar"
-msgstr "Tipos de contenido a escanear"
-
-msgid "Temps d'espera de connexió (segons)"
-msgstr "Tiempo de espera de conexión (segundos)"
-
-msgid "Recomanat: 15 segons. Valors alts alentiran el procés."
-msgstr "Recomendado: 15 segundos. Valores altos ralentizarán el proceso."
-
-msgid "TSO Link Inspector – Configuració"
-msgstr "TSO Link Inspector – Configuración"
-
-msgid "Últim escaneig: %s"
-msgstr "Último escaneo: %s"
-
-msgid "Última comprovació automàtica: %s"
-msgstr "Última comprobación automática: %s"
-
-msgid "Mai s'ha realitzat cap escaneig. Fes clic a \"Escanejar ara\" per iniciar."
-msgstr ""
-"Nunca se ha realizado ningún escaneo. Haz clic en \"Escanear ahora\" para "
-"iniciar."
-
-msgid "Escanejant posts %1$d de %2$d..."
-msgstr "Escaneando posts %1$d de %2$d..."
-
-msgid "%d elements processats."
-msgstr "%d elementos procesados."
-
-msgid "Permís denegat."
-msgstr "Permiso denegado."
-
-msgid "ID invàlid."
-msgstr "ID inválido."
-
-msgid "Dades incorrectes."
-msgstr "Datos incorrectos."
-
-msgid "Registre eliminat."
-msgstr "Registro eliminado."
-
-msgid "No has seleccionat cap element."
-msgstr "No has seleccionado ningún elemento."
-
-msgid "Etiqueta eliminada correctament."
-msgstr "Etiqueta eliminada correctamente."
-
-msgid "No s'ha pogut trobar l'URL original al contingut del post."
-msgstr "No se ha podido encontrar la URL original en el contenido del post."
-
-msgid "No s'ha pogut eliminar l'etiqueta de l'enllaç."
-msgstr "No se ha podido eliminar la etiqueta del enlace."
-
-msgid "No es pot connectar"
-msgstr "No se puede conectar"
-
 msgid "OK"
 msgstr "OK"
-
-msgid "Redirecció permanent"
-msgstr "Redirección permanente"
-
-msgid "Redirecció temporal"
-msgstr "Redirección temporal"
-
-msgid "Sol·licitud incorrecta"
-msgstr "Solicitud incorrecta"
-
-msgid "No autoritzat"
-msgstr "No autorizado"
-
-msgid "Accés prohibit"
-msgstr "Acceso prohibido"
-
-msgid "No trobat"
-msgstr "No encontrado"
-
-msgid "Eliminat"
-msgstr "Eliminado"
-
-msgid "Massa peticions"
-msgstr "Demasiadas peticiones"
-
-msgid "Error del servidor"
-msgstr "Error del servidor"
-
-msgid "Servei no disponible"
-msgstr "Servicio no disponible"
-
-msgid "Error servidor (%d)"
-msgstr "Error servidor (%d)"
-
-msgid "Error client (%d)"
-msgstr "Error cliente (%d)"
-
-msgid "Codi %d"
-msgstr "Código %d"
-
-msgid "No comprovat"
-msgstr "No comprobado"
-
-msgid "Mai"
-msgstr "Nunca"
-
-msgid "Escanejar camps personalitzats (ACF / meta)"
-msgstr "Escanear campos personalizados (ACF / meta)"
-
-msgid "Activar escaneig de camps meta (ACF, CPT UI, camps personalitzats)"
-msgstr "Activar escaneo de campos meta (ACF, CPT UI, campos personalizados)"
-
-msgid "Camps personalitzats (ACF / Meta)"
-msgstr "Campos personalizados (ACF / Meta)"
-
-msgid ""
-"Escanejarà camps de tipus URL, HTML i text. Pot augmentar el temps "
-"d'escaneig."
-msgstr ""
-"Escaneará campos de tipo URL, HTML y texto. Puede aumentar el tiempo de "
-"escaneo."
-
-msgid "Claus meta a excloure"
-msgstr "Claves meta a excluir"
-
-msgid ""
-"Una clau per línia. Les claus internes de WP i SEO ja s'exclouen per "
-"defecte."
-msgstr ""
-"Una clave por línea. Las claves internas de WP y SEO ya se excluyen por "
-"defecto."
-
-msgid "Comprovar ara"
-msgstr "Comprobar ahora"
-
-msgid "Comprovant enllaços..."
-msgstr "Comprobando enlaces..."
-
-msgid "Comprovació completada!"
-msgstr "¡Comprobación completada!"
-
-msgid "Comprovant %1$d de %2$d..."
-msgstr "Comprobando %1$d de %2$d..."
-
-msgid "Comprovació iniciada al servidor. Pots continuar navegant."
-msgstr "Comprobación iniciada en el servidor. Puedes seguir navegando."
-
-msgid "Introdueix una URL vàlida."
-msgstr "Introduce una URL válida."
-
-msgid "Executant diagnòstic..."
-msgstr "Ejecutando diagnóstico..."
-
-msgid "Resultat del diagnòstic:"
-msgstr "Resultado del diagnóstico:"
-
-msgid "Idioma del plugin"
-msgstr "Idioma del plugin"
-
-msgid "Automàtic (idioma del WordPress)"
-msgstr "Automático (idioma de WordPress)"
-
-msgid "Sobreescriu l'idioma del WordPress per a aquest plugin."
-msgstr "Sobreescribe el idioma de WordPress para este plugin."
-
-msgid "Veure post"
-msgstr "Ver post"
-
-msgid "Domini no existeix (DNS)"
-msgstr "Dominio no existe (DNS)"
-
-msgid "Connexió refusada"
-msgstr "Conexión rechazada"
-
-msgid "Error de certificat SSL"
-msgstr "Error de certificado SSL"
-
-msgid "Accés restringit (bot?)"
-msgstr "Acceso restringido (¿bot?)"
-
-msgid "Accés prohibit (bot?)"
-msgstr "Acceso prohibido (¿bot?)"
-
-msgid "Massa peticions (bot?)"
-msgstr "Demasiadas peticiones (¿bot?)"
-
-msgid "No disponible per llei"
-msgstr "No disponible por ley"
-
-msgid "Mètode no permès"
-msgstr "Método no permitido"
-
-msgid "Temps d'espera esgotat"
-msgstr "Tiempo de espera agotado"
-
-msgid "Porta d'enllaç incorrecta"
-msgstr "Puerta de enlace incorrecta"
-
-msgid "Temps d'espera del servidor"
-msgstr "Tiempo de espera del servidor"
-
-msgid "Creat"
-msgstr "Creado"
-
-msgid "Sense contingut"
-msgstr "Sin contenido"
-
-msgid "Eliminat permanentment"
-msgstr "Eliminado permanentemente"
-
-msgid "%d elements eliminats."
-msgstr "%d elementos eliminados."
-
-msgid "enllaços recomprovats."
-msgstr "enlaces recomprobados."
-
-msgid "Imatges HTML"
-msgstr "Imágenes HTML"
-
-msgid "Vídeos incrustats (iframes)"
-msgstr "Vídeos incrustados (iframes)"
-
-msgid "Comentaris d'usuaris"
-msgstr "Comentarios de usuarios"
-
-msgid "Escanejar etiquetes <img src> (imatges trencades)"
-msgstr "Escanear etiquetas <img src> (imágenes rotas)"
-
-msgid "Escanejar iframes (YouTube, Vimeo, Google Maps…)"
-msgstr "Escanear iframes (YouTube, Vimeo, Google Maps…)"
-
-msgid "Escanejar comentaris aprovats (enllaços i URL d'autors)"
-msgstr "Escanear comentarios aprobados (enlaces y URL de autores)"
-
-msgid "Pot augmentar el temps d'escaneig en llocs amb molts comentaris."
-msgstr "Puede aumentar el tiempo de escaneo en sitios con muchos comentarios."
-
-msgid "Comentari #%d"
-msgstr "Comentario #%d"
-
-msgid "Autor comentari #%d"
-msgstr "Autor comentario #%d"
-
-msgid "Tipus"
-msgstr "Tipo"
-
-msgid "Imatge"
-msgstr "Imagen"
 
 msgid "Iframe"
 msgstr "Iframe"
 
-msgid "Comentari"
-msgstr "Comentario"
-
-msgid "Versió segura HTTPS disponible"
-msgstr "Versión segura HTTPS disponible"
-
-msgid "URL final després de redireccions"
-msgstr "URL final tras redirecciones"
-
-msgid "Variant amb www"
-msgstr "Variante con www"
-
-msgid "URL suggerida"
-msgstr "URL sugerida"
-
-msgid "Buscant alternatives..."
-msgstr "Buscando alternativas..."
-
-msgid "No s'han trobat alternatives per a aquest URL."
-msgstr "No se han encontrado alternativas para esta URL."
-
-msgid "Aplicar aquesta URL"
-msgstr "Aplicar esta URL"
-
-msgid "Alt nivell de confiança"
-msgstr "Alto nivel de confianza"
-
-msgid "Nivell de confiança mitjà"
-msgstr "Nivel de confianza medio"
-
-msgid "Suggeriment URL"
-msgstr "Sugerencia URL"
-
-msgid "Re-comprovar cada (dies)"
-msgstr "Recomprobar cada (días)"
-
-msgid ""
-"El cron horari re-comprova automàticament els links més antics d'aquest "
-"nombre de dies. Per defecte: 7 dies."
-msgstr ""
-"El cron horario recomprueba automáticamente los links más antiguos de este "
-"número de días. Por defecto: 7 días."
-
-msgid ""
-"No s'ha pogut eliminar l'etiqueta. Per a comentaris, edita'l manualment des "
-"de Comentaris."
-msgstr ""
-"No se pudo eliminar la etiqueta. Para comentarios, edítalo manualmente desde"
-" Comentarios."
-
-msgid "No és trencat"
-msgstr "No está roto"
-
-msgid "Marcar com a correcte i moure a la llista OK"
-msgstr "Marcar como correcto y mover a la lista OK"
-
-msgid "Marcat com a correcte."
-msgstr "Marcado como correcto."
-
 msgid "OK (manual)"
 msgstr "OK (manual)"
 
-msgid "Elimina l'entrada de la llista de comprovació (l'article no canvia)"
-msgstr ""
-"Elimina la entrada de la lista de comprobación (el artículo no cambia)"
-
-# Fallback entries for current source strings without accents.
-msgid "TSO Link Inspector - Configuracio"
-msgstr "TSO Link Inspector - Configuración"
-
-msgid "Configuracio"
-msgstr "Configuración"
-
-msgid "Comprovacio completada!"
-msgstr "¡Comprobación completada!"
-
-msgid "Comprovacio iniciada. Pots continuar navegant."
-msgstr "Comprobación iniciada. Puedes continuar navegando."
-
-msgid "Resultat del diagnostic:"
-msgstr "Resultado del diagnóstico:"
-
-msgid "Executant diagnostic..."
-msgstr "Ejecutando diagnóstico..."
-
-msgid "Diagnostic"
-msgstr "Diagnóstico"
-
-msgid "Destinacio ja detectada"
-msgstr "Destino ya detectado"
-
-msgid "No hi ha alternatives."
-msgstr "No hay alternativas."
-
-msgid "Segur? El text es mantindra pero el link desapareixera."
-msgstr "¿Seguro? El texto se mantendrá pero el enlace desaparecerá."
-
-msgid ""
-"Links trobats pero sense comprovar per HTTP. El cron o Comprovar ara els "
-"verificara."
-msgstr ""
-"Enlaces encontrados pero sin comprobar por HTTP. El cron o Comprobar ahora "
-"los verificará."
-
-msgid ""
-"Links actius amb HTTP. Considera actualitzar-los a HTTPS per seguretat i "
-"SEO."
-msgstr ""
-"Enlaces activos con HTTP. Considera actualizarlos a HTTPS por seguridad y "
-"SEO."
-
-msgid "Ultim escaneig: %s"
-msgstr "Último escaneo: %s"
-
-msgid "Ultima comprovacio auto: %s"
-msgstr "Última comprobación auto: %s"
-
-msgid "Proper escaneig auto: %s"
-msgstr "Próximo escaneo auto: %s"
-
-msgid "Propera comprovacio auto: %s"
-msgstr "Próxima comprobación auto: %s"
-
-msgid "Cap escaneig realitzat. Fes clic a Escanejar ara."
-msgstr "No se ha realizado ningún escaneo. Haz clic en Escanear ahora."
-
-msgid "Tots els links han estat comprovats recentment."
-msgstr "Todos los enlaces han sido comprobados recientemente."
-
-msgid "Tots actualitzats"
-msgstr "Todo actualizado"
-
-msgid "Escanejar etiquetes img src (imatges trencades)"
-msgstr "Escanear etiquetas img src (imágenes rotas)"
-
-msgid "Comentaris"
-msgstr "Comentarios"
-
-msgid "Escanejar comentaris aprovats"
-msgstr "Escanear comentarios aprobados"
-
-msgid ""
-"Busca links en camps afegits per plugins com ACF. Util si tens camps de "
-"tipus URL, HTML o editor als teus articles. Pot alentir l'escaneig."
-msgstr ""
-"Busca enlaces en campos añadidos por plugins como ACF. Útil si tienes campos"
-" de tipo URL, HTML o editor en tus artículos. Puede ralentizar el escaneo."
-
-msgid "Una clau per linia."
-msgstr "Una clave por línea."
-
-msgid "Recomanat: 15 s."
-msgstr "Recomendado: 15 s."
-
-msgid ""
-"El cron re-comprova links mes antics daquesta edat. Per defecte: 7 dies."
-msgstr ""
-"El cron vuelve a comprobar enlaces más antiguos que esta antigüedad. Por "
-"defecto: 7 días."
-
-msgid "Data de modificacio del article"
-msgstr "Fecha de modificación del artículo"
-
-msgid "No actualitzar la data de modificacio en editar un link"
-msgstr "No actualizar la fecha de modificación al editar un enlace"
-
-msgid ""
-"Si activat, editar o desenllacar un link no canviara la data de modificacio "
-"del article."
-msgstr ""
-"Si está activado, editar o desenlazar un enlace no cambiará la fecha de "
-"modificación del artículo."
-
-msgid "Links trencats als cercadors"
-msgstr "Enlaces rotos en buscadores"
-
-msgid "Afegir rel=\"nofollow\" als links trencats automaticament"
-msgstr "Añadir rel=\"nofollow\" automáticamente a los enlaces rotos"
-
-msgid ""
-"Evita que Google i altres cercadors segueixin links trencats del teu lloc. "
-"Nomes afecta el contingut dels articles (no comentaris ni camps "
-"personalitzats)."
-msgstr ""
-"Evita que Google y otros buscadores sigan enlaces rotos de tu sitio. Solo "
-"afecta al contenido de los artículos (no comentarios ni campos "
-"personalizados)."
-
 msgid "Automatic"
 msgstr "Automático"
-
-msgid "Catala"
-msgstr "Catalán"
-
-msgid "Espanol"
-msgstr "Español"
-
-msgid "Llista d ignorats"
-msgstr "Lista de ignorados"
-
-msgid ""
-"Un domini o URL per linia. Exemple: amazon.com o https://example.com/page. "
-"Aquests links no seran escanejats ni comprovats."
-msgstr ""
-"Un dominio o URL por línea. Ejemplo: amazon.com o https://example.com/page. "
-"Estos enlaces no se escanearán ni comprobarán."
-
-msgid "Manteniment"
-msgstr "Mantenimiento"
-
-msgid ""
-"Esborra la taula interna del plugin: links trobats, estats HTTP, dates de "
-"comprovacio i URLs de redireccio."
-msgstr ""
-"Borra la tabla interna del plugin: enlaces encontrados, estados HTTP, fechas"
-" de comprobación y URLs de redirección."
-
-msgid "Els articles, pagines i comentaris NO es modifiquen."
-msgstr "Los artículos, páginas y comentarios NO se modifican."
-
-msgid "Despres haureu de tornar a fer Escanejar ara i Comprovar ara."
-msgstr "Después tendrás que volver a hacer Escanear ahora y Comprobar ahora."
-
-msgid ""
-"Segur? Tots els registres del plugin seran eliminats. Els articles no "
-"canviaran."
-msgstr ""
-"¿Seguro? Todos los registros del plugin serán eliminados. Los artículos no "
-"cambiarán."
-
-msgid "Esborrar tots els registres del plugin"
-msgstr "Borrar todos los registros del plugin"
 
 # English source strings for WordPress i18n compliance.
 msgid "TSO Link Inspector - Settings"
@@ -748,14 +119,6 @@ msgstr "Timeout (segundos)"
 msgid "Recommended: 15 s."
 msgstr "Recomendado: 15 s."
 
-msgid "Recheck every (days)"
-msgstr "Recomprobar cada (días)"
-
-msgid "Cron rechecks links older than this age. Default: 7 days."
-msgstr ""
-"El cron vuelve a comprobar enlaces más antiguos que esta antigüedad. Por "
-"defecto: 7 días."
-
 msgid "Post modified date"
 msgstr "Fecha de modificación del artículo"
 
@@ -809,25 +172,6 @@ msgstr "Guardar configuración"
 msgid "Maintenance"
 msgstr "Mantenimiento"
 
-msgid ""
-"Clears the plugin internal table: found links, HTTP status, check dates, and"
-" redirect URLs."
-msgstr ""
-"Borra la tabla interna del plugin: enlaces encontrados, estados HTTP, fechas"
-" de comprobación y URLs de redirección."
-
-msgid "Posts, pages, and comments are NOT modified."
-msgstr "Los artículos, páginas y comentarios NO se modifican."
-
-msgid "After that, run Scan now and Check now again."
-msgstr "Después, vuelve a ejecutar Escanear ahora y Comprobar ahora."
-
-msgid ""
-"Are you sure? All plugin records will be deleted. Posts will not be changed."
-msgstr ""
-"¿Seguro? Todos los registros del plugin serán eliminados. Los artículos no "
-"cambiarán."
-
 msgid "Recheck"
 msgstr "Recomprobar"
 
@@ -845,9 +189,6 @@ msgstr "Comprobando..."
 
 msgid "Scan now"
 msgstr "Escanear ahora"
-
-msgid "Link not found."
-msgstr "Enlace no encontrado."
 
 msgid "Link"
 msgstr "Enlace"
@@ -876,15 +217,8 @@ msgstr "No está roto"
 msgid "Unlink"
 msgstr "Desenlazar"
 
-msgid "Delete this record. The post link is not modified."
-msgstr "Elimina este registro. El enlace del artículo no se modifica."
-
 msgid "Clear the comment author website field (URL)"
 msgstr "Vaciar el campo URL del autor del comentario"
-
-msgid "Remove the link tag from content; visible text is kept."
-msgstr ""
-"Quitar la etiqueta de enlace del contenido; el texto visible se mantiene."
 
 msgid "Cannot unlink this item."
 msgstr "No se puede desenlazar este elemento."
@@ -943,13 +277,6 @@ msgstr ""
 "Enlaces encontrados pero aún sin comprobar por HTTP. El cron los comprobará "
 "automáticamente, o pulsa Comprobar ahora."
 
-msgid ""
-"Active links using HTTP instead of HTTPS. Consider updating them for "
-"security and SEO."
-msgstr ""
-"Enlaces activos con HTTP en lugar de HTTPS. Considera actualizarlos por "
-"seguridad y SEO."
-
 msgid "Comment #%d"
 msgstr "Comentario #%d"
 
@@ -984,9 +311,6 @@ msgstr "Guardando..."
 msgid "URL updated successfully."
 msgstr "URL actualizada correctamente."
 
-msgid "Marked as OK."
-msgstr "Marcado como correcto."
-
 msgid "Diagnostics"
 msgstr "Diagnóstico"
 
@@ -1014,9 +338,6 @@ msgstr ""
 "haber desaparecido de forma permanente — actualiza o elimina el enlace "
 "manualmente."
 
-msgid "No alternatives found."
-msgstr "No se han encontrado alternativas."
-
 msgid "Redirect destination already detected"
 msgstr "Destino de redirección ya detectado"
 
@@ -1040,9 +361,6 @@ msgstr "Desenlazando…"
 
 msgid "Manual locks (%s)"
 msgstr "Bloqueados manuales (%s)"
-
-msgid "Links manually marked as not broken."
-msgstr "Enlaces marcados manualmente como no rotos."
 
 msgid "Are you sure? The text will remain but the link will be removed."
 msgstr "¿Seguro? El texto se mantendrá pero el enlace se eliminará."
@@ -1083,37 +401,17 @@ msgstr ""
 msgid "HTTP insecure"
 msgstr "HTTP inseguro"
 
-msgid ""
-"Active links using HTTP. Consider updating them to HTTPS for security and "
-"SEO."
-msgstr ""
-"Enlaces activos usando HTTP. Considera actualizarlos a HTTPS por seguridad y"
-" SEO."
-
 msgid "Scanned"
 msgstr "Escaneados"
 
 msgid "Last scan: %s"
 msgstr "Último escaneo: %s"
 
-msgid "No scan has been run yet. Click Scan now."
-msgstr "Aún no se ha ejecutado ningún escaneo. Haz clic en Escanear ahora."
-
 msgid "(no pending links)"
 msgstr "(sin enlaces pendientes)"
 
 msgid "Last automatic check: %s"
 msgstr "Última comprobación automática: %s"
-
-msgid ""
-"Links never checked or older than %d days. Cron will check them "
-"automatically."
-msgstr ""
-"Enlaces nunca comprobados o más antiguos de %d días. El cron los comprobará "
-"automáticamente."
-
-msgid "%d to check"
-msgstr "%d por comprobar"
 
 msgid "All links were checked recently."
 msgstr "Todos los enlaces se comprobaron recientemente."
@@ -1142,8 +440,8 @@ msgstr "Ver artículo"
 msgid "Back"
 msgstr "Volver"
 
-msgid "Search URLs..."
-msgstr "Buscar URLs..."
+msgid "Search links..."
+msgstr "Buscar enlaces..."
 
 msgid "Searching..."
 msgstr "Buscando..."
@@ -1151,17 +449,11 @@ msgstr "Buscando..."
 msgid "Search"
 msgstr "Buscar"
 
-msgid "Edit URL"
-msgstr "Editar URL"
-
 msgid "New URL:"
 msgstr "Nueva URL:"
 
 msgid "Scanning %1$d of %2$d..."
 msgstr "Escaneando %1$d de %2$d..."
-
-msgid "Posts scanned. Finishing comments, menus and other sources…"
-msgstr "Entradas escaneadas. Terminando comentarios, menús y otras fuentes…"
 
 msgid "Invalid data."
 msgstr "Datos incorrectos."
@@ -1171,10 +463,6 @@ msgid ""
 msgstr ""
 "No se encontró la URL original en el artículo. Comprueba si el enlace fue "
 "editado manualmente."
-
-msgid "Cannot unlink this item. For comments, edit manually."
-msgstr ""
-"No se puede desenlazar este elemento. Para comentarios, edítalo manualmente."
 
 msgid "Link tag removed."
 msgstr "Etiqueta de enlace eliminada."
@@ -1194,23 +482,11 @@ msgstr "Comprobando %1$d de %2$d..."
 msgid "Unlinking %1$d of %2$d..."
 msgstr "Desenlazando %1$d de %2$d..."
 
-msgid "%d marked as OK."
-msgstr "%d marcados como correctos."
-
-msgid "%d deleted."
-msgstr "%d eliminados."
-
-msgid "Destination detected (last check)"
-msgstr "Destino detectado (última comprobación)"
-
 msgid "Secure HTTPS version available"
 msgstr "Versión segura HTTPS disponible"
 
 msgid "Final URL after redirects"
 msgstr "URL final tras redirecciones"
-
-msgid "www variant"
-msgstr "Variante con www"
 
 msgid "Cannot connect"
 msgstr "No se puede conectar"
@@ -1284,29 +560,8 @@ msgstr "No comprobado"
 msgid "English"
 msgstr "Inglés"
 
-msgid "Comprovat"
-msgstr "Comprobado"
-
-msgid "Data desconeguda"
-msgstr "Fecha desconocida"
-
-msgid "Veure article"
-msgstr "Ver artículo"
-
-msgid "Verificat manualment. El cron no sobreescriu aquest estat."
-msgstr "Verificado manualmente. El cron no sobrescribe este estado."
-
-msgid "HTTP insegur (%d)"
-msgstr "HTTP inseguro (%d)"
-
-msgid "S'ha produit un error."
-msgstr "Se ha producido un error."
-
 msgid "%d links"
 msgstr "%d enlaces"
-
-msgid "Nonce invalid."
-msgstr "Nonce inválido."
 
 msgid "Total"
 msgstr "Total"
@@ -1412,31 +667,11 @@ msgstr ""
 "Solo se incluyen enlaces completamente rotos (sin destino de redirección). "
 "Los correos resumen no se envían cuando no hay enlaces rotos."
 
-msgid "Sent to: %s"
-msgstr "Enviado a: %s"
-
-msgid "%1$d new broken link was detected on %2$s:"
-msgid_plural "%1$d new broken links were detected on %2$s:"
-msgstr[0] "Se ha detectado %1$d enlace roto nuevo en %2$s:"
-msgstr[1] "Se han detectado %1$d enlaces rotos nuevos en %2$s:"
-
 msgid "Broken URL:"
 msgstr "URL rota:"
 
 msgid "Status code:"
 msgstr "Código de estado:"
-
-msgid "Post ID:"
-msgstr "ID del artículo:"
-
-msgid "Post title:"
-msgstr "Título del artículo:"
-
-msgid "Edit post:"
-msgstr "Editar artículo:"
-
-msgid "Inspector:"
-msgstr "Inspector:"
 
 msgid "[%1$s] Broken links report (%2$d)"
 msgstr "[%1$s] Informe de enlaces rotos (%2$d)"
@@ -1489,9 +724,6 @@ msgstr[1] "Se han detectado %1$d enlaces rotos nuevos en %2$s."
 msgid "Extended scanning"
 msgstr "Escaneo ampliado"
 
-msgid "Plain-text URLs in post content (without <a> tags)"
-msgstr "URLs en texto plano en el contenido (sin etiquetas <a>)"
-
 msgid ""
 "Plain-text URLs in post content (without <a> tags). Checked for broken "
 "links; edit the post manually to change or remove them."
@@ -1534,9 +766,6 @@ msgstr "Elemento de menú #%d"
 msgid "Menu"
 msgstr "Menú"
 
-msgid "Menu links must be edited under Appearance > Menus."
-msgstr "Los enlaces de menú deben editarse en Apariencia > Menús."
-
 msgid "Close"
 msgstr "Cerrar"
 
@@ -1562,8 +791,7 @@ msgstr ""
 "Áreas de widgets (Texto, HTML personalizado, widgets de bloques, Imagen de "
 "medios y otros widgets que guardan URL en texto)"
 
-msgid ""
-"Taxonomy term descriptions (categories, tags, and custom taxonomies)"
+msgid "Taxonomy term descriptions (categories, tags, and custom taxonomies)"
 msgstr ""
 "Descripciones de términos taxonómicos (categorías, etiquetas y taxonomías "
 "personalizadas)"
@@ -1600,14 +828,6 @@ msgstr ""
 "tsoliin_register_link_source(); se ejecutan en cada escaneo, "
 "independentemente de estas casillas."
 
-msgid "Widget links must be edited under Appearance > Widgets."
-msgstr "Los enlaces de widgets deben editarse en Apariencia > Widgets."
-
-msgid "Term description links must be edited in the taxonomy editor."
-msgstr ""
-"Los enlaces de la descripción del término deben editarse en el editor de "
-"taxonomía."
-
 msgid "This link must be edited at its original source."
 msgstr "Este enlace debe editarse en su fuente original."
 
@@ -1616,9 +836,6 @@ msgstr "Widget"
 
 msgid "Term"
 msgstr "Término"
-
-msgid "Template"
-msgstr "Plantilla"
 
 msgid "Template / Navigation"
 msgstr "Plantilla / Navegación"
@@ -1660,18 +877,8 @@ msgstr "Editar enlace"
 msgid "Link text:"
 msgstr "Texto del enlace:"
 
-msgid "Inspector label (read-only):"
-msgstr "Etiqueta interna (solo lectura):"
-
 msgid "Link text in comment (read-only):"
 msgstr "Texto del enlace en el comentario (solo lectura):"
-
-msgid ""
-"This is an internal label, not the visible link text in the comment. Edit "
-"the comment in WordPress to change what visitors see."
-msgstr ""
-"Es una etiqueta interna, no el texto visible del enlace en el comentario. "
-"Edita el comentario en WordPress para cambiar lo que ven los visitantes."
 
 msgid ""
 "Only the URL can be changed here. To edit the visible link text, open the "
@@ -1708,12 +915,6 @@ msgid ""
 msgstr ""
 "Comprobar ahora enviará una petición HTTP a cada enlace guardado en la base "
 "de datos. En sitios grandes puede tardar mucho. ¿Continuar?"
-
-msgid "Scan:"
-msgstr "Escaneo:"
-
-msgid "Check:"
-msgstr "Comprobación:"
 
 msgid ""
 "Reads your content and adds links to this list. It does not test whether "
@@ -1819,17 +1020,6 @@ msgstr ""
 "comprobaciones en segundo plano continúan; salen de esta lista si cambia la "
 "URL o la redirección, o si una comprobación los encuentra rotos."
 
-msgid ""
-"Manual lock: marked OK by you. Background checks still run. Cleared if the "
-"URL or redirect changes, or if a check finds it broken."
-msgstr ""
-"Bloqueo manual: marcado como OK por ti. Las comprobaciones en segundo plano "
-"continúan. Se desbloquea si cambia la URL o la redirección, o si una "
-"comprobación lo encuentra roto."
-
-msgid "%d marked as OK and moved to Manual locks."
-msgstr "%d marcados como OK y movidos a Bloqueos manuales."
-
 msgid "Getting started"
 msgstr "Primeros pasos"
 
@@ -1901,69 +1091,11 @@ msgstr ""
 "tráfico o con caché, programa un cron del servidor que llame a wp-cron.php "
 "cada hora para comprobaciones automáticas fiables."
 
-msgid ""
-"Open Posts with issues from the main screen to see articles that contain "
-"broken, redirected, or unchecked links. Click a post to filter the list to "
-"that post only."
-msgstr ""
-"Abre Entradas con problemas desde la pantalla principal para ver artículos "
-"con enlaces rotos, redirigidos o sin comprobar. Haz clic en una entrada para"
-" filtrar la lista solo a esa entrada."
-
-msgid "Open posts view"
-msgstr "Abrir vista de entradas"
-
-msgid "List filters"
-msgstr "Filtros de la lista"
-
-msgid "Status filter tabs"
-msgstr "Pestañas de filtro de estado"
-
-msgid ""
-"Optional second row: Empty anchor (missing text), Generic anchor (non-"
-"descriptive phrases such as “click here”), Unpublished target (internal "
-"links to draft, private, pending, or trashed posts). Combine with status "
-"filters and Internal/External scope."
-msgstr ""
-"Segunda fila opcional: Ancla vacía (sin texto), Ancla genérica (frases poco "
-"descriptivas como «haz clic aquí»), Destino no publicado (enlaces internos a"
-" borradores, privados, pendientes o en la papelera). Combínalos con filtros "
-"de estado y ámbito Interno/Externo."
-
-msgid "Internal and external links"
-msgstr "Enlaces internos y externos"
-
-msgid ""
-"Scope tabs filter by destination: internal (same site or relative paths) vs "
-"external (other domains). Useful on large sites with many outbound links."
-msgstr ""
-"Las pestañas de ámbito filtran por destino: interno (mismo sitio o rutas "
-"relativas) vs externo (otros dominios). Útil en sitios grandes con muchos "
-"enlaces salientes."
-
 msgid "Row and bulk actions"
 msgstr "Acciones de fila y en masa"
 
 msgid "Editing and fixing links"
 msgstr "Editar y corregir enlaces"
-
-msgid ""
-"Edit link changes the URL in the stored source (post content, comment, menu,"
-" widget, or term). Unlink removes the <a> tag but keeps the visible text. "
-"Recheck re-reads the WordPress source (post, comment, menu, widget, term, or"
-" template) and then runs one HTTP test. Not broken locks the link as OK. "
-"Suggestion offers HTTPS upgrades when available. Edit and Unlink are not "
-"available for some source types (images, templates, etc.) — open the post or"
-" source editor instead."
-msgstr ""
-"Editar enlace cambia la URL en el origen guardado (contenido de la entrada, "
-"comentario, menú, widget o término). Desenlazar elimina la etiqueta <a> pero"
-" conserva el texto visible. Recomprobar vuelve a leer el origen en WordPress"
-" (entrada, comentario, menú, widget, término o plantilla) y después hace una"
-" prueba HTTP. No roto bloquea el enlace como OK. Sugerencia ofrece mejoras "
-"HTTPS cuando hay disponibles. Editar y Desenlazar no están disponibles para "
-"algunos tipos de origen (imágenes, plantillas, etc.) — abre el editor de la "
-"entrada o del origen."
 
 msgid "Bulk actions"
 msgstr "Acciones en masa"
@@ -2071,19 +1203,6 @@ msgstr ""
 "en el contenido de la entrada en el front-end para que los motores de "
 "búsqueda los sigan menos. No afecta a comentarios ni campos personalizados."
 
-msgid "Export CSV and PDF"
-msgstr "Exportar CSV y PDF"
-
-msgid ""
-"Export buttons on the main screen respect the active status filter, quality "
-"filter, scope, search, and post view. PDF reports are limited to a subset of"
-" rows; use CSV for the full filtered list."
-msgstr ""
-"Los botones de exportación de la pantalla principal respetan el filtro de "
-"estado activo, el filtro de calidad, el ámbito, la búsqueda y la vista de "
-"entrada. Los informes PDF están limitados a un subconjunto de filas; usa CSV"
-" para la lista filtrada completa."
-
 msgid "Delete all plugin records"
 msgstr "Eliminar todos los registros del plugin"
 
@@ -2093,9 +1212,9 @@ msgid ""
 "Settings are kept. Run Scan now, then Check now, to rebuild the list."
 msgstr ""
 "El mantenimiento en Ajustes vacía la base de datos de enlaces, el Historial "
-"y el progreso de escaneo/comprobación pero no edita entradas, comentarios "
-"ni otro contenido. Se conservan los Ajustes del plugin. Ejecuta Escanear "
-"ahora y después Comprobar ahora para reconstruir la lista."
+"y el progreso de escaneo/comprobación pero no edita entradas, comentarios ni"
+" otro contenido. Se conservan los Ajustes del plugin. Ejecuta Escanear ahora"
+" y después Comprobar ahora para reconstruir la lista."
 
 msgid "Not broken (Manual locks)"
 msgstr "No roto (Bloqueos manuales)"
@@ -2121,19 +1240,6 @@ msgstr ""
 
 msgid "Open ignore list"
 msgstr "Abrir lista de ignorados"
-
-msgid ""
-"Broken: HTTP errors and timeouts. Redirect: non-transparent redirects. OK: "
-"working links. Unchecked: found but not tested yet. HTTP insecure: active "
-"http:// links. Manual locks: links you marked Not broken."
-msgstr ""
-"Rotos: errores HTTP y tiempos de espera. Redirección: redirecciones no "
-"transparentes. OK: enlaces que funcionan. Sin comprobar: encontrados pero no"
-" probados. HTTP inseguro: enlaces http:// activos. Bloqueos manuales: "
-"enlaces marcados como No roto."
-
-msgid "Open URL"
-msgstr "Abrir URL"
 
 msgid "Ignore domain"
 msgstr "Ignorar dominio"
@@ -2191,8 +1297,7 @@ msgstr ""
 msgid "Manual locks (links you marked Not broken)."
 msgstr "Bloqueos manuales (enlaces marcados como No roto)."
 
-msgid ""
-"URL change History log (Edit / Suggest / Convert to /path / HTTPS)."
+msgid "URL change History log (Edit / Suggest / Convert to /path / HTTPS)."
 msgstr ""
 "Registro de Historial de cambios de URL (Editar / Sugerir / Convertir a "
 "/path / HTTPS)."
@@ -2272,9 +1377,6 @@ msgstr "Enlaces de este sitio (mismo dominio o rutas relativas)"
 msgid "Links pointing to other domains"
 msgstr "Enlaces que apuntan a otros dominios"
 
-msgid "Use relative URL"
-msgstr "Convertir a /path"
-
 msgid "Convert to /path"
 msgstr "Convertir a /path"
 
@@ -2310,52 +1412,19 @@ msgstr "Activa primero «Convertir a /path» en Configuración."
 msgid "This link cannot be converted to /path."
 msgstr "Este enlace no se puede convertir a /path."
 
-msgid "%1$d links saved as /path. %2$d skipped or failed."
-msgstr "%1$d enlaces guardados como /path. %2$d omitidos o fallidos."
-
 msgid "Show “Convert to /path” in the link list"
 msgstr "Mostrar «Convertir a /path» en la lista de enlaces"
 
 msgid ""
 "When enabled, adds a row and bulk action to replace same-site URLs like "
-"https://yoursite.com/contact/ with /contact/ in post content or scanned meta "
-"(and custom menu URLs). Comments, widgets, and terms are skipped. Disabled "
+"https://yoursite.com/contact/ with /contact/ in post content or scanned meta"
+" (and custom menu URLs). Comments, widgets, and terms are skipped. Disabled "
 "by default."
 msgstr ""
 "Si se activa, añade una acción por fila y en masa para sustituir URLs del "
 "mismo sitio como https://tusitio.com/contacto/ por /contacto/ en el "
-"contenido de la entrada o meta escaneada (y URLs de menú personalizadas). "
-"Se omiten comentarios, widgets y términos. Desactivado por defecto."
-
-msgid ""
-"Optional: enable “Convert to /path” in Settings to bulk-replace absolute "
-"same-site URLs with /path automatically."
-msgstr ""
-"Opcional: activa «Convertir a /path» en Configuración para sustituir en masa"
-" URLs absolutas del mismo sitio por /path automáticamente."
-
-msgid "Convert this same-site URL to a root-relative path (e.g. /page/)"
-msgstr ""
-"Convierte esta URL del mismo sitio en una ruta relativa raíz (p. ej. "
-"/pagina/)"
-
-msgid "Convert this internal link to a site-relative URL (e.g. /page/)?"
-msgstr ""
-"¿Convertir este enlace interno en una URL relativa del sitio (p. ej. "
-"/pagina/)?"
-
-msgid "Convert the selected internal links to site-relative URLs?"
-msgstr ""
-"¿Convertir los enlaces internos seleccionados en URLs relativas del sitio?"
-
-msgid "URL converted to a relative path."
-msgstr "URL convertida en una ruta relativa."
-
-msgid "This URL cannot be converted to a relative path."
-msgstr "Esta URL no se puede convertir en una ruta relativa."
-
-msgid "%1$d converted to relative URLs. %2$d skipped or failed."
-msgstr "%1$d convertidos a URLs relativas. %2$d omitidos o fallidos."
+"contenido de la entrada o meta escaneada (y URLs de menú personalizadas). Se"
+" omiten comentarios, widgets y términos. Desactivado por defecto."
 
 msgid ""
 "Articles sorted by broken links, then redirects. Click a title to review and"
@@ -2369,13 +1438,6 @@ msgstr "Enlaces totales"
 
 msgid "No posts with broken or redirected links."
 msgstr "No hay entradas con enlaces rotos o redirigidos."
-
-msgid ""
-"Quick health check when scan or check fails: database, settings, and one "
-"sample post."
-msgstr ""
-"Comprobación rápida si el escaneo o la revisión fallan: base de datos, "
-"configuración y una entrada de muestra."
 
 msgid "DB table:"
 msgstr "Tabla BD:"
@@ -2424,8 +1486,8 @@ msgstr ""
 "Crear una revisión antes de editar un enlace en el contenido de la entrada"
 
 msgid ""
-"When enabled, saves a WordPress revision before Edit link, Convert to /path, "
-"Upgrade to HTTPS, or Unlink changes post content (once per post per "
+"When enabled, saves a WordPress revision before Edit link, Convert to /path,"
+" Upgrade to HTTPS, or Unlink changes post content (once per post per "
 "request). Requires revisions enabled for that post type. Disabled by "
 "default."
 msgstr ""
@@ -2433,14 +1495,6 @@ msgstr ""
 "Convertir a /path, Actualizar a HTTPS o Desenlazar modifiquen el contenido "
 "(una por entrada y petición). Requiere revisiones activas para ese tipo de "
 "contenido. Desactivado por defecto."
-
-msgid ""
-"The edit modal shows an HTML preview of the matched tag before you save. "
-"Enable post revisions in Settings to keep a restore point."
-msgstr ""
-"El modal de edición muestra una vista previa HTML de la etiqueta coincidente"
-" antes de guardar. Activa las revisiones en Configuración para tener un "
-"punto de restauración."
 
 msgid ""
 "A WordPress revision will be saved when you save, so you can restore the "
@@ -2459,37 +1513,8 @@ msgstr ""
 msgid "Go to edit"
 msgstr "Ir a editar"
 
-msgid "Go to edit comment"
-msgstr "Ir a editar el comentario"
-
-msgid "Open the editor and scroll to this link"
-msgstr "Abre el editor y desplázate hasta este enlace"
-
-msgid "Edit comment links in WordPress using Go to edit comment."
-msgstr ""
-"Edita los enlaces del comentario en WordPress con Ir a editar el comentario."
-
-msgid "Open the widget editor for this sidebar widget"
-msgstr "Abre el editor de widgets de este widget de la barra lateral"
-
 msgid "Edit widget links in Appearance > Widgets using Go to edit."
 msgstr "Edita los enlaces del widget en Apariencia > Widgets con Ir a editar."
-
-msgid "Open the navigation menu editor for this link"
-msgstr "Abre el editor de menús de navegación de este enlace"
-
-msgid "Open the taxonomy editor for this link"
-msgstr "Abre el editor de taxonomías de este enlace"
-
-msgid "Edit menu links in Appearance > Menus using Go to edit."
-msgstr "Edita los enlaces del menú en Apariencia > Menús con Ir a editar."
-
-msgid ""
-"Menu links cannot be updated from suggestions. Change the URL in Appearance "
-"> Menus using Go to edit."
-msgstr ""
-"Los enlaces de menú no se pueden actualizar desde las sugerencias. Cambia la"
-" URL en Apariencia > Menús con Ir a editar."
 
 msgid ""
 "WooCommerce product field URLs cannot be updated from suggestions. Change "
@@ -2681,9 +1706,6 @@ msgstr "Origen"
 msgid "No links match this report."
 msgstr "Ningún enlace coincide con este informe."
 
-msgid "Showing up to 50 links. Export CSV for the full list."
-msgstr "Se muestran hasta 50 enlaces. Exporta CSV para la lista completa."
-
 msgid "Generated by %s"
 msgstr "Generado por %s"
 
@@ -2710,11 +1732,6 @@ msgstr ""
 msgid "Unverifiable (site blocks bots)"
 msgstr "No verificable (el sitio bloquea bots)"
 
-msgid "Canonical HTTPS URL (server cannot verify — check in browser)"
-msgstr ""
-"URL HTTPS canónica (el servidor no puede verificar — comprueba en el "
-"navegador)"
-
 msgid "HTTPS available (access restricted to bots/login — confirm in browser)"
 msgstr ""
 "HTTPS disponible (acceso restringido a bots/login — confirma en el "
@@ -2740,9 +1757,6 @@ msgstr ""
 "manuales), %2$d rotos (más de %5$d días), %3$d OK (más de %4$d días). "
 "Rendimiento: ~%6$d comprobaciones/día. Tiempo estimado para vaciar la cola: "
 "~%7$d días."
-
-msgid "%d in check queue"
-msgstr "%d en cola de comprobación"
 
 msgid "Automatic HTTP checks"
 msgstr "Comprobaciones HTTP automáticas"
@@ -2908,9 +1922,6 @@ msgstr "WooCommerce: Imagen destacada"
 msgid "WooCommerce: Gallery image"
 msgstr "WooCommerce: Imagen de galería"
 
-msgid "Open the WooCommerce product editor"
-msgstr "Abrir el editor del producto WooCommerce"
-
 msgid "Meta field “%s”: "
 msgstr "Campo meta “%s”: "
 
@@ -3023,13 +2034,6 @@ msgid "Click again to clear this quality filter."
 msgstr "Haz clic de nuevo para quitar este filtro de calidad."
 
 msgid ""
-"reads your content and adds links to this list. It does not test whether "
-"URLs work yet."
-msgstr ""
-"lee el contenido y añade enlaces a esta lista. Aún no comprueba si las URLs "
-"funcionan."
-
-msgid ""
 "Original URL not found in this comment. Edit the comment manually or check "
 "encoding (e.g. trailing slash)."
 msgstr ""
@@ -3114,14 +2118,6 @@ msgstr "No comprobable (URL no HTTP)"
 msgid "Unknown bulk action."
 msgstr "Acción masiva desconocida."
 
-msgid ""
-"HTTPS could not be verified from the server. Use bulk Upgrade to HTTPS only "
-"when confirmed, or mark the link as OK manually."
-msgstr ""
-"No se pudo verificar HTTPS desde el servidor. Usa la actualización masiva a "
-"HTTPS solo cuando esté confirmado, o marca el enlace como correcto "
-"manualmente."
-
 msgid "Marking as OK %1$d of %2$d..."
 msgstr "Marcando como correcto %1$d de %2$d..."
 
@@ -3134,9 +2130,6 @@ msgstr "registros eliminados."
 msgid "Deleting %1$d of %2$d..."
 msgstr "Eliminando %1$d de %2$d..."
 
-msgid "Record not found."
-msgstr "Registro no encontrado."
-
 msgid ""
 "Headers, footers, and popups in these builder types are not scanned because "
 "they are unchecked in Settings:"
@@ -3146,16 +2139,6 @@ msgstr ""
 
 msgid "Open Settings → Content types"
 msgstr "Abrir Ajustes → Tipos de contenido"
-
-msgid ""
-"This site appears to be behind a coming-soon or maintenance page. Internal "
-"HTML links are not marked OK or broken (status: Unverifiable) until the site"
-" is publicly reachable. External URLs and media files are still checked."
-msgstr ""
-"Parece que este sitio está detrás de una página de «coming soon» o de "
-"mantenimiento. Los enlaces HTML internos no se marcan como OK ni como rotos "
-"(estado: No verificable) hasta que el sitio sea accesible públicamente. Las "
-"URL externas y los archivos multimedia sí se comprueban."
 
 msgid "Builder templates (Elementor / Porto)"
 msgstr "Plantillas de constructor (Elementor / Porto)"
@@ -3173,18 +2156,6 @@ msgstr ""
 
 msgid "Coming soon / maintenance"
 msgstr "Coming soon / mantenimiento"
-
-msgid ""
-"If a coming-soon plugin serves the same HTML for every internal page, HTTP "
-"checks cannot tell working pages from missing ones. Internal HTML URLs are "
-"marked Unverifiable (coming soon / maintenance) until the site is live. "
-"External links and uploaded files are still tested."
-msgstr ""
-"Si un plugin de coming soon sirve el mismo HTML para cada página interna, "
-"las comprobaciones HTTP no pueden distinguir páginas que funcionan de las "
-"que faltan. Las URL HTML internas se marcan No verificable (coming soon / "
-"mantenimiento) hasta que el sitio esté en vivo. Los enlaces externos y los "
-"archivos subidos sí se comprueban."
 
 msgid "Elementor Library"
 msgstr "Biblioteca Elementor"
@@ -3404,8 +2375,8 @@ msgid "History records deleted."
 msgstr "Registros del historial eliminados."
 
 msgid ""
-"Save even if HTTPS cannot be verified from this server (geo-block, bot wall, "
-"or timeout)."
+"Save even if HTTPS cannot be verified from this server (geo-block, bot wall,"
+" or timeout)."
 msgstr ""
 "Guardar aunque este servidor no pueda verificar el HTTPS (geo-bloqueo, muro "
 "de bots o tiempo de espera)."
@@ -3430,13 +2401,6 @@ msgstr "Próximo escaneo: %s"
 msgid "Next check: %s"
 msgstr "Próxima comprobación: %s"
 
-msgid "Next: scan %1$s, check %2$s"
-msgstr "Próximo: escaneo %1$s, comprobación %2$s"
-
-msgid "Next automatic scan: %1$s. Next automatic check: %2$s."
-msgstr ""
-"Próximo escaneo automático: %1$s. Próxima comprobación automática: %2$s."
-
 msgid "Check paused. Click Continue check."
 msgstr "Comprobación en pausa. Haz clic en Continuar comprobación."
 
@@ -3458,11 +2422,6 @@ msgid ""
 msgstr ""
 "El escaneo ha fallado en el servidor. Usa Continuar escaneo para "
 "reintentarlo desde la última posición guardada."
-
-msgid "Scan timed out or was interrupted. Use Continue scan to resume."
-msgstr ""
-"El escaneo agotó el tiempo o se interrumpió. Usa Continuar escaneo para "
-"reanudarlo."
 
 msgid "Continue scan"
 msgstr "Continuar escaneo"
@@ -3488,8 +2447,8 @@ msgstr ""
 "más tarde."
 
 msgid ""
-"Discard this paused check? HTTP results already saved are kept; the progress "
-"bar is cleared. Unchecked links remain for a future Check now."
+"Discard this paused check? HTTP results already saved are kept; the progress"
+" bar is cleared. Unchecked links remain for a future Check now."
 msgstr ""
 "¿Descartar esta comprobación en pausa? Se conservan los resultados HTTP ya "
 "guardados; se borra la barra de progreso. Los enlaces sin comprobar quedan "
@@ -3499,9 +2458,9 @@ msgid ""
 "Discard all paused scan and check tasks? Found links and saved HTTP results "
 "are kept; progress bars are cleared."
 msgstr ""
-"¿Descartar todas las tareas de escaneo y comprobación en pausa? Se "
-"conservan los enlaces encontrados y los resultados HTTP guardados; se "
-"borran las barras de progreso."
+"¿Descartar todas las tareas de escaneo y comprobación en pausa? Se conservan"
+" los enlaces encontrados y los resultados HTTP guardados; se borran las "
+"barras de progreso."
 
 msgid "Scan started. You can continue browsing."
 msgstr "Escaneo iniciado. Puedes continuar navegando."
@@ -3525,12 +2484,6 @@ msgstr ""
 
 msgid "Scan failed."
 msgstr "El escaneo ha fallado."
-
-msgid "Continue scan here"
-msgstr "Continuar escaneo aquí"
-
-msgid "Continue check here"
-msgstr "Continuar comprobación aquí"
 
 msgid ""
 "Health check: database, sample scan, background scan/check status, WP-Cron, "
@@ -3694,8 +2647,8 @@ msgstr ""
 "Actividad de %1$s en segundo plano: %2$d min desde el último lote (puede "
 "parecer bloqueado si WP-Cron se retrasa)."
 
-msgid "Search URLs"
-msgstr "Buscar URL"
+msgid "Search links"
+msgstr "Buscar enlaces"
 
 msgid "%d unchecked"
 msgstr "%d sin comprobar"
@@ -3715,11 +2668,17 @@ msgstr "Modo auto"
 msgid "Follows sunrise and sunset (changes with the seasons)"
 msgstr "Según amanecer y ocaso (cambia con la estación)"
 
-msgid "Your admin session expired. Reload this page to keep monitoring the background task."
-msgstr "La sesión de administración ha caducado. Recarga esta página para continuar supervisando la tarea en segundo plano."
+msgid ""
+"Your admin session expired. Reload this page to keep monitoring the "
+"background task."
+msgstr ""
+"La sesión de administración ha caducado. Recarga esta página para continuar "
+"supervisando la tarea en segundo plano."
 
 msgid "Another background task is changing state. Try again in a moment."
-msgstr "Otra tarea en segundo plano está cambiando de estado. Inténtalo de nuevo en un momento."
+msgstr ""
+"Otra tarea en segundo plano está cambiando de estado. Inténtalo de nuevo en "
+"un momento."
 
 msgid "Filter by link type"
 msgstr "Filtrar por tipo de enlace"
@@ -3763,18 +2722,46 @@ msgstr "Ya hay un escaneo en marcha. Se muestra su progreso."
 msgid "How long a scan or check takes"
 msgstr "Cuánto tarda un escaneo o una comprobación"
 
-msgid "Only one batch runs at a time, and each batch is followed by a pause of a similar length, so the plugin never takes more than about half of one PHP process. On shared hosting this keeps the admin usable while a scan runs. The progress bar spends its first 70% on posts and the rest on comments, menus, terms, templates and widgets; it names the source it is working on. A source with many items can hold the bar on the same number for minutes: that is the pause, not a hang. You can close the browser, the work continues on the server."
-msgstr "Solo se ejecuta un lote cada vez, y cada lote va seguido de una pausa de duración similar, de modo que el plugin nunca ocupa más de la mitad de un proceso PHP. En alojamiento compartido esto mantiene el escritorio utilizable mientras se escanea. La barra dedica su primer 70% a las entradas y el resto a comentarios, menús, términos, plantillas y widgets; indica la fuente que está procesando. Una fuente con muchos elementos puede mantener la barra en el mismo número durante minutos: es la pausa, no un bloqueo. Puedes cerrar el navegador, el trabajo continúa en el servidor."
+msgid ""
+"Only one batch runs at a time, and each batch is followed by a pause of a "
+"similar length, so the plugin never takes more than about half of one PHP "
+"process. On shared hosting this keeps the admin usable while a scan runs. "
+"The progress bar spends its first 70% on posts and the rest on comments, "
+"menus, terms, templates and widgets; it names the source it is working on. A"
+" source with many items can hold the bar on the same number for minutes: "
+"that is the pause, not a hang. You can close the browser, the work continues"
+" on the server."
+msgstr ""
+"Solo se ejecuta un lote cada vez, y cada lote va seguido de una pausa de "
+"duración similar, de modo que el plugin nunca ocupa más de la mitad de un "
+"proceso PHP. En alojamiento compartido esto mantiene el escritorio "
+"utilizable mientras se escanea. La barra dedica su primer 70% a las entradas"
+" y el resto a comentarios, menús, términos, plantillas y widgets; indica la "
+"fuente que está procesando. Una fuente con muchos elementos puede mantener "
+"la barra en el mismo número durante minutos: es la pausa, no un bloqueo. "
+"Puedes cerrar el navegador, el trabajo continúa en el servidor."
 
 msgid "Scan now while a scan is running"
 msgstr "Escanear ahora mientras hay un escaneo en marcha"
 
-msgid "The button attaches to the run already in progress and shows its status instead of starting a second one. When a scan finishes, the links it just found are checked automatically; links checked earlier keep their status. Use Restart from zero when you want every link tested again."
-msgstr "El botón se engancha al escaneo que ya está en marcha y muestra su estado en lugar de iniciar otro. Cuando termina un escaneo, los enlaces recién encontrados se comprueban automáticamente; los enlaces comprobados antes conservan su estado. Usa Reiniciar desde cero cuando quieras volver a comprobarlos todos."
+msgid ""
+"The button joins the scan already running instead of starting another. If "
+"you stay on this screen until it finishes, a check of new and due links "
+"starts automatically. Links checked earlier keep their status. Restart scan "
+"starts the scan over; Restart from zero rechecks every link."
+msgstr ""
+"El botón se une al escaneo que ya está en marcha en lugar de iniciar otro. "
+"Si te quedas en esta pantalla hasta que termine, se inicia una comprobación "
+"de los enlaces nuevos y de los que toca revisar. Los enlaces ya comprobados "
+"conservan su estado. «Reiniciar escaneo» vuelve a empezar el escaneo; "
+"«Reiniciar desde cero» vuelve a comprobar todos los enlaces."
 
 #: includes/class-tso-lc-admin.php
-msgid "WordPress is installing updates. This page will reload when they finish…"
-msgstr "WordPress está instalando actualizaciones. Esta página se recargará cuando terminen…"
+msgid ""
+"WordPress is installing updates. This page will reload when they finish…"
+msgstr ""
+"WordPress está instalando actualizaciones. Esta página se recargará cuando "
+"terminen…"
 
 #: includes/class-tso-lc-http.php
 msgid "Domain not resolved by this server (DNS, unconfirmed)"
@@ -3789,8 +2776,19 @@ msgid "DNS second opinion"
 msgstr "Segunda opinión DNS"
 
 #: includes/class-tso-lc-http.php
-msgid "When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting \"Domain does not exist\". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as \"not resolved by this server (unconfirmed)\" and are not counted as broken."
-msgstr "Cuando este servidor no puede resolver un dominio, consulta el DNS público de Cloudflare (cloudflare-dns.com) antes de informar de que \"El dominio no existe\". Si Cloudflare lo resuelve, el enlace se muestra como OK. Solo se envía el nombre de host. Sin esta opción, estos enlaces se muestran como \"no resuelto por este servidor (sin confirmar)\" y no se cuentan como rotos."
+msgid ""
+"When this server cannot resolve a domain, ask Cloudflare public DNS "
+"(cloudflare-dns.com) before reporting \"Domain does not exist\". If "
+"Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. "
+"Without this option, such links are shown as \"not resolved by this server "
+"(unconfirmed)\" and are not counted as broken."
+msgstr ""
+"Cuando este servidor no puede resolver un dominio, consulta el DNS público "
+"de Cloudflare (cloudflare-dns.com) antes de informar de que \"El dominio no "
+"existe\". Si Cloudflare lo resuelve, el enlace se muestra como OK. Solo se "
+"envía el nombre de host. Sin esta opción, estos enlaces se muestran como "
+"\"no resuelto por este servidor (sin confirmar)\" y no se cuentan como "
+"rotos."
 
 #: includes/class-tso-lc-http.php
 msgid "Too many redirects (loop)"
@@ -3805,17 +2803,108 @@ msgid "HTTP proxy configured (WP_PROXY_HOST):"
 msgstr "Proxy HTTP configurado (WP_PROXY_HOST):"
 
 #: includes/class-tso-lc-admin.php
-msgid "Connections pinned to an IP address work (needed to check domains only a public DNS can resolve)."
-msgstr "Las conexiones fijadas a una dirección IP funcionan (necesario para comprobar dominios que solo un DNS público puede resolver)."
+msgid ""
+"Connections pinned to an IP address work (needed to check domains only a "
+"public DNS can resolve)."
+msgstr ""
+"Las conexiones fijadas a una dirección IP funcionan (necesario para "
+"comprobar dominios que solo un DNS público puede resolver)."
 
 #: includes/class-tso-lc-admin.php
-msgid "This server ignores connections pinned to an IP address (a proxy or custom HTTP transport resolves names itself). Domains this server cannot resolve cannot be checked directly."
-msgstr "Este servidor ignora las conexiones fijadas a una dirección IP (un proxy o un transporte HTTP personalizado resuelve los nombres por sí mismo). Los dominios que este servidor no puede resolver no se pueden comprobar directamente."
+msgid ""
+"This server ignores connections pinned to an IP address (a proxy or custom "
+"HTTP transport resolves names itself). Domains this server cannot resolve "
+"cannot be checked directly."
+msgstr ""
+"Este servidor ignora las conexiones fijadas a una dirección IP (un proxy o "
+"un transporte HTTP personalizado resuelve los nombres por sí mismo). Los "
+"dominios que este servidor no puede resolver no se pueden comprobar "
+"directamente."
 
 #: includes/class-tso-lc-admin.php
-msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
-msgstr "No se pudo conectar a una dirección IP de prueba. El alojamiento puede bloquear las conexiones salientes a direcciones arbitrarias."
+msgid ""
+"Could not connect to a test IP address. The host may block outbound "
+"connections to arbitrary addresses."
+msgstr ""
+"No se pudo conectar a una dirección IP de prueba. El alojamiento puede "
+"bloquear las conexiones salientes a direcciones arbitrarias."
 
 #: includes/class-tso-lc-admin.php
 msgid "Last check using the DNS second opinion:"
 msgstr "Última comprobación con la segunda opinión DNS:"
+
+msgid "Domain parked or for sale"
+msgstr "Dominio aparcado o en venta"
+
+msgid "Blocked by CDN (Cloudflare 520, check in browser)"
+msgstr "Bloqueado por CDN (Cloudflare 520, compruébalo en el navegador)"
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"A scan is still in progress. Wait for it to finish (or stop it) before "
+"checking links."
+msgstr ""
+"Hay un escaneo en curso. Espera a que termine (o deténlo) antes de comprobar"
+" los enlaces."
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"The settings could not be saved because the page expired. Reload the page "
+"and try again."
+msgstr ""
+"No se han podido guardar los ajustes porque la página ha caducado. Recarga "
+"la página e inténtalo de nuevo."
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"The recipient email is not valid, so the WordPress admin email will be used."
+msgstr ""
+"El correo del destinatario no es válido; se usará el correo de "
+"administración de WordPress."
+
+msgid "Sample scan skipped: a background scan is running."
+msgstr "Escaneo de prueba omitido: hay un escaneo en segundo plano en curso."
+
+msgid "Sample scan failed:"
+msgstr "Falló el escaneo de prueba:"
+
+#, php-format
+msgid "Broken: %1$d · Unchecked: %2$d · Redirects: %3$d · Marked OK: %4$d"
+msgstr ""
+"Rotos: %1$d · Sin comprobar: %2$d · Redirecciones: %3$d · Marcados OK: %4$d"
+
+msgid "Links by type:"
+msgstr "Enlaces por tipo:"
+
+msgid "Versions:"
+msgstr "Versiones:"
+
+msgid "PHP limits:"
+msgstr "Límites de PHP:"
+
+msgid "unlimited"
+msgstr "ilimitado"
+
+msgid "cURL not available"
+msgstr "cURL no disponible"
+
+msgid "HTTP library:"
+msgstr "Librería HTTP:"
+
+msgid "Persistent object cache:"
+msgstr "Caché de objetos persistente:"
+
+msgid "yes"
+msgstr "sí"
+
+msgid "no"
+msgstr "no"
+
+msgid "Automatic scan"
+msgstr "Escaneo automático"
+
+msgid "Automatic check"
+msgstr "Comprobación automática"
+
+msgid "not scheduled"
+msgstr "no programado"

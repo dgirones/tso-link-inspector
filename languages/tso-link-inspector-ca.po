@@ -23,64 +23,8 @@ msgstr ""
 "Comprova tots els enllaços trencats del lloc web i permet editar-los sense "
 "obrir l'article."
 
-msgid ""
-"Comprova tots els enllaços trencats del lloc web i permet editar-los sense "
-"obrir l'article."
-msgstr ""
-"Comprova tots els enllaços trencats del lloc web i permet editar-los sense "
-"obrir l'article."
-
 msgid "TSO Link Inspector"
 msgstr "TSO Link Inspector"
-
-msgid "Configuració – TSO Link Inspector"
-msgstr "Configuració – TSO Link Inspector"
-
-msgid "Configuració"
-msgstr "Configuració"
-
-msgid "No tens permisos suficients per accedir a aquesta pàgina."
-msgstr "No tens permisos suficients per accedir a aquesta pàgina."
-
-msgid "Escanejar ara"
-msgstr "Escanejar ara"
-
-msgid "Escaneig completat!"
-msgstr "Escaneig completat!"
-
-msgid "Escanejant..."
-msgstr "Escanejant..."
-
-msgid "Comprovant..."
-msgstr "Comprovant..."
-
-msgid "Desant..."
-msgstr "Desant..."
-
-msgid ""
-"Segur que vols eliminar l'etiqueta d'aquest enllaç? El text es mantindrà "
-"però el link desapareixerà."
-msgstr ""
-"Segur que vols eliminar l'etiqueta d'aquest enllaç? El text es mantindrà "
-"però el link desapareixerà."
-
-msgid "Segur que vols eliminar aquest registre de la llista?"
-msgstr "Segur que vols eliminar aquest registre de la llista?"
-
-msgid "S'ha produït un error. Torna-ho a intentar."
-msgstr "S'ha produït un error. Torna-ho a intentar."
-
-msgid "Nova URL:"
-msgstr "Nova URL:"
-
-msgid "Desar URL"
-msgstr "Desar URL"
-
-msgid "Cancel·lar"
-msgstr "Cancel·lar"
-
-msgid "Editar URL de l'enllaç"
-msgstr "Editar URL de l'enllaç"
 
 msgid "Current URL:"
 msgstr "URL actual:"
@@ -97,420 +41,14 @@ msgstr "Donar"
 msgid "Skipped (ignore list)"
 msgstr "Omesa (llista d'ignorats)"
 
-msgid "Enllaços totals"
-msgstr "Enllaços totals"
-
-msgid "Trencats"
-msgstr "Trencats"
-
-msgid "Redirecció"
-msgstr "Redirecció"
-
-msgid "Correctes"
-msgstr "Correctes"
-
-msgid "Pendents"
-msgstr "Pendents"
-
-msgid "Posts escanejats"
-msgstr "Posts escanejats"
-
-msgid "URL de l'enllaç"
-msgstr "URL de l'enllaç"
-
-msgid "Text de l'enllaç"
-msgstr "Text de l'enllaç"
-
-msgid "Article / Pàgina"
-msgstr "Article / Pàgina"
-
-msgid "Estat"
-msgstr "Estat"
-
-msgid "Última comprovació"
-msgstr "Última comprovació"
-
-msgid "Enllaç"
-msgstr "Enllaç"
-
-msgid "Enllaços"
-msgstr "Enllaços"
-
-msgid "Recomprovar seleccionats"
-msgstr "Recomprovar seleccionats"
-
-msgid "Eliminar de la llista"
-msgstr "Eliminar de la llista"
-
-msgid "No s'han trobat enllaços. Executa una escaneig primer."
-msgstr "No s'han trobat enllaços. Executa una escaneig primer."
-
-msgid "Tots (%d)"
-msgstr "Tots (%d)"
-
-msgid "Trencats (%d)"
-msgstr "Trencats (%d)"
-
-msgid "Redirecció (%d)"
-msgstr "Redirecció (%d)"
-
-msgid "Correctes (%d)"
-msgstr "Correctes (%d)"
-
-msgid "No comprovats (%d)"
-msgstr "No comprovats (%d)"
-
-msgid "Editar URL"
-msgstr "Editar URL"
-
-msgid "Recomprovar"
-msgstr "Recomprovar"
-
-msgid "Desenllaçar"
-msgstr "Desenllaçar"
-
-msgid "(sense títol)"
-msgstr "(sense títol)"
-
-msgid "Cercar URL"
-msgstr "Cercar URL"
-
-msgid "URL actualitzada correctament."
-msgstr "URL actualitzada correctament."
-
-msgid "Configuració desada."
-msgstr "Configuració desada."
-
-msgid "Tots els registres han estat eliminats."
-msgstr "Tots els registres han estat eliminats."
-
-msgid ""
-"Segur que vols eliminar tots els registres? Hauràs de tornar a escanejar."
-msgstr ""
-"Segur que vols eliminar tots els registres? Hauràs de tornar a escanejar."
-
-msgid "Esborrar tots els registres d'enllaços"
-msgstr "Esborrar tots els registres d'enllaços"
-
-msgid "Eina de manteniment"
-msgstr "Eina de manteniment"
-
-msgid "Desar la configuració"
-msgstr "Desar la configuració"
-
-msgid "Tipus de contingut a escanejar"
-msgstr "Tipus de contingut a escanejar"
-
-msgid "Temps d'espera de connexió (segons)"
-msgstr "Temps d'espera de connexió (segons)"
-
-msgid "Recomanat: 15 segons. Valors alts alentiran el procés."
-msgstr "Recomanat: 15 segons. Valors alts alentiran el procés."
-
-msgid "TSO Link Inspector – Configuració"
-msgstr "TSO Link Inspector – Configuració"
-
-msgid "Últim escaneig: %s"
-msgstr "Últim escaneig: %s"
-
-msgid "Última comprovació automàtica: %s"
-msgstr "Última comprovació automàtica: %s"
-
-msgid "Mai s'ha realitzat cap escaneig. Fes clic a \"Escanejar ara\" per iniciar."
-msgstr ""
-"Mai s'ha realitzat cap escaneig. Fes clic a \"Escanejar ara\" per iniciar."
-
-msgid "Escanejant posts %1$d de %2$d..."
-msgstr "Escanejant posts %1$d de %2$d..."
-
-msgid "%d elements processats."
-msgstr "%d elements processats."
-
-msgid "Permís denegat."
-msgstr "Permís denegat."
-
-msgid "ID invàlid."
-msgstr "ID invàlid."
-
-msgid "Dades incorrectes."
-msgstr "Dades incorrectes."
-
-msgid "Registre eliminat."
-msgstr "Registre eliminat."
-
-msgid "No has seleccionat cap element."
-msgstr "No has seleccionat cap element."
-
-msgid "Etiqueta eliminada correctament."
-msgstr "Etiqueta eliminada correctament."
-
-msgid "No s'ha pogut trobar l'URL original al contingut del post."
-msgstr "No s'ha pogut trobar l'URL original al contingut del post."
-
-msgid "No s'ha pogut eliminar l'etiqueta de l'enllaç."
-msgstr "No s'ha pogut desenllaçar l'enllaç."
-
-msgid "No es pot connectar"
-msgstr "No es pot connectar"
-
 msgid "OK"
 msgstr "OK"
-
-msgid "Redirecció permanent"
-msgstr "Redirecció permanent"
-
-msgid "Redirecció temporal"
-msgstr "Redirecció temporal"
-
-msgid "Sol·licitud incorrecta"
-msgstr "Sol·licitud incorrecta"
-
-msgid "No autoritzat"
-msgstr "No autoritzat"
-
-msgid "Accés prohibit"
-msgstr "Accés prohibit"
-
-msgid "No trobat"
-msgstr "No trobat"
-
-msgid "Eliminat"
-msgstr "Eliminat"
-
-msgid "Massa peticions"
-msgstr "Massa peticions"
-
-msgid "Error del servidor"
-msgstr "Error del servidor"
-
-msgid "Servei no disponible"
-msgstr "Servei no disponible"
-
-msgid "Error servidor (%d)"
-msgstr "Error servidor (%d)"
-
-msgid "Error client (%d)"
-msgstr "Error client (%d)"
-
-msgid "Codi %d"
-msgstr "Codi %d"
-
-msgid "No comprovat"
-msgstr "No comprovat"
-
-msgid "Mai"
-msgstr "Mai"
-
-msgid "Escanejar camps personalitzats (ACF / meta)"
-msgstr "Escanejar camps personalitzats (ACF / meta)"
-
-msgid "Activar escaneig de camps meta (ACF, CPT UI, camps personalitzats)"
-msgstr "Activar escaneig de camps meta (ACF, CPT UI, camps personalitzats)"
-
-msgid "Camps personalitzats (ACF / Meta)"
-msgstr "Camps personalitzats (ACF / Meta)"
-
-msgid ""
-"Escanejarà camps de tipus URL, HTML i text. Pot augmentar el temps "
-"d'escaneig."
-msgstr ""
-"Escanejarà camps de tipus URL, HTML i text. Pot augmentar el temps "
-"d'escaneig."
-
-msgid "Claus meta a excloure"
-msgstr "Claus meta a excloure"
-
-msgid ""
-"Una clau per línia. Les claus internes de WP i SEO ja s'exclouen per "
-"defecte."
-msgstr ""
-"Una clau per línia. Les claus internes de WP i SEO ja s'exclouen per "
-"defecte."
-
-msgid "Comprovar ara"
-msgstr "Comprovar ara"
-
-msgid "Comprovant enllaços..."
-msgstr "Comprovant enllaços..."
-
-msgid "Comprovació completada!"
-msgstr "Comprovació completada!"
-
-msgid "Comprovant %1$d de %2$d..."
-msgstr "Comprovant %1$d de %2$d..."
-
-msgid "Comprovació iniciada al servidor. Pots continuar navegant."
-msgstr "Comprovació iniciada al servidor. Pots continuar navegant."
-
-msgid "Introdueix una URL vàlida."
-msgstr "Introdueix una URL vàlida."
-
-msgid "Executant diagnòstic..."
-msgstr "Executant diagnòstic..."
-
-msgid "Resultat del diagnòstic:"
-msgstr "Resultat del diagnòstic:"
-
-msgid "Idioma del plugin"
-msgstr "Idioma del plugin"
-
-msgid "Automàtic (idioma del WordPress)"
-msgstr "Automàtic (idioma del WordPress)"
-
-msgid "Sobreescriu l'idioma del WordPress per a aquest plugin."
-msgstr "Sobreescriu l'idioma del WordPress per a aquest plugin."
-
-msgid "Veure post"
-msgstr "Veure post"
-
-msgid "Domini no existeix (DNS)"
-msgstr "Domini no existeix (DNS)"
-
-msgid "Connexió refusada"
-msgstr "Connexió refusada"
-
-msgid "Error de certificat SSL"
-msgstr "Error de certificat SSL"
-
-msgid "Accés restringit (bot?)"
-msgstr "Accés restringit (bot?)"
-
-msgid "Accés prohibit (bot?)"
-msgstr "Accés prohibit (bot?)"
-
-msgid "Massa peticions (bot?)"
-msgstr "Massa peticions (bot?)"
-
-msgid "No disponible per llei"
-msgstr "No disponible per llei"
-
-msgid "Mètode no permès"
-msgstr "Mètode no permès"
-
-msgid "Temps d'espera esgotat"
-msgstr "Temps d'espera esgotat"
-
-msgid "Porta d'enllaç incorrecta"
-msgstr "Porta d'enllaç incorrecta"
-
-msgid "Temps d'espera del servidor"
-msgstr "Temps d'espera del servidor"
-
-msgid "Creat"
-msgstr "Creat"
-
-msgid "Sense contingut"
-msgstr "Sense contingut"
-
-msgid "Eliminat permanentment"
-msgstr "Eliminat permanentment"
-
-msgid "%d elements eliminats."
-msgstr "%d elements eliminats."
-
-msgid "enllaços recomprovats."
-msgstr "enllaços recomprovats."
-
-msgid "Imatges HTML"
-msgstr "Imatges HTML"
-
-msgid "Vídeos incrustats (iframes)"
-msgstr "Vídeos incrustats (iframes)"
-
-msgid "Comentaris d'usuaris"
-msgstr "Comentaris d'usuaris"
-
-msgid "Escanejar etiquetes <img src> (imatges trencades)"
-msgstr "Escanejar etiquetes <img src> (imatges trencades)"
-
-msgid "Escanejar iframes (YouTube, Vimeo, Google Maps…)"
-msgstr "Escanejar iframes (YouTube, Vimeo, Google Maps…)"
-
-msgid "Escanejar comentaris aprovats (enllaços i URL d'autors)"
-msgstr "Escanejar comentaris aprovats (enllaços i URL d'autors)"
-
-msgid "Pot augmentar el temps d'escaneig en llocs amb molts comentaris."
-msgstr "Pot augmentar el temps d'escaneig en llocs amb molts comentaris."
-
-msgid "Comentari #%d"
-msgstr "Comentari #%d"
-
-msgid "Autor comentari #%d"
-msgstr "Autor comentari #%d"
-
-msgid "Tipus"
-msgstr "Tipus"
-
-msgid "Imatge"
-msgstr "Imatge"
 
 msgid "Iframe"
 msgstr "Iframe"
 
-msgid "Comentari"
-msgstr "Comentari"
-
-msgid "Versió segura HTTPS disponible"
-msgstr "Versió segura HTTPS disponible"
-
-msgid "URL final després de redireccions"
-msgstr "URL final després de redireccions"
-
-msgid "Variant amb www"
-msgstr "Variant amb www"
-
-msgid "URL suggerida"
-msgstr "URL suggerida"
-
-msgid "Buscant alternatives..."
-msgstr "Buscant alternatives..."
-
-msgid "No s'han trobat alternatives per a aquest URL."
-msgstr "No s'han trobat alternatives per a aquest URL."
-
-msgid "Aplicar aquesta URL"
-msgstr "Aplicar aquesta URL"
-
-msgid "Alt nivell de confiança"
-msgstr "Alt nivell de confiança"
-
-msgid "Nivell de confiança mitjà"
-msgstr "Nivell de confiança mitjà"
-
-msgid "Suggeriment URL"
-msgstr "Suggeriment URL"
-
-msgid "Re-comprovar cada (dies)"
-msgstr "Re-comprovar cada (dies)"
-
-msgid ""
-"El cron horari re-comprova automàticament els links més antics d'aquest "
-"nombre de dies. Per defecte: 7 dies."
-msgstr ""
-"El cron horari re-comprova automàticament els links més antics d'aquest "
-"nombre de dies. Per defecte: 7 dies."
-
-msgid ""
-"No s'ha pogut eliminar l'etiqueta. Per a comentaris, edita'l manualment des "
-"de Comentaris."
-msgstr ""
-"No s'ha pogut desenllaçar l'enllaç. Per a comentaris, edita'l manualment des"
-" de Comentaris."
-
-msgid "No és trencat"
-msgstr "No és trencat"
-
-msgid "Marcar com a correcte i moure a la llista OK"
-msgstr "Marcar com a correcte i moure a la llista OK"
-
-msgid "Marcat com a correcte."
-msgstr "Marcat com a correcte."
-
 msgid "OK (manual)"
 msgstr "OK (manual)"
-
-msgid "Elimina l'entrada de la llista de comprovació (l'article no canvia)"
-msgstr "Elimina l'entrada de la llista de comprovació (l'article no canvia)"
 
 # English source strings for WordPress i18n compliance.
 msgid "TSO Link Inspector - Settings"
@@ -577,13 +115,6 @@ msgstr "Timeout (segons)"
 msgid "Recommended: 15 s."
 msgstr "Recomanat: 15 s."
 
-msgid "Recheck every (days)"
-msgstr "Re-comprovar cada (dies)"
-
-msgid "Cron rechecks links older than this age. Default: 7 days."
-msgstr ""
-"El cron re-comprova links més antics d'aquesta edat. Per defecte: 7 dies."
-
 msgid "Post modified date"
 msgstr "Data de modificació del article"
 
@@ -596,8 +127,8 @@ msgid ""
 "way."
 msgstr ""
 "Si s'activa, editar o desenllaçar un enllaç al contingut de l'article no "
-"canviarà la data de modificació. Els canvis només a meta o a URLs de menú "
-"no l'afecten de cap manera."
+"canviarà la data de modificació. Els canvis només a meta o a URLs de menú no"
+" l'afecten de cap manera."
 
 msgid "Broken links and search engines"
 msgstr "Links trencats als cercadors"
@@ -638,25 +169,6 @@ msgstr "Desar la configuració"
 msgid "Maintenance"
 msgstr "Manteniment"
 
-msgid ""
-"Clears the plugin internal table: found links, HTTP status, check dates, and"
-" redirect URLs."
-msgstr ""
-"Esborra la taula interna del plugin: links trobats, estats HTTP, dates de "
-"comprovació i URLs de redirecció."
-
-msgid "Posts, pages, and comments are NOT modified."
-msgstr "Els articles, pàgines i comentaris NO es modifiquen."
-
-msgid "After that, run Scan now and Check now again."
-msgstr "Després haureu de tornar a fer Escanejar ara i Comprovar ara."
-
-msgid ""
-"Are you sure? All plugin records will be deleted. Posts will not be changed."
-msgstr ""
-"Segur? Tots els registres del plugin seran eliminats. Els articles no "
-"canviaran."
-
 msgid "Recheck"
 msgstr "Recomprovar"
 
@@ -674,9 +186,6 @@ msgstr "Comprovant..."
 
 msgid "Scan now"
 msgstr "Escanejar ara"
-
-msgid "Link not found."
-msgstr "Enllaç no trobat."
 
 msgid "Link"
 msgstr "Enllaç"
@@ -705,14 +214,8 @@ msgstr "No és trencat"
 msgid "Unlink"
 msgstr "Desenllaçar"
 
-msgid "Delete this record. The post link is not modified."
-msgstr "Elimina aquest registre. El link del post no canvia."
-
 msgid "Clear the comment author website field (URL)"
 msgstr "Buida el camp URL del autor del comentari"
-
-msgid "Remove the link tag from content; visible text is kept."
-msgstr "Elimina l'etiqueta d'enllaç del contingut; el text visible es manté."
 
 msgid "Cannot unlink this item."
 msgstr "No es pot desenllaçar aquest element."
@@ -772,13 +275,6 @@ msgstr ""
 "Links trobats però encara sense comprovar per HTTP. El cron els comprovarà "
 "automàticament, o clica Comprovar ara."
 
-msgid ""
-"Active links using HTTP instead of HTTPS. Consider updating them for "
-"security and SEO."
-msgstr ""
-"Links actius que usen HTTP en lloc de HTTPS. Considera actualitzar-los per "
-"seguretat i SEO."
-
 msgid "Comment #%d"
 msgstr "Comentari #%d"
 
@@ -800,29 +296,8 @@ msgstr "Text"
 msgid "Article"
 msgstr "Article"
 
-msgid "Comprovat"
-msgstr "Comprovat"
-
-msgid "Data desconeguda"
-msgstr "Data desconeguda"
-
-msgid "Veure article"
-msgstr "Veure article"
-
-msgid "Verificat manualment. El cron no sobreescriu aquest estat."
-msgstr "Verificat manualment. El cron no sobreescriu aquest estat."
-
-msgid "HTTP insegur (%d)"
-msgstr "HTTP insegur (%d)"
-
-msgid "S'ha produit un error."
-msgstr "S'ha produït un error."
-
 msgid "%d links"
 msgstr "%d links"
-
-msgid "Nonce invalid."
-msgstr "Nonce invàlid."
 
 msgid "Apply"
 msgstr "Aplicar"
@@ -845,9 +320,6 @@ msgstr "Desenllaçant…"
 msgid "Manual locks (%s)"
 msgstr "Bloquejats manuals (%s)"
 
-msgid "Links manually marked as not broken."
-msgstr "Enllaços marcats manualment com a no trencats."
-
 msgid "Are you sure? The text will remain but the link will be removed."
 msgstr "Segur? El text es mantindrà però el link desapareixerà."
 
@@ -855,8 +327,8 @@ msgid ""
 "Unlink the selected items? Anchor text stays; the link markup is removed "
 "from the source when possible."
 msgstr ""
-"Desenllaçar els elements seleccionats? El text de l’àncora es manté; es "
-"treu l’enllaç de l’origen quan és possible."
+"Desenllaçar els elements seleccionats? El text de l’àncora es manté; es treu"
+" l’enllaç de l’origen quan és possible."
 
 msgid "Select at least one link first."
 msgstr "Selecciona almenys un enllaç."
@@ -895,9 +367,6 @@ msgstr "Desant..."
 msgid "URL updated successfully."
 msgstr "URL actualitzada correctament."
 
-msgid "Marked as OK."
-msgstr "Marcat com a correcte."
-
 msgid "Diagnostics"
 msgstr "Diagnòstic"
 
@@ -923,9 +392,6 @@ msgstr ""
 "Cap URL alternativa pot corregir aquest enllaç trencat. El destí pot haver "
 "desaparegut de manera permanent — actualitza o elimina l'enllaç manualment."
 
-msgid "No alternatives found."
-msgstr "No s'han trobat alternatives."
-
 msgid "Invalid data."
 msgstr "Dades incorrectes."
 
@@ -934,10 +400,6 @@ msgid ""
 msgstr ""
 "URL original no trobada al post. Comprova que el link no ha estat editat "
 "manualment."
-
-msgid "Cannot unlink this item. For comments, edit manually."
-msgstr ""
-"No es pot desenllaçar aquest element. Per a comentaris, edita'l manualment."
 
 msgid "Link tag removed."
 msgstr "Etiqueta eliminada."
@@ -954,23 +416,11 @@ msgstr "Cap element seleccionat."
 msgid "Unlinking %1$d of %2$d..."
 msgstr "Desenllaçant %1$d de %2$d..."
 
-msgid "%d marked as OK."
-msgstr "%d marcats com a correctes."
-
-msgid "%d deleted."
-msgstr "%d eliminats."
-
-msgid "Destination detected (last check)"
-msgstr "Destinació detectada (última comprovació)"
-
 msgid "Secure HTTPS version available"
 msgstr "Versió segura HTTPS disponible"
 
 msgid "Final URL after redirects"
 msgstr "URL final després de redireccions"
-
-msgid "www variant"
-msgstr "Variant amb www"
 
 msgid "Cannot connect"
 msgstr "No es pot connectar"
@@ -1059,37 +509,17 @@ msgstr ""
 msgid "HTTP insecure"
 msgstr "HTTP insegur"
 
-msgid ""
-"Active links using HTTP. Consider updating them to HTTPS for security and "
-"SEO."
-msgstr ""
-"Links actius amb HTTP. Considera actualitzar-los a HTTPS per seguretat i "
-"SEO."
-
 msgid "Scanned"
 msgstr "Escanejats"
 
 msgid "Last scan: %s"
 msgstr "Últim escaneig: %s"
 
-msgid "No scan has been run yet. Click Scan now."
-msgstr "Cap escaneig realitzat. Fes clic a Escanejar ara."
-
 msgid "(no pending links)"
 msgstr "(cap link pendent)"
 
 msgid "Last automatic check: %s"
 msgstr "Última comprovació auto: %s"
-
-msgid ""
-"Links never checked or older than %d days. Cron will check them "
-"automatically."
-msgstr ""
-"Links mai comprovats o més antics de %d dies. El cron els anirà comprovant "
-"de forma automàtica."
-
-msgid "%d to check"
-msgstr "%d per comprovar"
 
 msgid "All links were checked recently."
 msgstr "Tots els links han estat comprovats recentment."
@@ -1115,17 +545,14 @@ msgstr "Veure article"
 msgid "Back"
 msgstr "Tornar"
 
-msgid "Search URLs..."
-msgstr "Cercar URLs..."
+msgid "Search links..."
+msgstr "Cercar enllaços..."
 
 msgid "Searching..."
 msgstr "Cercant..."
 
 msgid "Search"
 msgstr "Cercar"
-
-msgid "Edit URL"
-msgstr "Editar URL"
 
 msgid "New URL:"
 msgstr "Nova URL:"
@@ -1231,31 +658,11 @@ msgstr ""
 "Només s'inclouen enllaços completament trencats (sense destinació de "
 "redirecció). No s'envia correu resum quan no hi ha enllaços trencats."
 
-msgid "Sent to: %s"
-msgstr "Enviat a: %s"
-
-msgid "%1$d new broken link was detected on %2$s:"
-msgid_plural "%1$d new broken links were detected on %2$s:"
-msgstr[0] "S'ha detectat %1$d enllaç trencat nou a %2$s:"
-msgstr[1] "S'han detectat %1$d enllaços trencats nous a %2$s:"
-
 msgid "Broken URL:"
 msgstr "URL trencada:"
 
 msgid "Status code:"
 msgstr "Codi d'estat:"
-
-msgid "Post ID:"
-msgstr "ID de l'entrada:"
-
-msgid "Post title:"
-msgstr "Títol de l'entrada:"
-
-msgid "Edit post:"
-msgstr "Editar entrada:"
-
-msgid "Inspector:"
-msgstr "Inspector:"
 
 msgid "[%1$s] Broken links report (%2$d)"
 msgstr "[%1$s] Informe d'enllaços trencats (%2$d)"
@@ -1308,9 +715,6 @@ msgstr[1] "S'han detectat %1$d enllaços trencats nous a %2$s."
 msgid "Extended scanning"
 msgstr "Escaneig ampliat"
 
-msgid "Plain-text URLs in post content (without <a> tags)"
-msgstr "URL en text pla al contingut (sense etiquetes <a>)"
-
 msgid ""
 "Plain-text URLs in post content (without <a> tags). Checked for broken "
 "links; edit the post manually to change or remove them."
@@ -1353,9 +757,6 @@ msgstr "Element de menú #%d"
 msgid "Menu"
 msgstr "Menú"
 
-msgid "Menu links must be edited under Appearance > Menus."
-msgstr "Els enllaços de menú s'han d'editar a Aparença > Menús."
-
 msgid "Close"
 msgstr "Tancar"
 
@@ -1381,8 +782,7 @@ msgstr ""
 "Àrees de widgets (Text, HTML personalitzat, widgets de blocs, Imatge de "
 "mitjans i altres widgets que desen URL en text)"
 
-msgid ""
-"Taxonomy term descriptions (categories, tags, and custom taxonomies)"
+msgid "Taxonomy term descriptions (categories, tags, and custom taxonomies)"
 msgstr ""
 "Descripcions de termes taxonòmics (categories, etiquetes i taxonomies "
 "personalitzades)"
@@ -1419,14 +819,6 @@ msgstr ""
 "tsoliin_register_link_source(); s'executen a cada escaneig, independentment "
 "d'aquestes caselles."
 
-msgid "Widget links must be edited under Appearance > Widgets."
-msgstr "Els enllaços de widgets s'han d'editar a Aparença > Widgets."
-
-msgid "Term description links must be edited in the taxonomy editor."
-msgstr ""
-"Els enllaços de la descripció del terme s'han d'editar a l'editor de "
-"taxonomia."
-
 msgid "This link must be edited at its original source."
 msgstr "Aquest enllaç s'ha d'editar a la font original."
 
@@ -1435,9 +827,6 @@ msgstr "Widget"
 
 msgid "Term"
 msgstr "Terme"
-
-msgid "Template"
-msgstr "Plantilla"
 
 msgid "Template / Navigation"
 msgstr "Plantilla / Navegació"
@@ -1476,18 +865,8 @@ msgstr "Editar enllaç"
 msgid "Link text:"
 msgstr "Text de l'enllaç:"
 
-msgid "Inspector label (read-only):"
-msgstr "Etiqueta interna (només lectura):"
-
 msgid "Link text in comment (read-only):"
 msgstr "Text de l'enllaç al comentari (només lectura):"
-
-msgid ""
-"This is an internal label, not the visible link text in the comment. Edit "
-"the comment in WordPress to change what visitors see."
-msgstr ""
-"Això és una etiqueta interna, no el text visible de l'enllaç al comentari. "
-"Edita el comentari a WordPress per canviar el que veuen els visitants."
 
 msgid ""
 "Only the URL can be changed here. To edit the visible link text, open the "
@@ -1524,12 +903,6 @@ msgid ""
 msgstr ""
 "Comprovar ara enviarà una petició HTTP a cada enllaç guardat a la base de "
 "dades. En llocs grans pot trigar molt. Continuar?"
-
-msgid "Scan:"
-msgstr "Escaneig:"
-
-msgid "Check:"
-msgstr "Comprovació:"
 
 msgid ""
 "Reads your content and adds links to this list. It does not test whether "
@@ -1635,17 +1008,6 @@ msgstr ""
 "comprovacions en segon pla continuen; surten d'aquesta llista si canvia la "
 "URL o la redirecció, o si una comprovació els troba trencats."
 
-msgid ""
-"Manual lock: marked OK by you. Background checks still run. Cleared if the "
-"URL or redirect changes, or if a check finds it broken."
-msgstr ""
-"Bloqueig manual: marcat com a OK per tu. Les comprovacions en segon pla "
-"continuen. Es desbloqueja si canvia la URL o la redirecció, o si una "
-"comprovació el troba trencat."
-
-msgid "%d marked as OK and moved to Manual locks."
-msgstr "%d marcats com a OK i moguts a Bloquejos manuals."
-
 msgid "Getting started"
 msgstr "Primers passos"
 
@@ -1717,69 +1079,11 @@ msgstr ""
 " amb memòria cau, programa un cron del servidor que cridi wp-cron.php cada "
 "hora per a comprovacions automàtiques fiables."
 
-msgid ""
-"Open Posts with issues from the main screen to see articles that contain "
-"broken, redirected, or unchecked links. Click a post to filter the list to "
-"that post only."
-msgstr ""
-"Obre Articles amb problemes des de la pantalla principal per veure articles "
-"amb enllaços trencats, redirigits o sense comprovar. Fes clic en un article "
-"per filtrar la llista només a aquest article."
-
-msgid "Open posts view"
-msgstr "Obrir vista d'articles"
-
-msgid "List filters"
-msgstr "Filtres de la llista"
-
-msgid "Status filter tabs"
-msgstr "Pestanyes de filtre d'estat"
-
-msgid ""
-"Optional second row: Empty anchor (missing text), Generic anchor (non-"
-"descriptive phrases such as “click here”), Unpublished target (internal "
-"links to draft, private, pending, or trashed posts). Combine with status "
-"filters and Internal/External scope."
-msgstr ""
-"Segona fila opcional: Àncora buida (sense text), Àncora genèrica (frases poc"
-" descriptives com «feu clic aquí»), Destí no publicat (enllaços interns a "
-"esborranys, privats, pendents o a la paperera). Combina amb filtres d'estat "
-"i abast Intern/Extern."
-
-msgid "Internal and external links"
-msgstr "Enllaços interns i externs"
-
-msgid ""
-"Scope tabs filter by destination: internal (same site or relative paths) vs "
-"external (other domains). Useful on large sites with many outbound links."
-msgstr ""
-"Les pestanyes d'abast filtren per destí: intern (mateix lloc o camins "
-"relatius) vs extern (altres dominis). Útil en llocs grans amb molts enllaços"
-" sortints."
-
 msgid "Row and bulk actions"
 msgstr "Accions de fila i en massa"
 
 msgid "Editing and fixing links"
 msgstr "Editar i corregir enllaços"
-
-msgid ""
-"Edit link changes the URL in the stored source (post content, comment, menu,"
-" widget, or term). Unlink removes the <a> tag but keeps the visible text. "
-"Recheck re-reads the WordPress source (post, comment, menu, widget, term, or"
-" template) and then runs one HTTP test. Not broken locks the link as OK. "
-"Suggestion offers HTTPS upgrades when available. Edit and Unlink are not "
-"available for some source types (images, templates, etc.) — open the post or"
-" source editor instead."
-msgstr ""
-"Editar enllaç canvia la URL a l'origen guardat (contingut de l'article, "
-"comentari, menú, widget o terme). Desenllaçar elimina l'etiqueta <a> però "
-"conserva el text visible. Recomprovar torna a llegir l'origen a WordPress "
-"(article, comentari, menú, widget, terme o plantilla) i després fa una prova"
-" HTTP. No és trencat bloqueja l'enllaç com a OK. Suggeriment ofereix "
-"millores HTTPS quan n'hi ha. Editar i Desenllaçar no estan disponibles per a"
-" alguns tipus d'origen (imatges, plantilles, etc.) — obre l'editor de "
-"l'article o de l'origen."
 
 msgid "Bulk actions"
 msgstr "Accions en massa"
@@ -1790,11 +1094,10 @@ msgid ""
 "or Delete from list. Delete only removes the database row, not the link in "
 "your content."
 msgstr ""
-"Selecciona files i aplica Recomprovar seleccionats, Actualitzar "
-"seleccionats a HTTPS, Desenllaçar seleccionats, Marcar com a OK, Convertir "
-"seleccionats a /path (quan està activat a Configuració) o Eliminar de la "
-"llista. Eliminar només esborra la fila de la base de dades, no l'enllaç del "
-"contingut."
+"Selecciona files i aplica Recomprovar seleccionats, Actualitzar seleccionats"
+" a HTTPS, Desenllaçar seleccionats, Marcar com a OK, Convertir seleccionats "
+"a /path (quan està activat a Configuració) o Eliminar de la llista. Eliminar"
+" només esborra la fila de la base de dades, no l'enllaç del contingut."
 
 msgid "View post at link"
 msgstr "Veure l'article a l'enllaç"
@@ -1887,19 +1190,6 @@ msgstr ""
 "trencats al contingut de l'article al front-end perquè els motors de cerca "
 "els segueixin menys. No afecta comentaris ni camps personalitzats."
 
-msgid "Export CSV and PDF"
-msgstr "Exportar CSV i PDF"
-
-msgid ""
-"Export buttons on the main screen respect the active status filter, quality "
-"filter, scope, search, and post view. PDF reports are limited to a subset of"
-" rows; use CSV for the full filtered list."
-msgstr ""
-"Els botons d'exportació de la pantalla principal respecten el filtre d'estat"
-" actiu, el filtre de qualitat, l'abast, la cerca i la vista d'article. Els "
-"informes PDF estan limitats a un subconjunt de files; usa CSV per a la "
-"llista filtrada completa."
-
 msgid "Delete all plugin records"
 msgstr "Eliminar tots els registres del plugin"
 
@@ -1937,19 +1227,6 @@ msgstr ""
 
 msgid "Open ignore list"
 msgstr "Obrir llista d'ignorats"
-
-msgid ""
-"Broken: HTTP errors and timeouts. Redirect: non-transparent redirects. OK: "
-"working links. Unchecked: found but not tested yet. HTTP insecure: active "
-"http:// links. Manual locks: links you marked Not broken."
-msgstr ""
-"Trencats: errors HTTP i temps d'espera. Redirecció: redireccions no "
-"transparents. OK: enllaços que funcionen. Sense comprovar: trobats però no "
-"provats. HTTP insegur: enllaços http:// actius. Bloquejos manuals: enllaços "
-"marcats com No és trencat."
-
-msgid "Open URL"
-msgstr "Obrir URL"
 
 msgid "Ignore domain"
 msgstr "Ignorar domini"
@@ -2007,8 +1284,7 @@ msgstr ""
 msgid "Manual locks (links you marked Not broken)."
 msgstr "Bloquejos manuals (enllaços marcats com No és trencat)."
 
-msgid ""
-"URL change History log (Edit / Suggest / Convert to /path / HTTPS)."
+msgid "URL change History log (Edit / Suggest / Convert to /path / HTTPS)."
 msgstr ""
 "Registre d'Historial de canvis d'URL (Editar / Suggerir / Convertir a /path "
 "/ HTTPS)."
@@ -2088,9 +1364,6 @@ msgstr "Enllaços d'aquest lloc (mateix domini o camins relatius)"
 msgid "Links pointing to other domains"
 msgstr "Enllaços que apunten a altres dominis"
 
-msgid "Use relative URL"
-msgstr "Convertir a /path"
-
 msgid "Convert to /path"
 msgstr "Convertir a /path"
 
@@ -2126,52 +1399,19 @@ msgstr "Activa primer «Convertir a /path» a Configuració."
 msgid "This link cannot be converted to /path."
 msgstr "Aquest enllaç no es pot convertir a /path."
 
-msgid "%1$d links saved as /path. %2$d skipped or failed."
-msgstr "%1$d enllaços desats com a /path. %2$d omesos o fallits."
-
 msgid "Show “Convert to /path” in the link list"
 msgstr "Mostrar «Convertir a /path» a la llista d'enllaços"
 
 msgid ""
 "When enabled, adds a row and bulk action to replace same-site URLs like "
-"https://yoursite.com/contact/ with /contact/ in post content or scanned meta "
-"(and custom menu URLs). Comments, widgets, and terms are skipped. Disabled "
+"https://yoursite.com/contact/ with /contact/ in post content or scanned meta"
+" (and custom menu URLs). Comments, widgets, and terms are skipped. Disabled "
 "by default."
 msgstr ""
 "Si s'activa, afegeix una acció per fila i en massa per substituir URLs del "
 "mateix lloc com https://elteusite.com/contacte/ per /contacte/ al contingut "
 "de l'article o meta escanejada (i URLs de menú personalitzades). Es salten "
 "comentaris, widgets i termes. Desactivat per defecte."
-
-msgid ""
-"Optional: enable “Convert to /path” in Settings to bulk-replace absolute "
-"same-site URLs with /path automatically."
-msgstr ""
-"Opcional: activa «Convertir a /path» a Configuració per substituir en massa "
-"URLs absolutes del mateix lloc per /path automàticament."
-
-msgid "Convert this same-site URL to a root-relative path (e.g. /page/)"
-msgstr ""
-"Converteix aquesta URL del mateix lloc en un camí relatiu arrel (p. ex. "
-"/pagina/)"
-
-msgid "Convert this internal link to a site-relative URL (e.g. /page/)?"
-msgstr ""
-"Convertir aquest enllaç intern en una URL relativa del lloc (p. ex. "
-"/pagina/)?"
-
-msgid "Convert the selected internal links to site-relative URLs?"
-msgstr ""
-"Convertir els enllaços interns seleccionats en URLs relatives del lloc?"
-
-msgid "URL converted to a relative path."
-msgstr "URL convertida en un camí relatiu."
-
-msgid "This URL cannot be converted to a relative path."
-msgstr "Aquesta URL no es pot convertir en un camí relatiu."
-
-msgid "%1$d converted to relative URLs. %2$d skipped or failed."
-msgstr "%1$d convertits a URLs relatives. %2$d omesos o fallits."
 
 msgid ""
 "Articles sorted by broken links, then redirects. Click a title to review and"
@@ -2185,13 +1425,6 @@ msgstr "Enllaços totals"
 
 msgid "No posts with broken or redirected links."
 msgstr "No hi ha articles amb enllaços trencats o redirigits."
-
-msgid ""
-"Quick health check when scan or check fails: database, settings, and one "
-"sample post."
-msgstr ""
-"Comprovació ràpida si l'escaneig o la revisió fallen: base de dades, "
-"configuració i un article de mostra."
 
 msgid "DB table:"
 msgstr "Taula BD:"
@@ -2238,23 +1471,15 @@ msgid "Create a revision before editing a link in post content"
 msgstr "Crear una revisió abans d'editar un enllaç al contingut de l'article"
 
 msgid ""
-"When enabled, saves a WordPress revision before Edit link, Convert to /path, "
-"Upgrade to HTTPS, or Unlink changes post content (once per post per "
+"When enabled, saves a WordPress revision before Edit link, Convert to /path,"
+" Upgrade to HTTPS, or Unlink changes post content (once per post per "
 "request). Requires revisions enabled for that post type. Disabled by "
 "default."
 msgstr ""
 "Si s'activa, desa una revisió de WordPress abans que Editar enllaç, "
-"Convertir a /path, Actualitzar a HTTPS o Desenllaçar modifiquin el "
-"contingut (una per entrada i petició). Cal que les revisions estiguin "
-"actives per a aquell tipus de contingut. Desactivat per defecte."
-
-msgid ""
-"The edit modal shows an HTML preview of the matched tag before you save. "
-"Enable post revisions in Settings to keep a restore point."
-msgstr ""
-"El modal d'edició mostra una previsualització HTML de l'etiqueta coincident "
-"abans de desar. Activa les revisions a Configuració per tenir un punt de "
-"restauració."
+"Convertir a /path, Actualitzar a HTTPS o Desenllaçar modifiquin el contingut"
+" (una per entrada i petició). Cal que les revisions estiguin actives per a "
+"aquell tipus de contingut. Desactivat per defecte."
 
 msgid ""
 "A WordPress revision will be saved when you save, so you can restore the "
@@ -2273,37 +1498,8 @@ msgstr ""
 msgid "Go to edit"
 msgstr "Anar a editar"
 
-msgid "Go to edit comment"
-msgstr "Anar a editar el comentari"
-
-msgid "Open the editor and scroll to this link"
-msgstr "Obre l'editor i desplaça't fins a aquest enllaç"
-
-msgid "Edit comment links in WordPress using Go to edit comment."
-msgstr ""
-"Edita els enllaços del comentari a WordPress amb Anar a editar el comentari."
-
-msgid "Open the widget editor for this sidebar widget"
-msgstr "Obre l'editor de widgets d'aquest widget de la barra lateral"
-
 msgid "Edit widget links in Appearance > Widgets using Go to edit."
 msgstr "Edita els enllaços del widget a Aparença > Widgets amb Anar a editar."
-
-msgid "Open the navigation menu editor for this link"
-msgstr "Obre l'editor de menús de navegació d'aquest enllaç"
-
-msgid "Open the taxonomy editor for this link"
-msgstr "Obre l'editor de taxonomies d'aquest enllaç"
-
-msgid "Edit menu links in Appearance > Menus using Go to edit."
-msgstr "Edita els enllaços del menú a Aparença > Menús amb Anar a editar."
-
-msgid ""
-"Menu links cannot be updated from suggestions. Change the URL in Appearance "
-"> Menus using Go to edit."
-msgstr ""
-"Els enllaços de menú no es poden actualitzar des dels suggeriments. Canvia "
-"l'URL a Aparença > Menús amb Anar a editar."
 
 msgid ""
 "WooCommerce product field URLs cannot be updated from suggestions. Change "
@@ -2479,9 +1675,6 @@ msgstr "Mostra: %s"
 msgid "No links match this report."
 msgstr "Cap enllaç coincideix amb aquest informe."
 
-msgid "Showing up to 50 links. Export CSV for the full list."
-msgstr "Es mostren fins a 50 enllaços. Exporta CSV per a la llista completa."
-
 msgid "Generated by %s"
 msgstr "Generat per %s"
 
@@ -2508,10 +1701,6 @@ msgstr ""
 msgid "Unverifiable (site blocks bots)"
 msgstr "No verificable (el lloc bloqueja bots)"
 
-msgid "Canonical HTTPS URL (server cannot verify — check in browser)"
-msgstr ""
-"URL HTTPS canònica (el servidor no pot verificar — comprova al navegador)"
-
 msgid "HTTPS available (access restricted to bots/login — confirm in browser)"
 msgstr ""
 "HTTPS disponible (accés restringit a bots/login — confirma-ho al navegador)"
@@ -2535,9 +1724,6 @@ msgstr ""
 "Cua: %1$d sense comprovar, %8$d pendents d’HTTP (inclou bloquejos manuals), "
 "%2$d trencats (més de %5$d dies), %3$d OK (més de %4$d dies). Rendiment: "
 "~%6$d comprovacions/dia. Temps estimat per buidar la cua: ~%7$d dies."
-
-msgid "%d in check queue"
-msgstr "%d a la cua de comprovació"
 
 msgid "Automatic HTTP checks"
 msgstr "Comprovacions HTTP automàtiques"
@@ -2636,9 +1822,8 @@ msgid ""
 "like they contain URLs. Add extra keys below, one per line."
 msgstr ""
 "Les claus SEO/admin habituals (p. ex. algunes de Yoast i Rank Math) "
-"s'exclouen per defecte. Les claus meta privades que comencen per _ es "
-"salten tret que semblin contenir URLs. Afegeix claus extra a sota, una per "
-"línia."
+"s'exclouen per defecte. Les claus meta privades que comencen per _ es salten"
+" tret que semblin contenir URLs. Afegeix claus extra a sota, una per línia."
 
 msgid "Removed from list — link no longer found in content."
 msgstr "Eliminat de la llista: l'enllaç ja no es troba al contingut."
@@ -2704,9 +1889,6 @@ msgstr "WooCommerce: Imatge destacada"
 
 msgid "WooCommerce: Gallery image"
 msgstr "WooCommerce: Imatge de galeria"
-
-msgid "Open the WooCommerce product editor"
-msgstr "Obrir l'editor del producte WooCommerce"
 
 msgid "Meta field “%s”: "
 msgstr "Camp meta “%s”: "
@@ -2820,13 +2002,6 @@ msgid "Click again to clear this quality filter."
 msgstr "Fes clic una altra vegada per treure aquest filtre de qualitat."
 
 msgid ""
-"reads your content and adds links to this list. It does not test whether "
-"URLs work yet."
-msgstr ""
-"llegeix el contingut i afegeix enllaços a aquesta llista. Encara no comprova"
-" si les URLs funcionen."
-
-msgid ""
 "Original URL not found in this comment. Edit the comment manually or check "
 "encoding (e.g. trailing slash)."
 msgstr ""
@@ -2923,14 +2098,6 @@ msgstr "No comprovable (URL no HTTP)"
 msgid "Unknown bulk action."
 msgstr "Acció en massa desconeguda."
 
-msgid ""
-"HTTPS could not be verified from the server. Use bulk Upgrade to HTTPS only "
-"when confirmed, or mark the link as OK manually."
-msgstr ""
-"No s'ha pogut verificar HTTPS des del servidor. Usa l'actualització en massa"
-" a HTTPS només quan estigui confirmat, o marca l'enllaç com a correcte "
-"manualment."
-
 msgid "Marking as OK %1$d of %2$d..."
 msgstr "Marcant com a correcte %1$d de %2$d..."
 
@@ -2943,17 +2110,11 @@ msgstr "registres eliminats."
 msgid "Deleting %1$d of %2$d..."
 msgstr "Eliminant %1$d de %2$d..."
 
-msgid "Record not found."
-msgstr "Registre no trobat."
-
 msgid "Stop"
 msgstr "Atura"
 
 msgid "Scanning %1$d of %2$d..."
 msgstr "Escanejant %1$d de %2$d..."
-
-msgid "Posts scanned. Finishing comments, menus and other sources…"
-msgstr "Entrades escanejades. Acabant comentaris, menús i altres fonts…"
 
 msgid "Source"
 msgstr "Font"
@@ -2967,16 +2128,6 @@ msgstr ""
 
 msgid "Open Settings → Content types"
 msgstr "Obre Configuració → Tipus de contingut"
-
-msgid ""
-"This site appears to be behind a coming-soon or maintenance page. Internal "
-"HTML links are not marked OK or broken (status: Unverifiable) until the site"
-" is publicly reachable. External URLs and media files are still checked."
-msgstr ""
-"Sembla que aquest lloc és darrere d'una pàgina de «coming soon» o de "
-"manteniment. Els enllaços HTML interns no es marquen com a OK ni com a "
-"trencats (estat: No verificable) fins que el lloc sigui accessible "
-"públicament. Les URL externes i els fitxers multimèdia sí que es comproven."
 
 msgid "Builder templates (Elementor / Porto)"
 msgstr "Plantilles de constructor (Elementor / Porto)"
@@ -2994,18 +2145,6 @@ msgstr ""
 
 msgid "Coming soon / maintenance"
 msgstr "Coming soon / manteniment"
-
-msgid ""
-"If a coming-soon plugin serves the same HTML for every internal page, HTTP "
-"checks cannot tell working pages from missing ones. Internal HTML URLs are "
-"marked Unverifiable (coming soon / maintenance) until the site is live. "
-"External links and uploaded files are still tested."
-msgstr ""
-"Si un plugin de coming soon serveix el mateix HTML per a cada pàgina "
-"interna, les comprovacions HTTP no poden distingir pàgines que funcionen de "
-"les que falten. Les URL HTML internes es marquen No verificable (coming soon"
-" / manteniment) fins que el lloc estigui en viu. Els enllaços externs i els "
-"fitxers pujats sí que es comproven."
 
 msgid "Elementor Library"
 msgstr "Biblioteca Elementor"
@@ -3225,8 +2364,8 @@ msgid "History records deleted."
 msgstr "Registres de l’historial eliminats."
 
 msgid ""
-"Save even if HTTPS cannot be verified from this server (geo-block, bot wall, "
-"or timeout)."
+"Save even if HTTPS cannot be verified from this server (geo-block, bot wall,"
+" or timeout)."
 msgstr ""
 "Desa igualment si aquest servidor no pot verificar l’HTTPS (geo-bloqueig, "
 "mur de bots o temps d’espera)."
@@ -3236,8 +2375,8 @@ msgid ""
 "future scans and HTTP checks). Not available for relative /path URLs."
 msgstr ""
 "Afegeix també el domini de la URL que estàs desant a la llista d’ignorats "
-"(salta els escanejos i comprovacions HTTP futures). No disponible per a "
-"URLs relatives /path."
+"(salta els escanejos i comprovacions HTTP futures). No disponible per a URLs"
+" relatives /path."
 
 msgid "No scan yet"
 msgstr "Sense escaneig"
@@ -3250,13 +2389,6 @@ msgstr "Proper escaneig: %s"
 
 msgid "Next check: %s"
 msgstr "Propera comprovació: %s"
-
-msgid "Next: scan %1$s, check %2$s"
-msgstr "Proper: escaneig %1$s, comprovació %2$s"
-
-msgid "Next automatic scan: %1$s. Next automatic check: %2$s."
-msgstr ""
-"Proper escaneig automàtic: %1$s. Propera comprovació automàtica: %2$s."
 
 msgid "Check paused. Click Continue check."
 msgstr "Comprovació en pausa. Fes clic a Continuar comprovació."
@@ -3280,11 +2412,6 @@ msgstr ""
 "L’escaneig ha fallat al servidor. Fes servir Continua l’escaneig per "
 "reintentar-lo des de l’última posició desada."
 
-msgid "Scan timed out or was interrupted. Use Continue scan to resume."
-msgstr ""
-"L’escaneig ha superat el temps límit o s’ha interromput. Fes servir Continua"
-" l’escaneig per reprendre’l."
-
 msgid "Continue scan"
 msgstr "Continua l’escaneig"
 
@@ -3304,16 +2431,16 @@ msgid ""
 "Discard this paused scan? Links already found stay in the list; only scan "
 "progress is cleared. You can run Scan now again later."
 msgstr ""
-"Vols descartar aquest escaneig en pausa? Els enllaços ja trobats romandran "
-"a la llista; només s’esborra el progrés de l’escaneig. Pots tornar a fer "
+"Vols descartar aquest escaneig en pausa? Els enllaços ja trobats romandran a"
+" la llista; només s’esborra el progrés de l’escaneig. Pots tornar a fer "
 "Escanejar ara més tard."
 
 msgid ""
-"Discard this paused check? HTTP results already saved are kept; the progress "
-"bar is cleared. Unchecked links remain for a future Check now."
+"Discard this paused check? HTTP results already saved are kept; the progress"
+" bar is cleared. Unchecked links remain for a future Check now."
 msgstr ""
-"Vols descartar aquesta comprovació en pausa? Es conserven els resultats HTTP "
-"ja guardats; s’esborra la barra de progrés. Els enllaços sense comprovar "
+"Vols descartar aquesta comprovació en pausa? Es conserven els resultats HTTP"
+" ja guardats; s’esborra la barra de progrés. Els enllaços sense comprovar "
 "queden per un futur Comprovar ara."
 
 msgid ""
@@ -3321,8 +2448,8 @@ msgid ""
 "are kept; progress bars are cleared."
 msgstr ""
 "Vols descartar totes les tasques d’escaneig i comprovació en pausa? Es "
-"conserven els enllaços trobats i els resultats HTTP guardats; s’esborren "
-"les barres de progrés."
+"conserven els enllaços trobats i els resultats HTTP guardats; s’esborren les"
+" barres de progrés."
 
 msgid "Scan started. You can continue browsing."
 msgstr "Escaneig iniciat. Pots continuar navegant."
@@ -3345,12 +2472,6 @@ msgstr ""
 
 msgid "Scan failed."
 msgstr "L’escaneig ha fallat."
-
-msgid "Continue scan here"
-msgstr "Continua l’escaneig aquí"
-
-msgid "Continue check here"
-msgstr "Continua la comprovació aquí"
 
 msgid ""
 "Health check: database, sample scan, background scan/check status, WP-Cron, "
@@ -3514,8 +2635,8 @@ msgstr ""
 "Activitat d’%1$s en segon pla: %2$d min des de l’últim lot (pot semblar "
 "bloquejat si WP-Cron es retarda)."
 
-msgid "Search URLs"
-msgstr "Cerca URL"
+msgid "Search links"
+msgstr "Cerca enllaços"
 
 msgid "%d unchecked"
 msgstr "%d sense comprovar"
@@ -3535,11 +2656,17 @@ msgstr "Mode auto"
 msgid "Follows sunrise and sunset (changes with the seasons)"
 msgstr "Segons alba i ocàs (canvia amb l’estació)"
 
-msgid "Your admin session expired. Reload this page to keep monitoring the background task."
-msgstr "La sessió d’administració ha caducat. Torna a carregar aquesta pàgina per continuar supervisant la tasca en segon pla."
+msgid ""
+"Your admin session expired. Reload this page to keep monitoring the "
+"background task."
+msgstr ""
+"La sessió d’administració ha caducat. Torna a carregar aquesta pàgina per "
+"continuar supervisant la tasca en segon pla."
 
 msgid "Another background task is changing state. Try again in a moment."
-msgstr "Una altra tasca en segon pla està canviant d’estat. Torna-ho a provar d’aquí a un moment."
+msgstr ""
+"Una altra tasca en segon pla està canviant d’estat. Torna-ho a provar d’aquí"
+" a un moment."
 
 msgid "Filter by link type"
 msgstr "Filtra per tipus d'enllaç"
@@ -3583,18 +2710,46 @@ msgstr "Ja hi ha un escaneig en marxa. Se'n mostra el progrés."
 msgid "How long a scan or check takes"
 msgstr "Quant triga un escaneig o una comprovació"
 
-msgid "Only one batch runs at a time, and each batch is followed by a pause of a similar length, so the plugin never takes more than about half of one PHP process. On shared hosting this keeps the admin usable while a scan runs. The progress bar spends its first 70% on posts and the rest on comments, menus, terms, templates and widgets; it names the source it is working on. A source with many items can hold the bar on the same number for minutes: that is the pause, not a hang. You can close the browser, the work continues on the server."
-msgstr "Només s'executa un lot alhora, i cada lot va seguit d'una pausa de durada semblant, de manera que el plugin mai ocupa més de la meitat d'un procés PHP. En allotjament compartit això manté l'escriptori utilitzable mentre s'escaneja. La barra dedica el seu primer 70% a les entrades i la resta a comentaris, menús, termes, plantilles i ginys; indica la font que està processant. Una font amb molts elements pot mantenir la barra en el mateix número durant minuts: és la pausa, no un bloqueig. Pots tancar el navegador, la feina continua al servidor."
+msgid ""
+"Only one batch runs at a time, and each batch is followed by a pause of a "
+"similar length, so the plugin never takes more than about half of one PHP "
+"process. On shared hosting this keeps the admin usable while a scan runs. "
+"The progress bar spends its first 70% on posts and the rest on comments, "
+"menus, terms, templates and widgets; it names the source it is working on. A"
+" source with many items can hold the bar on the same number for minutes: "
+"that is the pause, not a hang. You can close the browser, the work continues"
+" on the server."
+msgstr ""
+"Només s'executa un lot alhora, i cada lot va seguit d'una pausa de durada "
+"semblant, de manera que el plugin mai ocupa més de la meitat d'un procés "
+"PHP. En allotjament compartit això manté l'escriptori utilitzable mentre "
+"s'escaneja. La barra dedica el seu primer 70% a les entrades i la resta a "
+"comentaris, menús, termes, plantilles i ginys; indica la font que està "
+"processant. Una font amb molts elements pot mantenir la barra en el mateix "
+"número durant minuts: és la pausa, no un bloqueig. Pots tancar el navegador,"
+" la feina continua al servidor."
 
 msgid "Scan now while a scan is running"
 msgstr "Escanejar ara mentre hi ha un escaneig en marxa"
 
-msgid "The button attaches to the run already in progress and shows its status instead of starting a second one. When a scan finishes, the links it just found are checked automatically; links checked earlier keep their status. Use Restart from zero when you want every link tested again."
-msgstr "El botó s'enganxa a l'escaneig que ja hi ha en marxa i en mostra l'estat en lloc d'iniciar-ne un altre. Quan acaba un escaneig, els enllaços acabats de trobar es comproven automàticament; els enllaços comprovats abans conserven el seu estat. Fes servir Reiniciar des de zero quan els vulguis tornar a comprovar tots."
+msgid ""
+"The button joins the scan already running instead of starting another. If "
+"you stay on this screen until it finishes, a check of new and due links "
+"starts automatically. Links checked earlier keep their status. Restart scan "
+"starts the scan over; Restart from zero rechecks every link."
+msgstr ""
+"El botó s'uneix a l'escaneig que ja està en marxa en lloc d'iniciar-ne un "
+"altre. Si et quedes en aquesta pantalla fins que acabi, s'inicia una "
+"comprovació dels enllaços nous i dels que toca revisar. Els enllaços ja "
+"comprovats conserven l'estat. «Reinicia l’escaneig» el torna a començar; "
+"«Reiniciar des de zero» torna a comprovar tots els enllaços."
 
 #: includes/class-tso-lc-admin.php
-msgid "WordPress is installing updates. This page will reload when they finish…"
-msgstr "WordPress està instal·lant actualitzacions. Aquesta pàgina es tornarà a carregar quan acabin…"
+msgid ""
+"WordPress is installing updates. This page will reload when they finish…"
+msgstr ""
+"WordPress està instal·lant actualitzacions. Aquesta pàgina es tornarà a "
+"carregar quan acabin…"
 
 #: includes/class-tso-lc-http.php
 msgid "Domain not resolved by this server (DNS, unconfirmed)"
@@ -3609,8 +2764,19 @@ msgid "DNS second opinion"
 msgstr "Segona opinió DNS"
 
 #: includes/class-tso-lc-http.php
-msgid "When this server cannot resolve a domain, ask Cloudflare public DNS (cloudflare-dns.com) before reporting \"Domain does not exist\". If Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. Without this option, such links are shown as \"not resolved by this server (unconfirmed)\" and are not counted as broken."
-msgstr "Quan aquest servidor no pot resoldre un domini, consulta el DNS públic de Cloudflare (cloudflare-dns.com) abans d'informar que \"El domini no existeix\". Si Cloudflare el resol, l'enllaç es mostra com a OK. Només s'envia el nom d'amfitrió. Sense aquesta opció, aquests enllaços es mostren com a \"no resolt per aquest servidor (no confirmat)\" i no es compten com a trencats."
+msgid ""
+"When this server cannot resolve a domain, ask Cloudflare public DNS "
+"(cloudflare-dns.com) before reporting \"Domain does not exist\". If "
+"Cloudflare resolves it, the link is shown as OK. Only the hostname is sent. "
+"Without this option, such links are shown as \"not resolved by this server "
+"(unconfirmed)\" and are not counted as broken."
+msgstr ""
+"Quan aquest servidor no pot resoldre un domini, consulta el DNS públic de "
+"Cloudflare (cloudflare-dns.com) abans d'informar que \"El domini no "
+"existeix\". Si Cloudflare el resol, l'enllaç es mostra com a OK. Només "
+"s'envia el nom d'amfitrió. Sense aquesta opció, aquests enllaços es mostren "
+"com a \"no resolt per aquest servidor (no confirmat)\" i no es compten com a"
+" trencats."
 
 #: includes/class-tso-lc-http.php
 msgid "Too many redirects (loop)"
@@ -3625,17 +2791,109 @@ msgid "HTTP proxy configured (WP_PROXY_HOST):"
 msgstr "Servidor intermediari HTTP configurat (WP_PROXY_HOST):"
 
 #: includes/class-tso-lc-admin.php
-msgid "Connections pinned to an IP address work (needed to check domains only a public DNS can resolve)."
-msgstr "Les connexions fixades a una adreça IP funcionen (necessari per comprovar dominis que només un DNS públic pot resoldre)."
+msgid ""
+"Connections pinned to an IP address work (needed to check domains only a "
+"public DNS can resolve)."
+msgstr ""
+"Les connexions fixades a una adreça IP funcionen (necessari per comprovar "
+"dominis que només un DNS públic pot resoldre)."
 
 #: includes/class-tso-lc-admin.php
-msgid "This server ignores connections pinned to an IP address (a proxy or custom HTTP transport resolves names itself). Domains this server cannot resolve cannot be checked directly."
-msgstr "Aquest servidor ignora les connexions fixades a una adreça IP (un servidor intermediari o un transport HTTP personalitzat resol els noms per si mateix). Els dominis que aquest servidor no pot resoldre no es poden comprovar directament."
+msgid ""
+"This server ignores connections pinned to an IP address (a proxy or custom "
+"HTTP transport resolves names itself). Domains this server cannot resolve "
+"cannot be checked directly."
+msgstr ""
+"Aquest servidor ignora les connexions fixades a una adreça IP (un servidor "
+"intermediari o un transport HTTP personalitzat resol els noms per si "
+"mateix). Els dominis que aquest servidor no pot resoldre no es poden "
+"comprovar directament."
 
 #: includes/class-tso-lc-admin.php
-msgid "Could not connect to a test IP address. The host may block outbound connections to arbitrary addresses."
-msgstr "No s'ha pogut connectar a una adreça IP de prova. L'allotjament pot bloquejar les connexions sortints a adreces arbitràries."
+msgid ""
+"Could not connect to a test IP address. The host may block outbound "
+"connections to arbitrary addresses."
+msgstr ""
+"No s'ha pogut connectar a una adreça IP de prova. L'allotjament pot "
+"bloquejar les connexions sortints a adreces arbitràries."
 
 #: includes/class-tso-lc-admin.php
 msgid "Last check using the DNS second opinion:"
 msgstr "Última comprovació amb la segona opinió DNS:"
+
+msgid "Domain parked or for sale"
+msgstr "Domini aparcat o en venda"
+
+msgid "Blocked by CDN (Cloudflare 520, check in browser)"
+msgstr "Bloquejat per CDN (Cloudflare 520, comprova-ho al navegador)"
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"A scan is still in progress. Wait for it to finish (or stop it) before "
+"checking links."
+msgstr ""
+"Hi ha un escaneig en curs. Espera que acabi (o atura'l) abans de comprovar "
+"els enllaços."
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"The settings could not be saved because the page expired. Reload the page "
+"and try again."
+msgstr ""
+"No s'ha pogut desar la configuració perquè la pàgina ha caducat. Recarrega "
+"la pàgina i torna-ho a provar."
+
+#: includes/class-tso-lc-admin.php
+msgid ""
+"The recipient email is not valid, so the WordPress admin email will be used."
+msgstr ""
+"El correu del destinatari no és vàlid; s'utilitzarà el correu "
+"d'administració del WordPress."
+
+msgid "Sample scan skipped: a background scan is running."
+msgstr "Escaneig de prova omès: hi ha un escaneig en segon pla en curs."
+
+msgid "Sample scan failed:"
+msgstr "Ha fallat l'escaneig de prova:"
+
+#, php-format
+msgid "Broken: %1$d · Unchecked: %2$d · Redirects: %3$d · Marked OK: %4$d"
+msgstr ""
+"Trencats: %1$d · Sense comprovar: %2$d · Redireccions: %3$d · Marcats OK: "
+"%4$d"
+
+msgid "Links by type:"
+msgstr "Enllaços per tipus:"
+
+msgid "Versions:"
+msgstr "Versions:"
+
+msgid "PHP limits:"
+msgstr "Límits de PHP:"
+
+msgid "unlimited"
+msgstr "il·limitat"
+
+msgid "cURL not available"
+msgstr "cURL no disponible"
+
+msgid "HTTP library:"
+msgstr "Biblioteca HTTP:"
+
+msgid "Persistent object cache:"
+msgstr "Memòria cau d'objectes persistent:"
+
+msgid "yes"
+msgstr "sí"
+
+msgid "no"
+msgstr "no"
+
+msgid "Automatic scan"
+msgstr "Escaneig automàtic"
+
+msgid "Automatic check"
+msgstr "Comprovació automàtica"
+
+msgid "not scheduled"
+msgstr "no programat"

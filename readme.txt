@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.4
+Stable tag: 2.6.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -141,30 +141,18 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
-= 2.5.4 =
-* Fix: SSL certificate problems (cURL error 60: expired, self-signed, incomplete chain) were misclassified as DNS failures; they now show "SSL error (server cannot verify)" and are not counted as broken.
-* Improvement: DNS second opinion (opt-in, Cloudflare). Domains this server cannot resolve show "not resolved by this server" ("200 OK by Cloudflare" or "DNS, unconfirmed") and are not counted as broken; with the option on, the page itself is checked using the public IPs Cloudflare returns (private addresses, non-standard ports and credentials are blocked). "Domain does not exist" is reported only when confirmed.
-* Improvement: Diagnostics reports IP-pinning support, WP_PROXY_HOST and the latest second-opinion outcome; uninstall removes the cached answers.
-* Fix: working domains reported as "Domain does not exist" after a temporary DNS failure, internationalized domains (español.es, 日本語.jp) and redirects to unresolvable domains.
-* Fix: links with app schemes (whatsapp:, tg:, geo:, callto:…) were checked as 404; bare URLs in text lost closing brackets or kept trailing punctuation, or were split by inline tags.
-* Fix: HEAD errors (405, 501, 4xx/5xx) are retried with GET; cookies are kept between redirects; redirect loops are reported as broken "Too many redirects (loop)"; code 999 is treated as bot protection.
-* Improvement: Back from "View all links for this post" and from the Posts / Products view returns to the list you came from (tab, search, sorting, page).
-* Fix: a search with &, # or spaces broke sorting, tabs and pagination; Export CSV / PDF now respects the Type filter.
-* Fix: Edit link on an http:// link asked "cannot confirm the URL" although the new https:// URL worked; the URL you type is now checked directly.
-* Fix: night mode — the Smart Suggest URL cards and the Posts / Products table were light-coloured inside the dark interface.
-* Fix: Smart Suggest no longer offers the www alias of a working link or domain-for-sale pages, and has an 8-second budget so slow hosts no longer fail with "upstream request failed".
+= 2.6.1 =
+* Fix: scanning posts with many links no longer exceeds the server time limit.
+* Fix: links of a just-edited post are kept; links of deleted posts are removed.
 
-= 2.5.3 =
-* Fix: the coming-soon detection no longer requests a made-up /tsoliin-nx-…/ URL, so it stops adding 404 entries to 404-monitor and redirect logs.
+= 2.6.0 =
+* Improved: dashboard widget shows redirects.
+* Improved: Automatic language uses language packs added later.
+* Fix: the "Getting started" banner stays until you close it.
 
-= 2.5.2 =
-* Fix: the Link Inspector screen could keep showing the WordPress maintenance page (until a hard refresh) if it reloaded itself while WordPress was installing updates; it now waits for the updates to finish and never caches that page under its URL.
-* Improvement: background scans/checks pause while WordPress installs updates.
-
-= 2.5.1 =
-* Fix: the admin froze (and could hit "Maximum execution time exceeded") while a scan or check was running, because every admin page load ran a batch inline.
-* Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
-* Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
-* Improvement: faster plugin screens, a progress bar that names the source being scanned, and the check after a scan now only tests new links instead of rechecking everything.
+= 2.5.9 =
+* Fix: renaming an image with only case changes no longer leaves a 404 row.
+* Fix: more accurate search across URLs and link text.
+* Fix: CSV and PDF exports respect search and filters.
 
 See changelog.txt in the plugin folder for older versions

@@ -181,9 +181,10 @@ class TSOLIIN_Cron {
 
 		$checked        = 0;
 		$newly_detected = array();
+		$budget         = $this->fit_budget_to_time_limit( 45 );
 		$started_at     = microtime( true );
 		foreach ( $links as $link ) {
-			if ( ( microtime( true ) - $started_at ) >= 45 ) {
+			if ( ( microtime( true ) - $started_at ) >= $budget ) {
 				break;
 			}
 			try {
@@ -368,17 +369,44 @@ class TSOLIIN_Cron {
 	 * higher (or unlimited) value.
 	 *
 	 * @param float $seconds Minimum seconds needed.
+	 * @return bool True when the worker now has a fresh allowance (limit restarted or unlimited),
+	 *              false when the host does not let the plugin change it.
 	 */
 	private function extend_time_limit( $seconds ) {
-		if ( ! function_exists( 'set_time_limit' ) ) {
-			return;
-		}
 		$current = (int) ini_get( 'max_execution_time' );
-		if ( 0 === $current ) {
-			return; // Already unlimited.
+		if ( $current <= 0 ) {
+			return true; // Already unlimited.
+		}
+		if ( ! function_exists( 'set_time_limit' ) ) {
+			return false;
 		}
 		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged -- Scan/check worker may need more than the default; never lowers the host value.
-		@set_time_limit( max( $current, (int) ceil( $seconds ) ) );
+		return (bool) @set_time_limit( max( $current, (int) ceil( $seconds ) ) );
+	}
+
+	/**
+	 * Seconds of work a worker can really afford in this request.
+	 *
+	 * Asks for the usual allowance first. Hosts that disable set_time_limit() keep
+	 * their own max_execution_time (often 30 s), and a 40 s work budget then ended in
+	 * "Maximum execution time exceeded". The budget is cut so about a third of the
+	 * real limit (at least 10 s) stays free to finish the unit in progress; where the
+	 * limit could be raised, or there is none, the budget is returned unchanged.
+	 *
+	 * @param float $budget Wanted seconds of work.
+	 * @return float Seconds of work to use: never more than asked, and never cut below 3.
+	 */
+	private function fit_budget_to_time_limit( $budget ) {
+		$budget    = (float) $budget;
+		$restarted = $this->extend_time_limit( $budget + 20 );
+		$limit     = (int) ini_get( 'max_execution_time' );
+		if ( $limit <= 0 ) {
+			return $budget;
+		}
+		// When the limit could not be restarted, time already spent by this request counts too.
+		$used = ( ! $restarted && function_exists( 'timer_float' ) ) ? max( 0.0, (float) timer_float() ) : 0.0;
+		$safe = $limit - $used - max( 10, (int) ceil( $limit / 3 ) );
+		return min( $budget, max( 3.0, $safe ) );
 	}
 
 	/**
@@ -472,13 +500,6 @@ class TSOLIIN_Cron {
 	 */
 	private function end_inflight( $kind ) {
 		delete_option( self::OPT_INFLIGHT_PREFIX . sanitize_key( $kind ) );
-	}
-
-	/** Drop all in-progress markers (fresh scan/check). */
-	private function clear_inflight() {
-		foreach ( array( 'scan_post', 'scan_phase', 'check_link' ) as $kind ) {
-			$this->end_inflight( $kind );
-		}
 	}
 
 	/**
@@ -616,7 +637,7 @@ class TSOLIIN_Cron {
 		$this->schedule_bg_scan_recovery_event();
 
 		try {
-			$this->extend_time_limit( $budget + 20 );
+			$budget = $this->fit_budget_to_time_limit( $budget );
 
 			$start = microtime( true );
 			$page  = max( 1, (int) get_option( 'tsoliin_bg_scan_page', 1 ) );
@@ -1331,7 +1352,7 @@ class TSOLIIN_Cron {
 		$this->schedule_bg_check_recovery_event();
 
 		try {
-			$this->extend_time_limit( $budget + 20 );
+			$budget = $this->fit_budget_to_time_limit( $budget );
 
 			$this->http->begin_bulk_timeout( 8 );
 			$batch_size = null === $batch_size ? self::BG_BATCH : max( 1, absint( $batch_size ) );
@@ -1616,37 +1637,6 @@ class TSOLIIN_Cron {
 	}
 
 	/**
-	 * Advance a running background check from the admin poll.
-	 *
-	 * A future recovery cron event must not block this: WP-Cron loopback is
-	 * often delayed, and the recovery delay is minutes, not seconds.
-	 *
-	 * @return bool True when a batch was attempted.
-	 */
-	public function ensure_bg_check_progress() {
-		if ( ! get_option( 'tsoliin_bg_check_running' ) ) {
-			return false;
-		}
-
-		$this->run_bg_step( null, false );
-		return true;
-	}
-
-	/**
-	 * Advance a running background scan from the admin poll.
-	 *
-	 * @return bool True when a scan step was attempted.
-	 */
-	public function ensure_bg_scan_progress() {
-		if ( ! get_option( 'tsoliin_bg_scan_running' ) ) {
-			return false;
-		}
-
-		$this->run_bg_scan_step( null, false );
-		return true;
-	}
-
-	/**
 	 * Send and clear the immediate broken-link email queue.
 	 *
 	 * @return void
@@ -1702,7 +1692,7 @@ class TSOLIIN_Cron {
 	/**
 	 * Get current background check progress.
 	 *
-	 * @return array{ running: bool, checked: int, total: int, pct: int, post_id: int, pending: int }
+	 * @return array{ running: bool, checked: int, total: int, pct: int, post_id: int, pending: int, complete: bool }
 	 */
 	public function get_bg_progress() {
 		$running  = (bool) get_option( 'tsoliin_bg_check_running', 0 );

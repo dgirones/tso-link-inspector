@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       TSO Link Inspector
  * Description:       Find and fix broken links across your entire WordPress site without opening each post.
- * Version:           2.5.4
+ * Version:           2.6.1
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            Tu Soporte Online
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TSOLIIN_VERSION', '2.5.4' );
+define( 'TSOLIIN_VERSION', '2.6.1' );
 define( 'TSOLIIN_PLUGIN_FILE', __FILE__ );
 define( 'TSOLIIN_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TSOLIIN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -182,6 +182,7 @@ final class TSOLIIN_Link_Inspector {
 		add_action( 'admin_init', array( $this, 'maybe_upgrade_db' ) );
 		add_action( 'admin_init', array( $this, 'late_cleanup_legacy_pc_tables' ), 999 );
 		add_action( 'deleted_comment', array( $this, 'on_deleted_comment' ), 10, 2 );
+		add_action( 'deleted_post', array( $this, 'on_deleted_post' ) );
 		// Keep the cached _wp_attached_file => post_id map (TSOLIIN_Support::get_attached_file_map())
 		// in sync: invalidate whenever an attachment's file path changes, or the attachment is removed.
 		add_action( 'added_post_meta', array( $this, 'on_attachment_meta_changed' ), 10, 4 );
@@ -248,8 +249,15 @@ final class TSOLIIN_Link_Inspector {
 		}
 		foreach ( array_unique( array_filter( $candidates ) ) as $candidate ) {
 			if ( $this->load_locale_translations( $candidate ) ) {
-				break;
+				return;
 			}
+		}
+
+		// No bundled catalog for this language: use the WordPress language pack when one is installed
+		// (a translation added later on translate.wordpress.org), instead of leaving the plugin in English.
+		$pack = WP_LANG_DIR . '/plugins/' . TSOLIIN_TEXT_DOMAIN . '-' . $auto_locale;
+		if ( '' !== (string) $auto_locale && ( is_readable( $pack . '.mo' ) || is_readable( $pack . '.l10n.php' ) ) ) {
+			load_textdomain( TSOLIIN_TEXT_DOMAIN, $pack . '.mo', (string) $auto_locale );
 		}
 	}
 
@@ -327,6 +335,9 @@ final class TSOLIIN_Link_Inspector {
 	 * @return string
 	 */
 	public function runtime_gettext_fallback( $translation, $text, $domain ) {
+		if ( 'default' === $domain ) {
+			return $this->translate_core_screen_meta( $translation, $text );
+		}
 		if ( TSOLIIN_TEXT_DOMAIN !== $domain ) {
 			return $translation;
 		}
@@ -334,6 +345,45 @@ final class TSOLIIN_Link_Inspector {
 			return $this->runtime_translations[ $text ];
 		}
 		return $translation;
+	}
+
+	/**
+	 * Translate the few WordPress core Screen Options/Help labels shown on plugin screens
+	 * when the plugin language chosen in Settings differs from the admin user's locale.
+	 *
+	 * @param string $translation Current translation.
+	 * @param string $text        Original core text.
+	 * @return string
+	 */
+	private function translate_core_screen_meta( $translation, $text ) {
+		static $map = array(
+			'es_ES' => array(
+				'Screen Options' => 'Opciones de pantalla',
+				'Help'           => 'Ayuda',
+				'Apply'          => 'Aplicar',
+				'Pagination'     => 'Paginación',
+			),
+			'ca'    => array(
+				'Screen Options' => 'Opcions de pantalla',
+				'Help'           => 'Ajuda',
+				'Apply'          => 'Aplica',
+				'Pagination'     => 'Paginació',
+			),
+		);
+		if ( $translation !== $text || ! $this->should_use_plugin_language_override() ) {
+			// Already translated by WordPress, or not a plugin screen.
+			return $translation;
+		}
+		$language = $this->get_selected_language();
+		if ( '' === $language ) {
+			// Automatic mode: follow the admin locale (es_* => es_ES, ca* => ca).
+			$locale   = function_exists( 'determine_locale' ) ? (string) determine_locale() : (string) get_locale();
+			$language = ( 0 === strpos( $locale, 'es' ) ) ? 'es_ES' : ( ( 0 === strpos( $locale, 'ca' ) ) ? 'ca' : '' );
+		}
+		if ( '' === $language || ! isset( $map[ $language ][ $text ] ) ) {
+			return $translation;
+		}
+		return $map[ $language ][ $text ];
 	}
 
 	/**
@@ -481,6 +531,8 @@ final class TSOLIIN_Link_Inspector {
 			return;
 		}
 		$this->db->ensure_table_exists();
+		// Throttled: clear stored redirect_url when new transparent rules apply (e.g. Chrome consent gate).
+		$this->db->maybe_cleanup_transparent_redirects();
 		// Re-register cron hooks if they were removed externally (e.g. cache flush, cron plugin).
 		$this->cron->schedule();
 	}
@@ -625,6 +677,21 @@ final class TSOLIIN_Link_Inspector {
 	 */
 	public function on_deleted_comment( $comment_id, $comment = null ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Parameter kept for the public/hook signature.
 		$this->db->delete_links_for_comment( (int) $comment_id );
+	}
+
+	/**
+	 * Remove inspector rows of a permanently deleted post, page, attachment or menu item.
+	 *
+	 * Without this the rows stayed in the list, and kept being checked, for content
+	 * that no longer exists. Rows with post_id 0 (widgets, terms, options) are never touched.
+	 *
+	 * @param int $post_id Deleted post ID.
+	 */
+	public function on_deleted_post( $post_id ) {
+		$post_id = absint( $post_id );
+		if ( $post_id > 0 ) {
+			$this->db->delete_links_for_post( $post_id );
+		}
 	}
 
 	/**

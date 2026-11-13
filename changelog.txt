@@ -4,6 +4,60 @@ Current releases are listed in readme.txt.
 
 == Changelog ==
 
+= 2.5.8 =
+* Fix: GitHub and Telegram stable download links no longer listed as redirects.
+* Fix: YouTube consent redirects shown as OK.
+* Fix: Cloudflare sites answering HTTP 520 shown as "Blocked by CDN".
+
+= 2.5.7 =
+* Fix: live search in the link list no longer drops or changes letters while typing, and keeps the active Type filter.
+* Fix: Quality filters are more accurate: Empty anchor ignores plain-text URLs, iframes and broken images; Generic anchor matches capitalised accented text; the Unpublished target total is no longer overwritten when filtering by Type.
+* Fix: the link list could repeat or skip links between pages when many links shared the same sort value.
+* Fix: re-checking a link from a template or reusable block could stop with a fatal error.
+* Fix: Ignore list entries now match paths without a scheme (example.com/page), are cleaned on save, and apply to existing links immediately.
+* Fix: Settings: removing a content type or switching off a link source (Widgets, Taxonomy descriptions, Site Editor, custom fields) now removes its stored links; the Content types checkboxes, private custom fields scan, expired-page save and invalid email now behave correctly, corrupted settings no longer cause errors, and "Delete all plugin records" now works on hosts without TRUNCATE rights and also clears leftover scan locks.
+* Fix: the admin bar no longer clips dropdown panels from other plugins (e.g. Query Monitor); removed unused code, including two unused scroll scripts. Diagnostics now also shows versions, PHP limits, links by type and the automatic schedule, and no longer fails if the sample scan errors.
+
+= 2.5.6 =
+* Fix: sites that answer HEAD with a session redirect loop (for example LiberKey/Joomla 303 to /en.html) while GET returns 200 are no longer reported as "Too many redirects".
+
+= 2.5.5 =
+* Improvement: day and night themes share one semantic colour system (ok / warn / danger / neutral surfaces and status pills), with a unified night canvas (#12141c) and clearer surface steps.
+* Fix: filter tabs, scope tabs, pagination and related accents follow the WordPress admin colour scheme instead of a hardcoded blue (avoids blue-on-brown clashes with schemes such as Sunrise).
+* Fix: in night mode, active filter/scope chips use white labels on the admin-scheme fill; idle chips use muted text so link-blue no longer overrides the chip colours.
+* Fix: Chrome Web Store links that only bounce through consent.google.com (cookie/consent gate for bots) are treated as OK, not as redirects.
+* Improvement: a link whose domain answers 200 but shows a parking or "buy this domain" page (for example a Seo.Domains lander) is now reported as broken ("Domain parked or for sale"). Only the page title, meta description or a nearly empty page are inspected; the verdict is cached per host and can be disabled with the tsoliin_check_parked_domains filter.
+* Improvement: night mode uses one dark palette (surfaces, text, links, status badges, notices and buttons) instead of light chips on a dark page.
+* Improvement: toolbar buttons have depth, and icons sit on the same line as the label.
+* Improvement: Settings has a Back button next to Settings, History and Help, with the same space under the title as the main screen.
+* Fix: the page title, version and Screen Options sit on one line, including the title icon.
+
+= 2.5.4 =
+* Fix: SSL certificate problems (cURL error 60: expired, self-signed, incomplete chain) were misclassified as DNS failures; they now show "SSL error (server cannot verify)" and are not counted as broken.
+* Improvement: DNS second opinion (opt-in, Cloudflare). Domains this server cannot resolve show "not resolved by this server" ("200 OK by Cloudflare" or "DNS, unconfirmed") and are not counted as broken; with the option on, the page itself is checked using the public IPs Cloudflare returns (private addresses, non-standard ports and credentials are blocked). "Domain does not exist" is reported only when confirmed.
+* Improvement: Diagnostics reports IP-pinning support, WP_PROXY_HOST and the latest second-opinion outcome; uninstall removes the cached answers.
+* Fix: working domains reported as "Domain does not exist" after a temporary DNS failure, internationalized domains (español.es, 日本語.jp) and redirects to unresolvable domains.
+* Fix: links with app schemes (whatsapp:, tg:, geo:, callto:…) were checked as 404; bare URLs in text lost closing brackets or kept trailing punctuation, or were split by inline tags.
+* Fix: HEAD errors (405, 501, 4xx/5xx) are retried with GET; cookies are kept between redirects; redirect loops are reported as broken "Too many redirects (loop)"; code 999 is treated as bot protection.
+* Improvement: Back from "View all links for this post" and from the Posts / Products view returns to the list you came from (tab, search, sorting, page).
+* Fix: a search with &, # or spaces broke sorting, tabs and pagination; Export CSV / PDF now respects the Type filter.
+* Fix: Edit link on an http:// link asked "cannot confirm the URL" although the new https:// URL worked; the URL you type is now checked directly.
+* Fix: night mode — the Smart Suggest URL cards and the Posts / Products table were light-coloured inside the dark interface.
+* Fix: Smart Suggest no longer offers the www alias of a working link or domain-for-sale pages, and has an 8-second budget so slow hosts no longer fail with "upstream request failed".
+
+= 2.5.3 =
+* Fix: the coming-soon detection no longer requests a made-up /tsoliin-nx-…/ URL, so it stops adding 404 entries to 404-monitor and redirect logs.
+
+= 2.5.2 =
+* Fix: the Link Inspector screen could keep showing the WordPress maintenance page (until a hard refresh) if it reloaded itself while WordPress was installing updates; it now waits for the updates to finish and never caches that page under its URL.
+* Improvement: background scans/checks pause while WordPress installs updates.
+
+= 2.5.1 =
+* Fix: the admin froze (and could hit "Maximum execution time exceeded") while a scan or check was running, because every admin page load ran a batch inline.
+* Fix: high CPU and memory on shared hosting: cron, open tabs and the keep-alive all worked non-stop; now a single worker runs at a time and rests between batches.
+* Fix: a scan or check could never finish when one post or link crashed PHP or threw an error, or when a stored link was rescanned in a loop.
+* Improvement: faster plugin screens, a progress bar that names the source being scanned, and the check after a scan now only tests new links instead of rechecking everything.
+
 = 2.5.0 =
 * Fix: the link list ran one extra database query per comment-type row to check if it could be edited/viewed (get_comment() was not cached across the two places that call it), showing up as hundreds of duplicate queries on sites with many comment links; the comment cache is now primed once per page load like it already was for posts.
 * Fix: on posts with many links, the list re-queried the same post's content from the database for every row that belonged to it (up to 3 times per row across the title, view, and edit links), instead of reusing the post already fetched for an earlier row; a request-level cache now keeps this to one lookup per post per page load.

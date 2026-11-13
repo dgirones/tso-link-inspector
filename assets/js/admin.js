@@ -252,28 +252,12 @@
 			}
 		},
 
-		markScrollBeforePostNav: function () {
-			try {
-				window.sessionStorage.setItem( 'tsoliinScrollToList', '1' );
-			} catch ( err ) {
-				// Ignore — full navigation still works without scroll restore.
-			}
-		},
-
 		maybeScrollToListOnLoad: function () {
-			var should = false;
-			try {
-				if ( '1' === window.sessionStorage.getItem( 'tsoliinScrollToList' ) ) {
-					should = true;
-					window.sessionStorage.removeItem( 'tsoliinScrollToList' );
-				}
-			} catch ( err ) {
-				// Ignore storage errors.
+			// The list is scrolled into view by script only when viewing one post's links.
+			if ( 'scrollRestoration' in window.history ) {
+				window.history.scrollRestoration = 'manual';
 			}
-			if ( ! should && /[?&]post_id=\d+/.test( window.location.search ) ) {
-				should = true;
-			}
-			if ( ! should || ! document.getElementById( 'tsoliin-list-table-region' ) ) {
+			if ( ! /[?&]post_id=\d+/.test( window.location.search ) || ! document.getElementById( 'tsoliin-list-table-region' ) ) {
 				return;
 			}
 			var self = this;
@@ -321,6 +305,7 @@
 
 			this.bindEvents();
 			this.bindLiveSearch();
+			this.bindExportSync();
 			this.maybeScrollToListOnLoad();
 			this.initThemeSwitcher();
 			$( document ).on( 'heartbeat-send', function ( event, data ) {
@@ -366,7 +351,6 @@
 				this.$startBtn.prop( 'disabled', scanRunning );
 				this.$stopBtn.show();
 			} else {
-				var pendingOnLoad = parseInt( tsoliinData.pendingCheck, 10 ) || 0;
 				var pctOnLoad     = parseInt( tsoliinData.bgPct, 10 ) || 0;
 				var scanActive    = this.isScanBlockingCheck();
 				var checkPaused   = parseInt( tsoliinData.checkPaused, 10 ) === 1;
@@ -482,6 +466,39 @@
 		 */
 		refreshDomRefs: function () {
 			this.$form = $( '#tsoliin-list-form' );
+		},
+
+		/**
+		 * Before an export is submitted, copy the live list state (search and
+		 * filters, updated by AJAX) into the form's hidden fields.
+		 */
+		bindExportSync: function () {
+			var self = this;
+			$( document ).on( 'submit', '.tsoliin-export-form', function () {
+				var $form = $( this );
+				if ( ! $( '.tsoliin-search-input' ).length ) {
+					return;
+				}
+				var state = {
+					filter           : tsoliinData.listFilter,
+					quality_filter   : tsoliinData.listQualityFilter,
+					link_type_filter : tsoliinData.listTypeFilter,
+					scope            : tsoliinData.listScope,
+					s                : $( '.tsoliin-search-input' ).first().val() || self.lastSearchVal || ''
+				};
+				$.each( state, function ( name, value ) {
+					var $field = $form.find( 'input[name="' + name + '"]' );
+					if ( value === undefined || value === null || '' === value ) {
+						$field.remove();
+						return;
+					}
+					if ( $field.length ) {
+						$field.val( value );
+					} else {
+						$form.append( $( '<input type="hidden" />' ).attr( 'name', name ).val( value ) );
+					}
+				} );
+			} );
 		},
 
 		/**
@@ -625,6 +642,9 @@
 				success: function ( r ) {
 					if ( r.success && r.data && r.data.html ) {
 						try {
+							if ( typeof opts.beforeReplace === 'function' ) {
+								opts.beforeReplace();
+							}
 							var responseRegion = r.data.region || ( useScope ? 'scope' : 'list' );
 							if ( 'scope' === responseRegion && $scope.length ) {
 								$scope.html( r.data.html );
@@ -2645,7 +2665,6 @@
 		},
 
 		dismissOnboarding: function ( $banner ) {
-			var self = this;
 			if ( $banner && $banner.length ) {
 				$banner.fadeOut( 200, function () { $banner.remove(); } );
 			}
@@ -3124,15 +3143,16 @@
 			self.lastSearchVal = $( '.tsoliin-search-input' ).first().val() || '';
 
 			$( document ).on( 'input', '.tsoliin-search-input', function () {
-				var term = $.trim( $( this ).val() );
 				window.clearTimeout( self.searchTimer );
 				self.searchTimer = window.setTimeout( function () {
-					if ( term === self.lastSearchVal ) {
+					// Use the current value (not the one at keystroke time) so slow typing is never overwritten.
+					var current = $.trim( $( '.tsoliin-search-input' ).first().val() || '' );
+					if ( current === self.lastSearchVal ) {
 						return;
 					}
-					self.lastSearchVal = term;
-					self.runLiveSearch( term );
-				}, 400 );
+					self.lastSearchVal = current;
+					self.runLiveSearch( current );
+				}, 700 );
 			} );
 
 			$( document ).on( 'click', '.tsoliin-search-submit', function ( e ) {
@@ -3146,9 +3166,10 @@
 
 		runLiveSearch: function ( searchTerm ) {
 			var self    = this;
-			var $input  = $( '.tsoliin-search-input' ).first();
 			var $btn    = $( '.tsoliin-search-submit' ).first();
-			var focusPos = $input.length ? $input[0].selectionStart : null;
+			var typed    = null;
+			var focusPos = null;
+			var hadFocus = false;
 
 			if ( ! $( '#tsoliin-scope-region, #tsoliin-list-table-region' ).length ) {
 				if ( $( '#tsoliin-list-form' ).length ) {
@@ -3166,21 +3187,46 @@
 					s              : searchTerm,
 					filter         : tsoliinData.listFilter || 'all',
 					quality_filter : tsoliinData.listQualityFilter || '',
+					link_type_filter: tsoliinData.listTypeFilter || '',
 					scope          : tsoliinData.listScope || 'all',
 					post_id        : parseInt( tsoliinData.viewPostId, 10 ) || 0,
 					paged          : 1
 				},
 				{
 					trackAsSearch: true,
+					// The input lives inside the replaced region: capture what the user has typed
+					// right now (possibly more than searchTerm) before it is swapped out.
+					beforeReplace: function () {
+						var $cur = $( '.tsoliin-search-input' ).first();
+						if ( $cur.length ) {
+							typed    = $cur.val();
+							hadFocus = document.activeElement === $cur[0];
+							focusPos = $cur[0].selectionStart;
+						}
+					},
 					onSuccess: function () {
 						self.updateSearchUrl( searchTerm );
-						self.lastSearchVal = searchTerm;
 						var $newInput = $( '.tsoliin-search-input' ).first();
 						if ( $newInput.length ) {
-							$newInput.val( searchTerm ).trigger( 'focus' );
-							if ( null !== focusPos && $newInput[0].setSelectionRange ) {
-								var pos = Math.min( focusPos, String( searchTerm ).length );
-								$newInput[0].setSelectionRange( pos, pos );
+							var keep = ( null !== typed ) ? typed : searchTerm;
+							$newInput.val( keep );
+							if ( hadFocus ) {
+								$newInput.trigger( 'focus' );
+								if ( null !== focusPos && $newInput[0].setSelectionRange ) {
+									var pos = Math.min( focusPos, String( keep ).length );
+									$newInput[0].setSelectionRange( pos, pos );
+								}
+							}
+							// User kept typing during the request: search again for the newer text.
+							if ( $.trim( keep ) !== searchTerm ) {
+								window.clearTimeout( self.searchTimer );
+								self.searchTimer = window.setTimeout( function () {
+									var cur = $.trim( $( '.tsoliin-search-input' ).first().val() || '' );
+									if ( cur !== self.lastSearchVal ) {
+										self.lastSearchVal = cur;
+										self.runLiveSearch( cur );
+									}
+								}, 700 );
 							}
 						}
 					},
@@ -3298,7 +3344,7 @@
 							var isHttps = /^https:\/\//i.test( s.url || '' );
 							var code = parseInt( s.status_code, 10 );
 							var isBotBlock = ( 401 === code || 403 === code || 429 === code || 999 === code );
-							var isUnverifiedRemote = unverified || isBotBlock || ( 0 === code || -3 === code || -4 === code || -5 === code || -7 === code || -10 === code || -11 === code );
+							var isUnverifiedRemote = unverified || isBotBlock || ( 0 === code || -3 === code || -4 === code || -5 === code || -7 === code || -10 === code || -11 === code || -14 === code );
 							if ( ! actionable || isUnverifiedRemote ) {
 								conf = '⚠️';
 							} else if ( ! isHttps ) {
@@ -3440,6 +3486,7 @@
 				url   : tsoliinData.ajaxUrl,
 				method: 'POST',
 				data  : { action: 'tsoliin_diagnose', nonce: tsoliinData.nonce },
+				timeout: 120000,
 				success: function ( r ) {
 					$btn.prop( 'disabled', false ).html( btnHtml );
 					if ( ! $panel.is( ':visible' ) ) {
@@ -3448,7 +3495,7 @@
 					if ( r.success ) {
 						$panel.html( '<strong>' + self.escapeHtml( tsoliinData.i18n.diagResult ) + '</strong><br><code style="display:block;white-space:pre-wrap;margin-top:8px;">' + self.escapeHtml( r.data.lines.join( '\n' ) ) + '</code>' );
 					} else {
-						$panel.html( '<p style="color:red;">' + ( r.data ? r.data.message : 'Error' ) + '</p>' );
+						$panel.html( '<p style="color:red;">' + self.escapeHtml( r.data && r.data.message ? r.data.message : tsoliinData.i18n.error ) + '</p>' );
 					}
 				},
 				error: function ( _jqXHR, textStatus ) {

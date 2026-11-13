@@ -23,6 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *  -9   = site gated (coming soon / maintenance intercepts internal URLs)
  * -10   = DNS lookup failed from this server but not confirmed (not reported as broken)
  * -12   = redirect loop / more than 8 redirects
+ * -13   = domain parked / for sale (HTTP 200, but the page is a parking lander)
+ * -14   = Cloudflare answered 520 to this server even after a browser-like retry (unverifiable, not broken)
  * -11   = DNS lookup failed from this server but Cloudflare DNS resolves it (shown as OK, not broken)
  * 2-5   = legacy (stored by old absint() bug, same meaning as -2 to -5)
  */
@@ -39,6 +41,12 @@ class TSOLIIN_HTTP {
 
 	/** Internal status: the redirect chain did not end after the maximum number of hops (loop). */
 	const STATUS_TOO_MANY_REDIRECTS = -12;
+
+	/** Internal status: the domain answers 200 but serves a parking / "buy this domain" page instead of the real site. */
+	const STATUS_DOMAIN_FOR_SALE = -13;
+
+	/** Internal status: Cloudflare answered HTTP 520 to this checker even after a browser-like retry (edge bot filter, not a confirmed dead link). */
+	const STATUS_CDN_BLOCKED = -14;
 
 	/**
 	 * Request timeout in seconds.
@@ -353,11 +361,26 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Request cache for get_site_hosts(), per blog ID.
+	 *
+	 * The scanner asks whether a host is internal once per extracted URL, and each
+	 * answer used to call home_url() and site_url() again (thousands of option and
+	 * filter round-trips on a post with many links).
+	 *
+	 * @var array<int,string[]>
+	 */
+	private static $site_hosts_cache = array();
+
+	/**
 	 * Hostnames considered internal for this WordPress site (with www / non-www variants).
 	 *
 	 * @return string[] Lowercase hostnames.
 	 */
 	public static function get_site_hosts() {
+		$blog_id = function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0;
+		if ( isset( self::$site_hosts_cache[ $blog_id ] ) ) {
+			return self::$site_hosts_cache[ $blog_id ];
+		}
 		$hosts = array();
 		foreach ( array( home_url(), site_url() ) as $base ) {
 			$host = wp_parse_url( $base, PHP_URL_HOST );
@@ -366,7 +389,18 @@ class TSOLIIN_HTTP {
 			}
 			$hosts = array_merge( $hosts, self::expand_site_host_variants( $host ) );
 		}
-		return array_values( array_unique( $hosts ) );
+		$hosts = array_values( array_unique( $hosts ) );
+		if ( ! empty( $hosts ) ) {
+			self::$site_hosts_cache[ $blog_id ] = $hosts;
+		}
+		return $hosts;
+	}
+
+	/**
+	 * Forget the cached site hosts (start of every scan unit, so a long worker never keeps a stale answer).
+	 */
+	public static function flush_site_hosts_cache() {
+		self::$site_hosts_cache = array();
 	}
 
 	/**
@@ -719,28 +753,6 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
-	 * For ?attachment_id= URLs, return the wp-content/uploads file URL when available.
-	 *
-	 * Used only for optional suggestions — not for the primary check(), which must test
-	 * the URL visitors actually click (attachment pages can 404 while the file still exists).
-	 *
-	 * @param string $url Absolute URL.
-	 * @return string
-	 */
-	public static function prefer_attachment_file_url( $url ) {
-		$attachment_id = self::parse_attachment_id_from_url( $url );
-		if ( $attachment_id <= 0 ) {
-			return $url;
-		}
-		$post = get_post( $attachment_id );
-		if ( ! $post || 'attachment' !== $post->post_type || 'trash' === $post->post_status ) {
-			return $url;
-		}
-		$file_url = wp_get_attachment_url( $attachment_id );
-		return ( is_string( $file_url ) && '' !== $file_url ) ? $file_url : $url;
-	}
-
-	/**
 	 * Whether a local attachment_id target is missing or unusable on this WordPress site.
 	 *
 	 * @param int $attachment_id Attachment post ID.
@@ -987,21 +999,41 @@ class TSOLIIN_HTTP {
 		if ( empty( $ignored ) ) {
 			return false;
 		}
-		$url_lower = strtolower( (string) $url );
+		$url_lower = strtolower( trim( (string) $url ) );
 		$host      = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		// Same URL without scheme and "www." so "example.com/page" also matches https://www.example.com/page/x.
+		$url_bare = preg_replace( '#^(?:https?:)?//(?:www\\.)?#', '', $url_lower );
 		foreach ( $ignored as $pattern ) {
-			$p = trim( strtolower( (string) $pattern ) );
+			$p = self::normalize_ignore_pattern( $pattern );
 			if ( '' === $p ) {
 				continue;
 			}
 			if ( 0 === strpos( $url_lower, $p ) ) {
 				return true;
 			}
+			if ( false !== strpos( $p, '/' ) && ! preg_match( '#^(?:https?:)?//#', $p ) ) {
+				$p_bare = preg_replace( '#^www\\.#', '', $p );
+				if ( is_string( $url_bare ) && '' !== $p_bare && 0 === strpos( $url_bare, $p_bare ) ) {
+					return true;
+				}
+			}
 			if ( '' !== $host && self::host_matches_ignore_pattern( $host, $p ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Normalize one ignore-list entry: trim, lowercase, drop a leading "*." / "." wildcard marker.
+	 *
+	 * @param string $pattern Raw entry.
+	 * @return string Empty when nothing usable remains.
+	 */
+	public static function normalize_ignore_pattern( $pattern ) {
+		$p = trim( strtolower( (string) $pattern ) );
+		$p = preg_replace( '#^\*?\.+#', '', $p );
+		return is_string( $p ) ? trim( $p ) : '';
 	}
 
 	/**
@@ -1484,7 +1516,7 @@ class TSOLIIN_HTTP {
 	 * @return string|false `added`, `exists`, or false on invalid input.
 	 */
 	public static function add_ignore_pattern( $pattern ) {
-		$pattern = trim( strtolower( (string) $pattern ) );
+		$pattern = self::normalize_ignore_pattern( $pattern );
 		if ( '' === $pattern ) {
 			return false;
 		}
@@ -1495,37 +1527,15 @@ class TSOLIIN_HTTP {
 		}
 		$list = isset( $s['ignore_list'] ) && is_array( $s['ignore_list'] ) ? $s['ignore_list'] : array();
 		foreach ( $list as $entry ) {
-			if ( strtolower( trim( (string) $entry ) ) === $pattern ) {
+			if ( self::normalize_ignore_pattern( $entry ) === $pattern ) {
 				return 'exists';
 			}
 		}
 		$list[]           = $pattern;
 		$s['ignore_list'] = $list;
 		update_option( 'tsoliin_settings', $s );
+		( new TSOLIIN_DB() )->apply_ignore_list_change();
 		return 'added';
-	}
-
-	/**
-	 * Resolve a stored link URL to an absolute URL suitable for opening in a browser.
-	 *
-	 * @param string $url Link URL.
-	 * @return string Empty when the URL cannot be opened.
-	 */
-	public static function resolve_link_open_url( $url ) {
-		$url = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $url ) );
-		if ( '' === $url || preg_match( '#^(mailto:|tel:|javascript:)#i', $url ) ) {
-			return '';
-		}
-		if ( 0 === strpos( $url, '//' ) ) {
-			return 'https:' . $url;
-		}
-		if ( 0 === strpos( $url, '/' ) || 0 === strpos( $url, './' ) || 0 === strpos( $url, '../' ) ) {
-			return home_url( $url );
-		}
-		if ( preg_match( '#^https?://#i', $url ) ) {
-			return $url;
-		}
-		return '';
 	}
 
 	/**
@@ -1552,19 +1562,6 @@ class TSOLIIN_HTTP {
 			'redirect_url' => '',
 			'is_broken'    => 0,
 		);
-	}
-
-	/**
-	 * Last coming-soon probe result (transient, then stored option).
-	 *
-	 * @return array{gated?:bool,home_code?:int,probe_code?:int}
-	 */
-	public function get_site_gate_state() {
-		$state = get_transient( 'tsoliin_site_gate' );
-		if ( ! is_array( $state ) ) {
-			$state = get_option( 'tsoliin_site_gate_state', array() );
-		}
-		return is_array( $state ) ? $state : array();
 	}
 
 	/**
@@ -2034,7 +2031,7 @@ class TSOLIIN_HTTP {
 	/**
 	 * Whether the URL host has addresses registered by use_second_opinion_ips() and a port WordPress allows.
 	 *
-	 * wp_http_validate_url() rejects hosts this server cannot resolve; for these hosts our own checks (public
+	 * The function wp_http_validate_url() rejects hosts this server cannot resolve; for these hosts our own checks (public
 	 * addresses, allowed port, no credentials) replace it.
 	 *
 	 * @param string $url Absolute http(s) URL.
@@ -2303,6 +2300,138 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Detect a parked / "buy this domain" lander that answers HTTP 200 for every path.
+	 *
+	 * A dead domain that was dropped and re-registered by a broker still answers 200, so the status code alone
+	 * cannot tell it from the real site. The verdict is per host and cached (a short time when parked, a few days
+	 * when not), so a host is fetched once, not once per link. Large social/bot-wall hosts and file URLs are skipped.
+	 *
+	 * @param string $url            Final URL (no fragment) that answered with a 2xx status.
+	 * @param int    $code           HTTP status of that response.
+	 * @param array  $redirect_chain Redirect hops followed so far.
+	 * @return array{status_code:int,redirect_url:string,redirect_chain:array,is_broken:int}|null Broken result, or null when the page looks real.
+	 */
+	private function maybe_parked_domain_result( $url, $code, $redirect_chain = array() ) {
+		$code = (int) $code;
+		if ( $code < 200 || $code >= 300 ) {
+			return null;
+		}
+		/**
+		 * Filters whether 200 pages on external hosts are inspected for parking / domain-for-sale pages.
+		 *
+		 * @param bool $enabled Default true.
+		 */
+		if ( ! apply_filters( 'tsoliin_check_parked_domains', true ) ) {
+			return null;
+		}
+
+		$parts = wp_parse_url( (string) $url );
+		$host  = isset( $parts['host'] ) ? strtolower( (string) $parts['host'] ) : '';
+		if ( '' === $host || self::is_bot_wall_host( $url ) ) {
+			return null;
+		}
+		$site_host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		if ( $host === $site_host ) {
+			return null;
+		}
+		$path = isset( $parts['path'] ) ? (string) $parts['path'] : '';
+		if ( preg_match( '/\.(?:jpe?g|png|gif|webp|avif|svg|ico|pdf|zip|gz|mp[34]|mov|avi|css|js|json|xml|txt|docx?|xlsx?|pptx?|woff2?|ttf)$/i', $path ) ) {
+			return null;
+		}
+
+		$cache_key = 'tsoliin_parked_' . md5( $host );
+		$cached    = get_transient( $cache_key );
+		if ( 'no' === $cached ) {
+			return null;
+		}
+
+		if ( 'yes' !== $cached ) {
+			if ( 'ok' !== $this->guard_remote_url_for_request( $url ) ) {
+				return null;
+			}
+			$response = wp_remote_get(
+				$url,
+				array(
+					'timeout'             => min( 10, max( 5, (int) $this->timeout ) ),
+					'redirection'         => 3,
+					'reject_unsafe_urls'  => ! self::url_uses_fallback_ips( $url ),
+					'limit_response_size' => 65536,
+					'user-agent'          => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+					'sslverify'           => true,
+					'headers'             => array(
+						'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+						'Accept-Language' => 'ca,es;q=0.9,en;q=0.8',
+					),
+				)
+			);
+			if ( is_wp_error( $response ) ) {
+				return null;
+			}
+			$get_code = (int) wp_remote_retrieve_response_code( $response );
+			$type     = strtolower( (string) wp_remote_retrieve_header( $response, 'content-type' ) );
+			if ( $get_code < 200 || $get_code >= 300 || ( '' !== $type && false === strpos( $type, 'html' ) ) ) {
+				return null;
+			}
+			$parked = self::html_looks_parked( (string) wp_remote_retrieve_body( $response ) );
+			set_transient( $cache_key, $parked ? 'yes' : 'no', $parked ? DAY_IN_SECONDS : 2 * DAY_IN_SECONDS );
+			if ( ! $parked ) {
+				return null;
+			}
+		}
+
+		return array(
+			'status_code'    => self::STATUS_DOMAIN_FOR_SALE,
+			'redirect_url'   => '',
+			'redirect_chain' => $redirect_chain,
+			'is_broken'      => 1,
+		);
+	}
+
+	/**
+	 * Whether an HTML document is a parking / domain-for-sale lander.
+	 *
+	 * Conservative on purpose: a sale phrase must sit in the page title or meta description, or the page must
+	 * be nearly empty (at most 2500 characters of visible text) and carry the phrase. A normal article that only
+	 * mentions domains for sale does not match.
+	 *
+	 * @param string $html Start of the document (first 64 KB is enough).
+	 * @return bool
+	 */
+	public static function html_looks_parked( $html ) {
+		$html = substr( (string) $html, 0, 65536 );
+		if ( '' === trim( $html ) ) {
+			return false;
+		}
+
+		$pattern = '/(?:buy\s+this\s+domain|this\s+domain\s+(?:name\s+)?(?:is\s+|may\s+be\s+|might\s+be\s+)?(?:for\s+sale|available(?:\s+for\s+purchase)?)|domain(?:\s+name)?\s+(?:is\s+)?for\s+sale|(?:this\s+)?domain\s+is\s+parked|(?:make|submit)\s+an\s+offer\s+(?:on|for)\s+this\s+domain|inquire\s+about\s+this\s+domain|seo\.domains|hugedomains|sedoparking|parkingcrew|afternic|dominio\s+en\s+venta|domini\s+en\s+venda|domaine\s+(?:est\s+)?\x{00e0}\s+vendre|domain\s+zu\s+verkaufen|(?:tato\s+)?dom[e\x{00e9}]na\s+(?:je\s+)?na\s+prodej)/iu';
+
+		$title = '';
+		if ( preg_match( '#<title[^>]*>(.*?)</title>#is', $html, $m ) ) {
+			$title = $m[1];
+		}
+		$desc = '';
+		if ( preg_match_all( '#<meta\s[^>]*>#i', $html, $metas ) ) {
+			foreach ( $metas[0] as $tag ) {
+				if ( preg_match( '#(?:name|property)\s*=\s*["\'](?:description|og:description|og:title|twitter:description)["\']#i', $tag )
+					&& preg_match( '#content\s*=\s*(["\'])(.*?)\1#is', $tag, $c ) ) {
+					$desc .= ' ' . $c[2];
+				}
+			}
+		}
+		$head = html_entity_decode( wp_strip_all_tags( $title . ' ' . $desc ), ENT_QUOTES, 'UTF-8' );
+		if ( preg_match( $pattern, $head ) ) {
+			return true;
+		}
+
+		$visible = preg_replace( '#<(script|style|noscript|svg)\b.*?</\1>#is', ' ', $html );
+		$text    = trim( (string) preg_replace( '/\s+/', ' ', html_entity_decode( wp_strip_all_tags( (string) $visible ), ENT_QUOTES, 'UTF-8' ) ) );
+		if ( strlen( $text ) <= 2500 && preg_match( $pattern, $html ) ) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Check a URL and return status info.
 	 *
 	 * Tries same-site www/non-www (and attachment permalink) variants before reporting broken.
@@ -2472,6 +2601,43 @@ class TSOLIIN_HTTP {
 					}
 				}
 
+				// Cloudflare 520 ("unknown error") is very often its edge/origin rejecting a non-browser client while
+				// the page loads fine in a browser. Retry once with a full browser-like header set; if it still
+				// fails with a Cloudflare 520, report it as unverifiable instead of broken.
+				if ( ! is_wp_error( $response ) && 520 === $code && self::response_is_cloudflare( $response ) ) {
+					usleep( 600000 );
+					$cdn_r = wp_remote_get( $final_url, array_merge( $args, array( 'stream' => false ), array( 'headers' => array_merge( $args['headers'], self::browser_navigation_headers() ) ) ) );
+					if ( ! is_wp_error( $cdn_r ) ) {
+						$cdn_code = (int) wp_remote_retrieve_response_code( $cdn_r );
+						if ( 520 !== $cdn_code ) {
+							$response = $cdn_r;
+							$code     = $cdn_code;
+						}
+					}
+					if ( 520 === $code ) {
+						return array(
+							'status_code'    => self::STATUS_CDN_BLOCKED,
+							'redirect_url'   => $redirect_to,
+							'redirect_chain' => $redirect_chain,
+							'is_broken'      => 0,
+						);
+					}
+				}
+
+				// Some CMS hosts (e.g. LiberKey/Joomla) answer HEAD with a session 303 that loops
+				// (/path → /en.html → /en.html…) while GET returns 200 for the same URL. Prefer GET
+				// when it yields a non-redirect success so we do not follow a HEAD-only loop.
+				if ( ! is_wp_error( $response ) && in_array( $code, array( 301, 302, 303, 307, 308 ), true ) ) {
+					$get_r = wp_remote_get( $final_url, array_merge( $args, array( 'stream' => false ) ) );
+					if ( ! is_wp_error( $get_r ) ) {
+						$get_code = (int) wp_remote_retrieve_response_code( $get_r );
+						if ( $get_code >= 200 && $get_code < 300 ) {
+							$response = $get_r;
+							$code     = $get_code;
+						}
+					}
+				}
+
 				if ( is_wp_error( $response ) && -2 === $this->classify_error( $response ) ) {
 					// Resolve failures are often temporary: wait briefly and try once more before reporting.
 					usleep( 800000 );
@@ -2567,6 +2733,26 @@ class TSOLIIN_HTTP {
 					return $chrome_unavail;
 				}
 
+				// Chrome Web Store → consent.google.com (EU/cookie gate for bots). Not a real destination change.
+				if ( $this->is_chrome_webstore_consent_gate_redirect( $url, $final_url ) ) {
+					return array(
+						'status_code'    => 200,
+						'redirect_url'   => '',
+						'redirect_chain' => $redirect_chain,
+						'is_broken'      => 0,
+					);
+				}
+
+				// YouTube → consent.youtube.com / consent.google.com (EU cookie gate for bots). Browsers with the consent cookie never see it.
+				if ( $this->is_youtube_consent_gate_redirect( $url, $final_url ) ) {
+					return array(
+						'status_code'    => 200,
+						'redirect_url'   => '',
+						'redirect_chain' => $redirect_chain,
+						'is_broken'      => 0,
+					);
+				}
+
 				// Case 1: trivial redirect (trailing slash, www variant, CDN hop, etc.).
 				// Still honour the final HTTP status — e.g. www → bare host 301 must not mask a 404.
 				if ( $this->is_trivial_redirect( $url, $final_url ) ) {
@@ -2629,6 +2815,11 @@ class TSOLIIN_HTTP {
 					);
 				}
 
+				$parked = $this->maybe_parked_domain_result( $final_url, $final_code, $redirect_chain );
+				if ( null !== $parked ) {
+					return $parked;
+				}
+
 				// Case 3: real redirect to different content.
 				return array(
 					'status_code'    => $first_code, // first hop code (301, 302…).
@@ -2647,6 +2838,11 @@ class TSOLIIN_HTTP {
 			$chrome_unavail = $this->maybe_chrome_webstore_unavailable_result( $final_url );
 			if ( null !== $chrome_unavail ) {
 				return $chrome_unavail;
+			}
+
+			$parked = $this->maybe_parked_domain_result( $final_url, (int) $code );
+			if ( null !== $parked ) {
+				return $parked;
 			}
 
 			return array(
@@ -2697,6 +2893,10 @@ class TSOLIIN_HTTP {
 				'is_broken'      => 0,
 			);
 		}
+		$parked = $this->maybe_parked_domain_result( $final_url, $final_code, $redirect_chain );
+		if ( null !== $parked ) {
+			return $parked;
+		}
 		return array(
 			'status_code'    => 200,
 			'redirect_url'   => '',
@@ -2746,6 +2946,37 @@ class TSOLIIN_HTTP {
 	}
 
 	/**
+	 * Whether a response was served by Cloudflare (Server: cloudflare or a cf-ray header).
+	 *
+	 * @param array|WP_Error $response HTTP API response.
+	 * @return bool
+	 */
+	private static function response_is_cloudflare( $response ) {
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+		$server = strtolower( (string) wp_remote_retrieve_header( $response, 'server' ) );
+		return false !== strpos( $server, 'cloudflare' ) || '' !== (string) wp_remote_retrieve_header( $response, 'cf-ray' );
+	}
+
+	/**
+	 * Extra request headers a real browser sends on a top-level navigation (used for the CDN retry).
+	 *
+	 * @return array<string,string>
+	 */
+	private static function browser_navigation_headers() {
+		return array(
+			'Accept-Encoding'           => 'gzip, deflate',
+			'Cache-Control'             => 'max-age=0',
+			'Upgrade-Insecure-Requests' => '1',
+			'Sec-Fetch-Dest'            => 'document',
+			'Sec-Fetch-Mode'            => 'navigate',
+			'Sec-Fetch-Site'            => 'none',
+			'Sec-Fetch-User'            => '?1',
+		);
+	}
+
+	/**
 	 * Determine if a status code means the link is broken.
 	 *
 	 * NOTE: 401, 403, 429, 999 are NOT broken — they may be bot-blocks.
@@ -2773,7 +3004,7 @@ class TSOLIIN_HTTP {
 		if ( self::is_bot_block_status( $code ) ) {
 			return false;
 		}
-		if ( in_array( $code, array( -1, -5, -6, -7, -8, self::STATUS_SITE_GATED, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK ), true ) ) {
+		if ( in_array( $code, array( -1, -5, -6, -7, -8, self::STATUS_SITE_GATED, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK, self::STATUS_CDN_BLOCKED ), true ) ) {
 			return false;
 		}
 		if ( $code <= 0 ) {
@@ -2816,7 +3047,7 @@ class TSOLIIN_HTTP {
 		if ( self::is_bot_block_status( $code ) ) {
 			return true;
 		}
-		return in_array( $code, array( 0, -3, -4, -5, -7, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK ), true );
+		return in_array( $code, array( 0, -3, -4, -5, -7, self::STATUS_DNS_UNCONFIRMED, self::STATUS_DNS_CF_OK, self::STATUS_CDN_BLOCKED ), true );
 	}
 
 	/**
@@ -3145,31 +3376,37 @@ class TSOLIIN_HTTP {
 	 * @return bool
 	 */
 	public static function is_http_same_resource_bar_www( $a, $b ) {
-		$a  = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $a ) );
-		$b  = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $b ) );
-		$pa = wp_parse_url( $a );
-		$pb = wp_parse_url( $b );
-		if ( empty( $pa['host'] ) || empty( $pb['host'] ) ) {
-			return false;
+		$key = self::http_resource_key_bar_www( $a );
+		return '' !== $key && self::http_resource_key_bar_www( $b ) === $key;
+	}
+
+	/**
+	 * Comparison key behind is_http_same_resource_bar_www(): two URLs are the same
+	 * resource exactly when both keys are non-empty and identical.
+	 *
+	 * Scheme (http/https, lowercase), host (lowercase, no leading www.), path without
+	 * trailing slashes and the query string. Empty string when the URL has no host or
+	 * is not http(s). Lets callers compare one URL against many without parsing it
+	 * again for every pair.
+	 *
+	 * @param string $url URL.
+	 * @return string
+	 */
+	public static function http_resource_key_bar_www( $url ) {
+		$url   = trim( str_replace( array( "\0", "\r", "\n" ), '', (string) $url ) );
+		$parts = wp_parse_url( $url );
+		if ( empty( $parts['host'] ) ) {
+			return '';
 		}
-		$sa = isset( $pa['scheme'] ) ? strtolower( (string) $pa['scheme'] ) : '';
-		$sb = isset( $pb['scheme'] ) ? strtolower( (string) $pb['scheme'] ) : '';
-		if ( $sa !== $sb || ! in_array( $sa, array( 'http', 'https' ), true ) ) {
-			return false;
+		$scheme = isset( $parts['scheme'] ) ? strtolower( (string) $parts['scheme'] ) : '';
+		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			return '';
 		}
-		$ha = strtolower( preg_replace( '#^www\.#i', '', $pa['host'] ) );
-		$hb = strtolower( preg_replace( '#^www\.#i', '', $pb['host'] ) );
-		if ( $ha !== $hb ) {
-			return false;
-		}
-		$patha = isset( $pa['path'] ) ? $pa['path'] : '/';
-		$pathb = isset( $pb['path'] ) ? $pb['path'] : '/';
-		if ( rtrim( $patha, '/' ) !== rtrim( $pathb, '/' ) ) {
-			return false;
-		}
-		$qa = isset( $pa['query'] ) ? $pa['query'] : '';
-		$qb = isset( $pb['query'] ) ? $pb['query'] : '';
-		return $qa === $qb;
+		$host  = strtolower( preg_replace( '#^www\.#i', '', $parts['host'] ) );
+		$path  = isset( $parts['path'] ) ? $parts['path'] : '/';
+		$query = isset( $parts['query'] ) ? $parts['query'] : '';
+		// "\n" cannot occur inside any part (stripped above), so it is a safe separator.
+		return $scheme . "\n" . $host . "\n" . rtrim( $path, '/' ) . "\n" . $query;
 	}
 
 	/**
@@ -3323,6 +3560,8 @@ class TSOLIIN_HTTP {
 			-10 => __( 'Domain not resolved by this server (DNS, unconfirmed)', 'tso-link-inspector' ),
 			-11 => __( 'Domain not resolved by this server (200 OK by Cloudflare)', 'tso-link-inspector' ),
 			-12 => __( 'Too many redirects (loop)', 'tso-link-inspector' ),
+			-13 => __( 'Domain parked or for sale', 'tso-link-inspector' ),
+			-14 => __( 'Blocked by CDN (Cloudflare 520, check in browser)', 'tso-link-inspector' ),
 			999 => __( 'Access blocked (bot?)', 'tso-link-inspector' ),
 			0   => __( 'Cannot connect', 'tso-link-inspector' ),
 			-2  => __( 'Domain does not exist (DNS)', 'tso-link-inspector' ),
@@ -3383,7 +3622,7 @@ class TSOLIIN_HTTP {
 		if ( in_array( $code, array( -1, -6, -7, -8, self::STATUS_SITE_GATED ), true ) && ! $is_broken ) {
 			return 'tsoliin-status--skipped';
 		}
-		if ( in_array( $code, array( -5, self::STATUS_DNS_UNCONFIRMED ), true ) && ! $is_broken ) {
+		if ( in_array( $code, array( -5, self::STATUS_DNS_UNCONFIRMED, self::STATUS_CDN_BLOCKED ), true ) && ! $is_broken ) {
 			return 'tsoliin-status--warning';
 		}
 		if ( self::STATUS_DNS_CF_OK === $code && ! $is_broken ) {
@@ -3445,6 +3684,7 @@ class TSOLIIN_HTTP {
 	 *  - Bare host vs www + tracking-only query (youtube.com/x → www.youtube.com/x?ucbcb=1&cbrd=1)
 	 *  - Same article path with/without www (case- or encoding-normalised paths)
 	 *  - Chrome Web Store legacy host → chromewebstore.google.com (same extension path)
+	 *  - Chrome Web Store → consent.google.com cookie/consent gate (continue= same extension)
 	 *  - Stable “latest” vendor download (/dl/…) → versioned installer on same vendor host (Telegram)
 	 *  - WordPress attachment page → media file on the same site (/post-slug/ → /wp-content/uploads/file.jpg)
 	 *  - Asset/static file served from a related CDN host (pixel.gif → cdn.example.com/pixel.gif)
@@ -3543,6 +3783,16 @@ class TSOLIIN_HTTP {
 			return true;
 		}
 
+		// 8e. GitHub "releases/latest/download/<asset>" → release-assets CDN (stable alias that always redirects to the current file).
+		if ( $this->is_github_latest_download_redirect( $original, $final_target ) ) {
+			return true;
+		}
+
+		// 8f. Telegram "telegram.org/dl/..." → versioned build on Telegram's own download CDN.
+		if ( $this->is_telegram_dl_redirect( $original, $final_target ) ) {
+			return true;
+		}
+
 		// 8. Google Chrome Web Store host migration (legacy chrome.google.com/webstore/... → chromewebstore.google.com/detail/...).
 		if ( $this->is_chrome_webstore_migration_redirect( $original, $final_target ) ) {
 			return true;
@@ -3550,6 +3800,16 @@ class TSOLIIN_HTTP {
 
 		// 8b. Same extension ID with a Google slug/consent rewrite (volume-master-controlador/{id} → volume-master/{id}).
 		if ( $this->is_chrome_webstore_same_extension_redirect( $original, $final_target ) ) {
+			return true;
+		}
+
+		// 8c. Chrome Web Store → Google consent gate (continue URL still points at the same extension).
+		if ( $this->is_chrome_webstore_consent_gate_redirect( $original, $final_target ) ) {
+			return true;
+		}
+
+		// 8d. YouTube → Google consent gate (continue URL still points at the same YouTube path).
+		if ( $this->is_youtube_consent_gate_redirect( $original, $final_target ) ) {
 			return true;
 		}
 
@@ -4038,6 +4298,146 @@ class TSOLIIN_HTTP {
 		$orig_id  = self::extract_chrome_webstore_extension_id( $original );
 		$final_id = self::extract_chrome_webstore_extension_id( $final_target );
 		return '' !== $orig_id && $orig_id === $final_id;
+	}
+
+	/**
+	 * Whether a Chrome Web Store check stopped on Google's consent.google.com cookie gate.
+	 *
+	 * Server-side fetches often get 302 → consent.google.com/m?continue=…extension… (or a 400 on the
+	 * consent page without cookies). Browsers with an existing Google consent cookie never see this hop,
+	 * so it must not be listed as a real redirect or as a broken link.
+	 *
+	 * @param string $original     Chrome Web Store URL that was checked.
+	 * @param string $final_target Final URL after following redirects (often consent.google.com).
+	 * @return bool
+	 */
+	private function is_chrome_webstore_consent_gate_redirect( $original, $final_target ) {
+		if ( ! self::is_chrome_webstore_host( $original ) ) {
+			return false;
+		}
+		$host = strtolower( (string) wp_parse_url( $final_target, PHP_URL_HOST ) );
+		if ( 'consent.google.com' !== $host ) {
+			return false;
+		}
+		$orig_id = self::extract_chrome_webstore_extension_id( $original );
+		if ( '' === $orig_id ) {
+			return false;
+		}
+		$query = (string) wp_parse_url( $final_target, PHP_URL_QUERY );
+		if ( '' === $query ) {
+			return false;
+		}
+		$params = array();
+		wp_parse_str( $query, $params );
+		$continue = isset( $params['continue'] ) ? (string) $params['continue'] : '';
+		if ( '' === $continue ) {
+			return false;
+		}
+		$continue_id = self::extract_chrome_webstore_extension_id( $continue );
+		if ( $orig_id === $continue_id ) {
+			return true;
+		}
+		return false !== strpos( $continue, $orig_id );
+	}
+
+	/**
+	 * Whether a YouTube check stopped on Google's EU consent gate (consent.youtube.com / consent.google.com).
+	 *
+	 * Server-side fetches from the EU get a 301/302 to consent.youtube.com/m?continue=<original URL>, while a
+	 * browser with the consent cookie opens the page directly. Only a gate whose `continue` URL is the same
+	 * YouTube path as the original counts; a real move (for example /user/X to /@X) does not.
+	 *
+	 * @param string $original     Original URL.
+	 * @param string $final_target Final URL after following redirects.
+	 * @return bool
+	 */
+	private function is_youtube_consent_gate_redirect( $original, $final_target ) {
+		$orig_host = strtolower( (string) wp_parse_url( $original, PHP_URL_HOST ) );
+		if ( ! in_array( $orig_host, array( 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com' ), true ) ) {
+			return false;
+		}
+		$final_host = strtolower( (string) wp_parse_url( $final_target, PHP_URL_HOST ) );
+		if ( ! in_array( $final_host, array( 'consent.youtube.com', 'consent.google.com' ), true ) ) {
+			return false;
+		}
+		$query = (string) wp_parse_url( $final_target, PHP_URL_QUERY );
+		if ( '' === $query ) {
+			return false;
+		}
+		$params = array();
+		wp_parse_str( $query, $params );
+		$continue = isset( $params['continue'] ) && is_string( $params['continue'] ) ? $params['continue'] : '';
+		if ( '' === $continue ) {
+			return false;
+		}
+		$cont_host = strtolower( (string) wp_parse_url( $continue, PHP_URL_HOST ) );
+		if ( 'youtube.com' !== $cont_host && '.youtube.com' !== substr( $cont_host, -12 ) ) {
+			return false;
+		}
+		$orig_path = strtolower( rtrim( (string) wp_parse_url( $original, PHP_URL_PATH ), '/' ) );
+		$cont_path = strtolower( rtrim( (string) wp_parse_url( $continue, PHP_URL_PATH ), '/' ) );
+		if ( $orig_path !== $cont_path ) {
+			return false;
+		}
+		// Same video / playlist / channel id (the query parameter that identifies the resource).
+		foreach ( array( 'v', 'list', 'channel_id' ) as $key ) {
+			$o = array();
+			$c = array();
+			wp_parse_str( (string) wp_parse_url( $original, PHP_URL_QUERY ), $o );
+			wp_parse_str( (string) wp_parse_url( $continue, PHP_URL_QUERY ), $c );
+			$ov = isset( $o[ $key ] ) && is_string( $o[ $key ] ) ? $o[ $key ] : '';
+			$cv = isset( $c[ $key ] ) && is_string( $c[ $key ] ) ? $c[ $key ] : '';
+			if ( $ov !== $cv ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Whether a GitHub "latest release asset" URL redirected to GitHub's asset CDN.
+	 *
+	 * The URL github.com/{owner}/{repo}/releases/latest/download/{asset} is a stable alias: it always answers with a
+	 * 302 to release-assets.githubusercontent.com (or objects.githubusercontent.com) for the current file. The
+	 * original URL is the right one to keep, so this is not a redirect to fix.
+	 *
+	 * @param string $original     Original URL.
+	 * @param string $final_target Final URL after following redirects.
+	 * @return bool
+	 */
+	private function is_github_latest_download_redirect( $original, $final_target ) {
+		$orig_host = strtolower( (string) wp_parse_url( $original, PHP_URL_HOST ) );
+		if ( 'github.com' !== $orig_host && 'www.github.com' !== $orig_host ) {
+			return false;
+		}
+		$orig_path = (string) wp_parse_url( $original, PHP_URL_PATH );
+		if ( ! preg_match( '#^/[^/]+/[^/]+/releases/(?:latest/)?download/#i', $orig_path ) ) {
+			return false;
+		}
+		$final_host = strtolower( (string) wp_parse_url( $final_target, PHP_URL_HOST ) );
+		return 'githubusercontent.com' === $final_host || '.githubusercontent.com' === substr( $final_host, -22 );
+	}
+
+	/**
+	 * Whether a telegram.org "/dl/" download URL redirected to Telegram's download hosts.
+	 *
+	 * Examples are telegram.org/dl/android/apk (to a telesco.pe CDN file) and telegram.org/dl/desktop/linux
+	 * (to td.telegram.org). These are stable aliases that always point at the current build.
+	 *
+	 * @param string $original     Original URL.
+	 * @param string $final_target Final URL after following redirects.
+	 * @return bool
+	 */
+	private function is_telegram_dl_redirect( $original, $final_target ) {
+		$orig_host = strtolower( (string) wp_parse_url( $original, PHP_URL_HOST ) );
+		if ( 'telegram.org' !== $orig_host && 'www.telegram.org' !== $orig_host ) {
+			return false;
+		}
+		if ( 0 !== strpos( (string) wp_parse_url( $original, PHP_URL_PATH ), '/dl/' ) ) {
+			return false;
+		}
+		$final_host = strtolower( (string) wp_parse_url( $final_target, PHP_URL_HOST ) );
+		return (bool) preg_match( '/(^|\.)(?:telegram\.org|telesco\.pe)$/', $final_host );
 	}
 
 	/**

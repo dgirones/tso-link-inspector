@@ -189,7 +189,7 @@ class TSOLIIN_Reports {
 		$limit  = null === $limit ? self::get_report_export_limit() : max( 1, absint( $limit ) );
 		$filter = isset( $args['filter'] ) ? sanitize_key( (string) $args['filter'] ) : 'all';
 
-		if ( 'all' === $filter ) {
+		if ( 'all' === $filter && empty( $args['search'] ) ) {
 			$result = $db->get_links(
 				array_merge(
 					$args,
@@ -284,7 +284,7 @@ class TSOLIIN_Reports {
 		$date   = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
 		$title  = self::get_filter_label( $filter );
 
-		if ( 'all' === $filter ) {
+		if ( 'all' === $filter && empty( $args['search'] ) ) {
 			$section_title = __( 'Top broken links', 'tso-link-inspector' );
 		} else {
 			/* translators: %s: filter label */
