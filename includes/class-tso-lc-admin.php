@@ -679,12 +679,12 @@ class TSOLIIN_Admin {
 				'staleRowGone'             => __( 'This list row is already gone (the link was updated or removed from the content).', 'tso-link-inspector' ),
 				'itemsChecked'             => __( 'links rechecked.', 'tso-link-inspector' ),
 				'itemsUnlinked'            => __( 'links unlinked.', 'tso-link-inspector' ),
-				'itemsSkipped'             => __( 'rows skipped (menu/widget/term).', 'tso-link-inspector' ),
+				'itemsSkipped'             => __( 'rows skipped (not eligible for this action).', 'tso-link-inspector' ),
 				'itemsSkippedHttps'        => __( 'links skipped (HTTPS not verified or not editable).', 'tso-link-inspector' ),
 				'itemsFailed'              => __( 'requests failed.', 'tso-link-inspector' ),
 				'unlinking'                => __( 'Unlinking…', 'tso-link-inspector' ),
 				'confirmUnlink'            => __( 'Are you sure? The text will remain but the link will be removed.', 'tso-link-inspector' ),
-				'confirmUnlinkBulk'        => __( 'Unlink the selected items? Anchor text stays; the link markup is removed from the source when possible.', 'tso-link-inspector' ),
+				'confirmUnlinkBulk'        => __( 'Unlink the selected items? For HTML links the anchor text stays and the link markup is removed. Plain-text URLs are deleted from the post content. Continue?', 'tso-link-inspector' ),
 				'confirmDelete'            => __( 'Delete this record from the list. The post will not be changed. Continue?', 'tso-link-inspector' ),
 				'noItemsSelected'          => __( 'Select at least one link first.', 'tso-link-inspector' ),
 				'confirmDeletePlain'       => __( 'This URL is plain text, not a link, so it cannot be unlinked. Delete the URL text from the post instead?', 'tso-link-inspector' ),
@@ -4054,11 +4054,12 @@ class TSOLIIN_Admin {
 					)
 				);
 			}
-			$link    = $this->db->get_link( $link_id );
-			$type    = ( $link && isset( $link->link_type ) ) ? (string) $link->link_type : 'link';
-			$ok      = false;
-			$skipped = false;
-			$ghost   = false; // Stale list row only: nothing was removed from any content, so nothing to log.
+			$link         = $this->db->get_link( $link_id );
+			$type         = ( $link && isset( $link->link_type ) ) ? (string) $link->link_type : 'link';
+			$ok           = false;
+			$skipped      = false;
+			$ghost        = false; // Stale list row only: nothing was removed from any content, so nothing to log.
+			$log_action   = 'bulk_unlink';
 			if ( $link ) {
 				if ( ! TSOLIIN_Support::current_user_can_mutate_link( $link ) && ! $this->scanner->is_orphan_post_link_row( $link ) ) {
 					$ok      = false;
@@ -4073,9 +4074,9 @@ class TSOLIIN_Admin {
 						$skipped = true;
 					}
 				} elseif ( 'plain' === $type && $this->scanner->is_plain_url_in_post_content( (int) $link->post_id, (string) $link->link_url ) ) {
-					// Plain text has no link to remove; deleting URL text is only offered one by one, with a confirmation.
-					$ok      = false;
-					$skipped = true;
+					// Plain text has no <a> markup: bulk unlink deletes the URL text (same as row Unlink after confirm).
+					$ok         = $this->scanner->remove_plain_url_in_post( (int) $link->post_id, (string) $link->link_url );
+					$log_action = 'delete_plain';
 				} elseif ( '' !== $this->scanner->get_meta_only_field_key( $link ) ) {
 					// URL only in a custom field: clearing it needs a confirmation, offered one by one.
 					$ok      = false;
@@ -4093,7 +4094,7 @@ class TSOLIIN_Admin {
 				}
 				if ( $ok ) {
 					if ( ! $ghost ) {
-						$this->db->log_url_change( $link_id, (int) $link->post_id, (string) $link->link_url, '', 'bulk_unlink' );
+						$this->db->log_url_change( $link_id, (int) $link->post_id, (string) $link->link_url, '', $log_action );
 					}
 					$this->db->delete_link( $link_id );
 				}
