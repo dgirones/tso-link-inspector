@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       TSO Link Inspector
  * Description:       Find and fix broken links across your entire WordPress site without opening each post.
- * Version:           2.6.1
+ * Version:           2.6.4
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            Tu Soporte Online
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TSOLIIN_VERSION', '2.6.1' );
+define( 'TSOLIIN_VERSION', '2.6.4' );
 define( 'TSOLIIN_PLUGIN_FILE', __FILE__ );
 define( 'TSOLIIN_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TSOLIIN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

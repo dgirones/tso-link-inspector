@@ -880,6 +880,11 @@ a.tsoliin-stat:focus-visible {
 	font-size: 12px;
 }
 
+.tsoliin-status-filter__select {
+	max-width: 300px;
+	text-overflow: ellipsis;
+}
+
 .tsoliin-scope-search-row__search {
 	flex: 0 0 auto;
 	margin-left: auto;
@@ -2025,6 +2030,10 @@ body.admin_page_tso-link-inspector-settings #wpadminbar .ab-top-secondary > li {
 	.tsoliin-type-filter__select {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+
+	.tsoliin-status-filter__select {
+		max-width: 100%;
 	}
 
 	.tsoliin-scope-search-row__search .tsoliin-search-form {
@@ -3291,4 +3300,13 @@ html[data-tsoliin-theme="night"] .tsoliin-wrap .tsoliin-suggest-list em {
 	.tsoliin-theme-btn .tsoliin-theme-label {
 		display: none;
 	}
+}
+
+/* Selection kept across searches: note shown when part of it is not in the current list. */
+.tsoliin-selection-note {
+	display: inline-block;
+	margin-left: 10px;
+	line-height: 28px;
+	font-style: italic;
+	opacity: .85;
 }

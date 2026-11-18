@@ -38,6 +38,9 @@ class TSOLIIN_DB {
 	/** Max URL-change history rows kept (oldest pruned automatically). */
 	const HISTORY_MAX_ROWS = 500;
 
+	/** Days a link without a verified HTTPS version is not re-checked by the bulk HTTPS upgrade. */
+	const HTTPS_SKIP_DAYS = 30;
+
 	/**
 	 * Cached result of table_exists() for this request.
 	 *
@@ -58,6 +61,13 @@ class TSOLIIN_DB {
 	 * @var bool
 	 */
 	private $schema_upgraded = false;
+
+	/**
+	 * Whether the https_skipped_at column exists (null until checked this request).
+	 *
+	 * @var bool|null
+	 */
+	private $https_skip_column = null;
 
 	/**
 	 * Whether create_history_table() already ran this request.
@@ -170,6 +180,7 @@ class TSOLIIN_DB {
 			source_key varchar(64) NOT NULL DEFAULT '',
 			last_checked datetime DEFAULT NULL,
 			consecutive_failures smallint(6) NOT NULL DEFAULT 0,
+			https_skipped_at datetime DEFAULT NULL,
 			date_found datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			KEY post_id (post_id),
@@ -465,6 +476,82 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Make sure the https_skipped_at column exists (checked once per request, added when missing).
+	 *
+	 * Only the bulk HTTPS upgrade and the HTTP insecure list need it, so every other flow keeps working
+	 * even before the column has been added.
+	 *
+	 * @return bool
+	 */
+	public function ensure_https_skip_column() {
+		if ( null !== $this->https_skip_column ) {
+			return $this->https_skip_column;
+		}
+		$this->https_skip_column = false;
+		if ( ! $this->table_exists() ) {
+			return false;
+		}
+		global $wpdb;
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$column = $wpdb->get_var( "SHOW COLUMNS FROM `{$this->table}` LIKE 'https_skipped_at'" );
+		if ( empty( $column ) ) {
+			$suppress = $wpdb->suppress_errors();
+			$wpdb->query( "ALTER TABLE `{$this->table}` ADD COLUMN https_skipped_at datetime DEFAULT NULL AFTER consecutive_failures" );
+			$wpdb->suppress_errors( $suppress );
+			$column = $wpdb->get_var( "SHOW COLUMNS FROM `{$this->table}` LIKE 'https_skipped_at'" );
+		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$this->https_skip_column = ! empty( $column );
+		return $this->https_skip_column;
+	}
+
+	/**
+	 * Remember that no verified HTTPS version was found for a link, so the bulk upgrade skips it for a while.
+	 *
+	 * @param int $link_id Link row ID.
+	 * @return void
+	 */
+	public function mark_https_skipped( $link_id ) {
+		if ( ! $this->ensure_https_skip_column() ) {
+			return;
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $this->table, array( 'https_skipped_at' => current_time( 'mysql', true ) ), array( 'id' => absint( $link_id ) ), array( '%s' ), array( '%d' ) );
+	}
+
+	/**
+	 * Forget a recorded HTTPS skip (the link URL changed). Harmless when the column does not exist yet.
+	 *
+	 * @param int $link_id Link row ID.
+	 * @return void
+	 */
+	public function clear_https_skipped( $link_id ) {
+		if ( false === $this->https_skip_column ) {
+			return;
+		}
+		global $wpdb;
+		$suppress = $wpdb->suppress_errors();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update( $this->table, array( 'https_skipped_at' => null ), array( 'id' => absint( $link_id ) ), array( '%s' ), array( '%d' ) );
+		$wpdb->suppress_errors( $suppress );
+	}
+
+	/**
+	 * Whether a link was recently found to have no verified HTTPS version.
+	 *
+	 * @param object|null $link DB link row.
+	 * @return bool
+	 */
+	public static function https_skip_is_fresh( $link ) {
+		if ( ! is_object( $link ) || empty( $link->https_skipped_at ) ) {
+			return false;
+		}
+		$when = strtotime( (string) $link->https_skipped_at . ' UTC' );
+		return false !== $when && $when > ( time() - self::HTTPS_SKIP_DAYS * DAY_IN_SECONDS );
+	}
+
+	/**
 	 * Decode stored redirect chain JSON.
 	 *
 	 * @param string $json Stored JSON.
@@ -693,6 +780,7 @@ class TSOLIIN_DB {
 						array( '%d' )
 					);
 					// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$this->clear_https_skipped( absint( $by_key->id ) );
 					self::clear_stats_cache();
 					return absint( $by_key->id );
 				}
@@ -786,6 +874,7 @@ class TSOLIIN_DB {
 					array( '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%d', '%d', '%s', '%s' ),
 					array( '%d' )
 				);
+				$this->clear_https_skipped( absint( $alias_id ) );
 			} else {
 				$wpdb->update(
 					$this->table,
@@ -1212,7 +1301,7 @@ class TSOLIIN_DB {
 	 *
 	 * @param int    $link_id     Link row ID.
 	 * @param string $new_url     New URL.
-	 * @param string $change_type History label: edit|suggest|relative|https|bulk_relative|bulk_https.
+	 * @param string $change_type History label: edit|suggest|relative|https|bulk_relative|bulk_https|unlink|bulk_unlink.
 	 */
 	public function update_link_url( $link_id, $new_url, $change_type = 'edit' ) {
 		global $wpdb;
@@ -1249,6 +1338,7 @@ class TSOLIIN_DB {
 			array( '%d' )
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$this->clear_https_skipped( $link_id );
 		self::clear_stats_cache();
 
 		if ( $old_row && (string) $old_row->link_url !== $new_url ) {
@@ -1276,12 +1366,12 @@ class TSOLIIN_DB {
 	}
 
 	/**
-	 * Record a URL change and prune oldest rows past HISTORY_MAX_ROWS.
+	 * Record a URL change (or a removed link, with an empty new URL) and prune oldest rows past HISTORY_MAX_ROWS.
 	 *
 	 * @param int    $link_id     Link ID.
 	 * @param int    $post_id     Post ID.
 	 * @param string $old_url     Previous URL.
-	 * @param string $new_url     New URL.
+	 * @param string $new_url     New URL ('' when the link was removed).
 	 * @param string $change_type Change type key.
 	 * @return void
 	 */
@@ -1735,16 +1825,17 @@ class TSOLIIN_DB {
 		global $wpdb;
 
 		$defaults      = array(
-			'filter'           => 'all',
-			'quality_filter'   => '',
-			'link_type_filter' => '',
-			'scope'            => 'all',
-			'per_page'         => 20,
-			'paged'            => 1,
-			'orderby'          => 'date_found',
-			'order'            => 'DESC',
-			'search'           => '',
-			'post_id'          => 0,
+			'filter'             => 'all',
+			'quality_filter'     => '',
+			'link_type_filter'   => '',
+			'status_code_filter' => '',
+			'scope'              => 'all',
+			'per_page'           => 20,
+			'paged'              => 1,
+			'orderby'            => 'date_found',
+			'order'              => 'DESC',
+			'search'             => '',
+			'post_id'            => 0,
 		);
 		$args          = wp_parse_args( $args, $defaults );
 		$args['scope'] = $this->sanitize_link_scope( $args['scope'] );
@@ -1791,14 +1882,44 @@ class TSOLIIN_DB {
 			$args['link_type_filter'] = '';
 		}
 
+		$args['status_code_filter'] = self::sanitize_status_code_filter( isset( $args['status_code_filter'] ) ? $args['status_code_filter'] : '' );
+
 		return $args;
+	}
+
+	/**
+	 * Normalise the detailed status filter: comma-separated HTTP / internal status codes.
+	 *
+	 * Codes can be negative (internal results such as timeout or parked domain), so sanitize_key()
+	 * is not enough. Invalid pieces are dropped; the result is sorted so equal filters compare equal.
+	 *
+	 * @param mixed $raw Raw value (for example "-3" or "-2,2").
+	 * @return string Normalised value, or '' when there is no valid code.
+	 */
+	public static function sanitize_status_code_filter( $raw ) {
+		if ( ! is_string( $raw ) && ! is_int( $raw ) ) {
+			return '';
+		}
+		$codes = array();
+		foreach ( explode( ',', (string) $raw ) as $piece ) {
+			$piece = trim( $piece );
+			if ( preg_match( '/^-?\d{1,3}$/', $piece ) ) {
+				$codes[ (int) $piece ] = (int) $piece;
+			}
+		}
+		if ( empty( $codes ) ) {
+			return '';
+		}
+		$codes = array_slice( array_values( $codes ), 0, 12 );
+		sort( $codes, SORT_NUMERIC );
+		return implode( ',', $codes );
 	}
 
 	/**
 	 * Shared WHERE/ORDER BY parts for admin link list queries.
 	 *
 	 * @param array $args Query arguments.
-	 * @return array{where:string,params:array,orderby:string,order:string,posts_join:string}
+	 * @return array{where:string,params:array,orderby:string,order:string,order_prefix:string,posts_join:string}
 	 */
 	private function build_links_list_query_parts( array $args ) {
 		global $wpdb;
@@ -1868,6 +1989,14 @@ class TSOLIIN_DB {
 			$params[] = $link_type_filter;
 		}
 
+		// Detailed status (Status dropdown): only links already checked, so stale codes of queued rechecks never match.
+		$status_codes = isset( $args['status_code_filter'] ) ? self::sanitize_status_code_filter( $args['status_code_filter'] ) : '';
+		if ( '' !== $status_codes ) {
+			$code_list = array_map( 'intval', explode( ',', $status_codes ) );
+			$where    .= ' AND l.last_checked IS NOT NULL AND l.status_code IN (' . implode( ',', array_fill( 0, count( $code_list ), '%d' ) ) . ')';
+			$params    = array_merge( $params, $code_list );
+		}
+
 		if ( '' !== $args['search'] ) {
 			$search_term = sanitize_text_field( $args['search'] );
 			$url_pieces  = array();
@@ -1931,12 +2060,19 @@ class TSOLIIN_DB {
 			}
 		}
 
+		// HTTP insecure tab: links recently found to have no verified HTTPS version go last, so batches reach the fixable ones first.
+		$order_prefix = '';
+		if ( 'http_insecure' === $args['filter'] && $this->ensure_https_skip_column() ) {
+			$order_prefix = "( l.https_skipped_at IS NOT NULL AND l.https_skipped_at > '" . esc_sql( gmdate( 'Y-m-d H:i:s', time() - self::HTTPS_SKIP_DAYS * DAY_IN_SECONDS ) ) . "' ) ASC, ";
+		}
+
 		return array(
-			'where'      => $where,
-			'params'     => $params,
-			'orderby'    => $orderby,
-			'order'      => $order,
-			'posts_join' => " LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id ",
+			'where'        => $where,
+			'params'       => $params,
+			'orderby'      => $orderby,
+			'order'        => $order,
+			'order_prefix' => $order_prefix,
+			'posts_join'   => " LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id ",
 		);
 	}
 
@@ -1978,6 +2114,51 @@ class TSOLIIN_DB {
 	}
 
 	/**
+	 * Checked links per status code for the Status dropdown, under the current list filters.
+	 *
+	 * Uses the same WHERE as the list (tab, quality, type, scope, search, post) except the detailed
+	 * status itself, so each count is what the list would show after choosing that status.
+	 *
+	 * @param array $args Same arguments as get_links().
+	 * @return array<int,int> Status code => number of links.
+	 */
+	public function get_status_code_counts( array $args ) {
+		global $wpdb;
+
+		$args                       = wp_parse_args(
+			$args,
+			array(
+				'filter'           => 'all',
+				'quality_filter'   => '',
+				'link_type_filter' => '',
+				'scope'            => 'all',
+				'search'           => '',
+				'post_id'          => 0,
+				'orderby'          => 'date_found',
+				'order'            => 'DESC',
+			)
+		);
+		$args['scope']              = $this->sanitize_link_scope( $args['scope'] );
+		$args                       = $this->normalize_link_query_filters( $args );
+		$args['status_code_filter'] = '';
+
+		$parts = $this->build_links_list_query_parts( $args );
+		$sql   = "SELECT l.status_code AS code, COUNT(*) AS cnt FROM {$this->table} l{$parts['posts_join']}{$parts['where']} AND l.last_checked IS NOT NULL GROUP BY l.status_code";
+		if ( ! empty( $parts['params'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $parts['params'] ) ); // $sql built from the known table name and the shared list WHERE (placeholders only).
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$rows = $wpdb->get_results( $sql ); // $sql built from the known table name, no user input.
+		}
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row->code ] = (int) $row->cnt;
+		}
+		return $out;
+	}
+
+	/**
 	 * Paginated links query (core SQL).
 	 *
 	 * @param array $args Query arguments.
@@ -1991,6 +2172,7 @@ class TSOLIIN_DB {
 		$params      = $query_parts['params'];
 		$orderby     = $query_parts['orderby'];
 		$order       = $query_parts['order'];
+		$order_pre   = $query_parts['order_prefix'];
 		$posts_join  = $query_parts['posts_join'];
 
 		$per_page = max( 1, absint( $args['per_page'] ) );
@@ -2005,7 +2187,7 @@ class TSOLIIN_DB {
 			$total = (int) $wpdb->get_var( $count_sql ); // $count_sql built with known table name, no user input.
 		}
 
-		$items_sql    = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id $where ORDER BY l.$orderby $order, l.id $order LIMIT %d OFFSET %d";
+		$items_sql    = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l LEFT JOIN {$wpdb->posts} p ON p.ID = l.post_id $where ORDER BY {$order_pre}l.$orderby $order, l.id $order LIMIT %d OFFSET %d";
 		$items_params = array_merge( $params, array( $per_page, $offset ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$items = $wpdb->get_results( $wpdb->prepare( $items_sql, $items_params ) ); // $items_sql built from known table + whitelisted orderby/filter.
@@ -2058,6 +2240,7 @@ class TSOLIIN_DB {
 		$params      = $query_parts['params'];
 		$orderby     = $query_parts['orderby'];
 		$order       = $query_parts['order'];
+		$order_pre   = $query_parts['order_prefix'];
 		$posts_join  = $query_parts['posts_join'];
 
 		$batch_size    = 250;
@@ -2068,7 +2251,7 @@ class TSOLIIN_DB {
 		$list_per_page = max( 0, (int) $list_per_page );
 
 		while ( true ) {
-			$items_sql = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l{$posts_join}{$where} ORDER BY l.{$orderby} {$order}, l.id {$order} LIMIT %d OFFSET %d";
+			$items_sql = "SELECT l.*, p.post_title, p.post_status FROM {$this->table} l{$posts_join}{$where} ORDER BY {$order_pre}l.{$orderby} {$order}, l.id {$order} LIMIT %d OFFSET %d";
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$batch = $wpdb->get_results( $wpdb->prepare( $items_sql, array_merge( $params, array( $batch_size, $cursor ) ) ) );
 			if ( empty( $batch ) ) {
@@ -2093,7 +2276,7 @@ class TSOLIIN_DB {
 			}
 		}
 
-		if ( empty( $args['post_id'] ) && '' === (string) $args['search'] && empty( $args['link_type_filter'] ) && 'all' === sanitize_key( (string) $args['filter'] ) ) {
+		if ( empty( $args['post_id'] ) && '' === (string) $args['search'] && empty( $args['link_type_filter'] ) && empty( $args['status_code_filter'] ) && 'all' === sanitize_key( (string) $args['filter'] ) ) {
 			set_transient( 'tsoliin_unpub_cnt_v3_all', $match_index, 15 * MINUTE_IN_SECONDS );
 		}
 
@@ -3029,7 +3212,14 @@ class TSOLIIN_DB {
 		if ( '' === $key ) {
 			return;
 		}
-		delete_transient( $key );
+		// acquire_transient_lock() writes both rows straight to the options table. With a
+		// persistent object cache delete_transient() only clears the cache and never touches
+		// those rows, so a "released" lock stayed held until it expired: a second Scan/Check
+		// start within 15 s was refused, and each scan step or comment batch waited ~45 s.
+		delete_option( '_transient_timeout_' . $key );
+		delete_option( '_transient_' . $key );
+		wp_cache_delete( $key, 'transient' );
+		wp_cache_delete( 'timeout_' . $key, 'transient' );
 	}
 
 	/**

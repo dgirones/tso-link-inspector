@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.1
+Stable tag: 2.6.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,7 +38,7 @@ Find and fix broken links across your entire WordPress site without opening each
 * **HTTP insecure detection**: flags active links still using HTTP instead of HTTPS.
 * **Ignore list**: add domains or URL prefixes to never scan or check.
 * **Continue check / Restart from zero**: resume a stopped run, or wipe progress and recheck everything.
-* **History**: Settings tab listing recent URL changes from Edit, Suggest, Convert to /path, and HTTPS (capped log; oldest rows pruned automatically).
+* **History**: Settings tab listing recent URL changes from Edit, Suggest, Convert to /path, and HTTPS, and links removed with Unlink (capped log; oldest rows pruned automatically).
 * **Save when unverified**: Edit link / Suggest can still save a URL if this server cannot confirm it (geo-block, bot wall, timeout), with an option to ignore that domain.
 * **Scan images and iframes**: optionally detect broken `<img src>` and embedded videos.
 * **Scan user comments**: optionally check links in approved comments.
@@ -59,7 +59,7 @@ Find and fix broken links across your entire WordPress site without opening each
 1. Click **Scan now** to extract all links from your posts.
 2. Click **Check now** to send HTTP requests to every URL (runs server-side, you can close the browser). If you stop mid-run, use **Continue check** to resume, or **Restart from zero** to wipe progress and recheck everything.
 3. Review results using the **Broken**, **Redirect**, **HTTP insecure** and other filter tabs.
-4. Fix links using **Edit URL**, **Suggestion**, **Unlink** or **Mark as OK** from each row. Recent URL changes appear under **Settings → History**.
+4. Fix links using **Edit URL**, **Suggestion**, **Unlink** or **Mark as OK** from each row. Recent URL changes and removed links appear under **Settings → History**.
 
 = Redirect intelligence =
 
@@ -111,7 +111,7 @@ The links the scan just found are checked automatically. Links checked earlier k
 If a check was stopped and unchecked links remain, **Continue check** resumes from where it left off (already-checked links stay as they are). **Restart from zero** clears check progress and rechecks every link from scratch. **Continue check** starts immediately; **Restart from zero** asks for confirmation. The check that starts automatically after a scan behaves like **Continue check**.
 
 = Where is the URL change History? =
-Open **Tools → TSO Link Inspector → Settings → History**. It lists recent changes from Edit link, Suggest apply, Convert to /path, and Upgrade to HTTPS (including bulk actions). The log keeps a limited number of rows (oldest removed automatically). You can delete all history records; this does not change posts or the link list.
+Open **Tools → TSO Link Inspector → Settings → History**. It lists recent changes from Edit link, Suggest apply, Convert to /path, and Upgrade to HTTPS, and links removed with Unlink (including bulk actions). The log keeps a limited number of rows (oldest removed automatically). You can delete all history records; this does not change posts or the link list.
 
 = Can I save a URL when the server cannot verify it? =
 Yes. In Edit link or Suggest, if this server gets a geo-block, bot wall, or timeout, you can still save the URL. Optionally tick **ignore domain** so that host is added to the Ignore list and skipped in future scans/checks.
@@ -141,18 +141,25 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 
 == Changelog ==
 
+= 2.6.4 =
+* New: Status dropdown in the link list to filter by Timed out, Parked domain, Not found, etc.
+* Improved: the bulk selection is kept while searching, sorting or paging, and cleared when the scope or filter changes.
+* Improved: Unlink on a plain text URL offers to delete the URL text from the post.
+* Improved: Unlink on a URL stored in a custom field asks before clearing it.
+
+= 2.6.3 =
+* Fix: bulk actions no longer stop on an error window; slow links are retried.
+* Fix: bulk HTTPS upgrade leaves addresses like http://name@host unchanged.
+* Improved: bulk HTTPS upgrade remembers links with no HTTPS version for 30 days and lists them last.
+
+= 2.6.2 =
+* New: History tab also records links removed with Unlink.
+* Improved: own-site link checks are marked for TSO Swiss Knife.
+* Fix: Unlink works on image files that are only linked.
+* Fix: scans and checks no longer stall with a persistent object cache.
+
 = 2.6.1 =
 * Fix: scanning posts with many links no longer exceeds the server time limit.
-* Fix: links of a just-edited post are kept; links of deleted posts are removed.
-
-= 2.6.0 =
-* Improved: dashboard widget shows redirects.
-* Improved: Automatic language uses language packs added later.
-* Fix: the "Getting started" banner stays until you close it.
-
-= 2.5.9 =
-* Fix: renaming an image with only case changes no longer leaves a 404 row.
-* Fix: more accurate search across URLs and link text.
-* Fix: CSV and PDF exports respect search and filters.
+* Fix: links of edited posts are kept; links of deleted posts are removed.
 
 See changelog.txt in the plugin folder for older versions

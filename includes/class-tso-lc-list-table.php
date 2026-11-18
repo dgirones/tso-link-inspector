@@ -138,6 +138,17 @@ class TSOLIIN_List_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Active detailed status filter (Status dropdown): comma-separated status codes, or ''.
+	 *
+	 * @return string
+	 */
+	private function read_request_status_code_filter() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list GET filter; read-only display.
+		$raw = isset( $_REQUEST['status_code_filter'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['status_code_filter'] ) ) : '';
+		return TSOLIIN_DB::sanitize_status_code_filter( $raw );
+	}
+
+	/**
 	 * Append current quality_filter to tab URL args when active.
 	 *
 	 * @param array $args Query args (by ref).
@@ -207,6 +218,13 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			$type = $this->read_request_type_filter();
 			if ( '' !== $type ) {
 				$query['link_type_filter'] = $type;
+			}
+		}
+
+		if ( ! isset( $args['status_code_filter'] ) && ! in_array( 'status_code_filter', $omit_keys, true ) ) {
+			$status_codes = $this->read_request_status_code_filter();
+			if ( '' !== $status_codes ) {
+				$query['status_code_filter'] = $status_codes;
 			}
 		}
 
@@ -343,6 +361,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$filter    = $this->read_request_status_filter();
 		$quality   = $this->read_request_quality_filter();
 		$link_type = $this->read_request_type_filter();
+		$status_cd = $this->read_request_status_code_filter();
 		$search    = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '';
 		$orderby   = isset( $_REQUEST['orderby'] ) ? sanitize_key( $_REQUEST['orderby'] ) : 'date_found';
 		$order     = isset( $_REQUEST['order'] ) ? sanitize_key( $_REQUEST['order'] ) : 'DESC';
@@ -369,16 +388,17 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$scope   = $this->read_request_scope();
 		$result  = $this->db->get_links(
 			array(
-				'filter'           => $filter,
-				'quality_filter'   => $quality,
-				'link_type_filter' => $link_type,
-				'scope'            => $scope,
-				'search'           => $search,
-				'orderby'          => $orderby,
-				'order'            => $order,
-				'per_page'         => $per_page,
-				'paged'            => $paged,
-				'post_id'          => $post_id,
+				'filter'             => $filter,
+				'quality_filter'     => $quality,
+				'link_type_filter'   => $link_type,
+				'status_code_filter' => $status_cd,
+				'scope'              => $scope,
+				'search'             => $search,
+				'orderby'            => $orderby,
+				'order'              => $order,
+				'per_page'           => $per_page,
+				'paged'              => $paged,
+				'post_id'            => $post_id,
 			)
 		);
 
@@ -613,15 +633,25 @@ class TSOLIIN_List_Table extends WP_List_Table {
 		$actions['not_broken'] = sprintf( '<a href="#" class="tsoliin-not-broken" data-id="%d" data-nonce="%s" title="%s" style="color:#0a7d33;font-weight:600;">%s</a>', absint( $item->id ), esc_attr( $nonce ), esc_attr( $not_broken_title ), esc_html__( 'Not broken', 'tso-link-inspector' ) );
 
 		if ( $can_unlink ) {
-			$unlink_title      = TSOLIIN_Support::is_comment_author_url_row( $item )
+			$unlink_title  = TSOLIIN_Support::is_comment_author_url_row( $item )
 				? __( 'Clear the comment author website field (URL)', 'tso-link-inspector' )
 				: __( 'Remove the link (or image) from the source; visible text is kept when it is a text link.', 'tso-link-inspector' );
+			$is_plain_text = TSOLIIN_Support::is_plain_text_url_row_in_content( $item );
+			if ( $is_plain_text ) {
+				$unlink_title = __( 'Plain text URL: you will be asked whether to delete the URL text from the post.', 'tso-link-inspector' );
+			}
+			$is_meta_only = ( ! $is_plain_text && ! empty( $item->post_id ) ) ? '' !== TSOLIIN_Support::get_meta_only_field_key( $item ) : false;
+			if ( $is_meta_only ) {
+				$unlink_title = __( 'URL stored in a custom field: you will be asked before it is removed from that field.', 'tso-link-inspector' );
+			}
 			$actions['unlink'] = sprintf(
-				'<a href="#" class="tsoliin-unlink" data-id="%d" data-url="%s" data-post="%d" data-nonce="%s" title="%s">%s</a>',
+				'<a href="#" class="tsoliin-unlink" data-id="%d" data-url="%s" data-post="%d" data-nonce="%s" data-plain="%d" data-meta="%d" title="%s">%s</a>',
 				absint( $item->id ),
 				esc_attr( $url ),
 				absint( $item->post_id ),
 				esc_attr( $nonce ),
+				$is_plain_text ? 1 : 0,
+				$is_meta_only ? 1 : 0,
 				esc_attr( $unlink_title ),
 				esc_html__( 'Unlink', 'tso-link-inspector' )
 			);
@@ -877,7 +907,8 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			if ( 'all' !== $ctx['scope_current'] ) {
 				$tab_args['scope'] = $ctx['scope_current'];
 			}
-			$url    = esc_url( $this->list_nav_url( $tab_args, array( 'paged', 's' ) ) );
+			// A detailed status only makes sense inside the tab it was chosen in, so switching tab clears it.
+			$url    = esc_url( $this->list_nav_url( $tab_args, array( 'paged', 's', 'status_code_filter' ) ) );
 			$active = $current === $key ? ' class="current"' : '';
 			$title  = '';
 			if ( 'unchecked' === $key ) {
@@ -1043,6 +1074,104 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			}
 			$option_url = esc_url( $this->list_nav_url( $type_args, $omit_keys ) );
 			$selected   = ( $current === $key ) ? ' selected="selected"' : '';
+			echo '<option value="' . $option_url . '"' . $selected . '>' . esc_html( $label ) . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $option_url from esc_url().
+		}
+		echo '</select>';
+		echo '</div>';
+	}
+
+	/**
+	 * Status dropdown (Timed out, Domain parked or for sale, Not found, …) with the number of links of each.
+	 *
+	 * Only statuses present in the checked links of the current list are offered. Codes that share a
+	 * label (for example 2 and -2, "Domain does not exist") are one option. Choosing one adds
+	 * "AND status_code IN (…)" to the list SQL; it combines with the tabs, quality, type, scope and search.
+	 *
+	 * @return void
+	 */
+	private function render_status_code_dropdown() {
+		$ctx     = $this->get_list_tabnav_context();
+		$current = $this->read_request_status_code_filter();
+		$quality = $ctx['quality_current'];
+
+		$counts = $this->db->get_status_code_counts(
+			array(
+				'filter'           => $ctx['current'],
+				'quality_filter'   => $quality,
+				'link_type_filter' => $this->read_request_type_filter(),
+				'scope'            => $ctx['scope_current'],
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Admin list GET filter; read-only display.
+				'search'           => isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '',
+				'post_id'          => $ctx['view_post_id_nav'],
+			)
+		);
+		// The unpublished-target quality filter is matched in PHP, so SQL counts would not match its list.
+		$show_counts = ( 'unpublished_target' !== $quality );
+
+		// Group codes by their label.
+		$groups = array();
+		foreach ( $counts as $code => $count ) {
+			$label = TSOLIIN_HTTP::status_label( (int) $code );
+			if ( ! isset( $groups[ $label ] ) ) {
+				$groups[ $label ] = array(
+					'codes' => array(),
+					'count' => 0,
+				);
+			}
+			$groups[ $label ]['codes'][] = (int) $code;
+			$groups[ $label ]['count']  += (int) $count;
+		}
+		uasort(
+			$groups,
+			static function ( $a, $b ) {
+				return $b['count'] <=> $a['count'];
+			}
+		);
+
+		// Label of the active choice: a link like ?status_code_filter=-2 still selects the option that groups -2 and 2.
+		$current_labels = array();
+		if ( '' !== $current ) {
+			foreach ( explode( ',', $current ) as $code ) {
+				$current_labels[ TSOLIIN_HTTP::status_label( (int) $code ) ] = true;
+			}
+		}
+		$current_label  = ( 1 === count( $current_labels ) ) ? (string) key( $current_labels ) : '';
+		$selected_value = '';
+
+		$options = array();
+		foreach ( $groups as $label => $group ) {
+			$value = TSOLIIN_DB::sanitize_status_code_filter( implode( ',', $group['codes'] ) );
+			if ( '' !== $current && ( $value === $current || (string) $label === $current_label ) ) {
+				$selected_value = $value;
+			}
+			$options[ $value ] = $show_counts
+				? sprintf( '%1$s (%2$s)', $label, TSOLIIN_Support::format_display_number( $group['count'] ) )
+				: $label;
+		}
+		// Keep an active choice visible even when no checked link has that status in this view.
+		if ( '' !== $current && '' === $selected_value ) {
+			$labels = array();
+			foreach ( explode( ',', $current ) as $code ) {
+				$labels[ TSOLIIN_HTTP::status_label( (int) $code ) ] = true;
+			}
+			$options[ $current ] = $show_counts
+				? sprintf( '%1$s (%2$s)', implode( ' / ', array_keys( $labels ) ), TSOLIIN_Support::format_display_number( 0 ) )
+				: implode( ' / ', array_keys( $labels ) );
+			$selected_value      = $current;
+		}
+
+		if ( empty( $options ) && '' === $current ) {
+			return;
+		}
+
+		echo '<div class="tsoliin-type-filter tsoliin-status-filter">';
+		echo '<label class="screen-reader-text" for="tsoliin-status-filter-select">' . esc_html__( 'Filter by link status', 'tso-link-inspector' ) . '</label>';
+		echo '<select id="tsoliin-status-filter-select" class="tsoliin-type-filter__select tsoliin-status-filter__select" aria-label="' . esc_attr__( 'Filter by link status', 'tso-link-inspector' ) . '">';
+		$all_url = esc_url( $this->list_nav_url( array(), array( 'paged', 'status_code_filter' ) ) );
+		echo '<option value="' . $all_url . '"' . ( '' === $current ? ' selected="selected"' : '' ) . '>' . esc_html__( 'All statuses', 'tso-link-inspector' ) . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $all_url from esc_url().
+		foreach ( $options as $value => $label ) {
+			$option_url = esc_url( $this->list_nav_url( array( 'status_code_filter' => (string) $value ), array( 'paged' ) ) );
+			$selected   = ( (string) $value === $selected_value ) ? ' selected="selected"' : '';
 			echo '<option value="' . $option_url . '"' . $selected . '>' . esc_html( $label ) . '</option>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $option_url from esc_url().
 		}
 		echo '</select>';
@@ -1257,6 +1386,7 @@ class TSOLIIN_List_Table extends WP_List_Table {
 			echo '<div class="tsoliin-scope-search-row">';
 			$this->render_scope_tabs();
 			$this->render_type_filter_dropdown();
+			$this->render_status_code_dropdown();
 			echo '<div class="tsoliin-scope-search-row__search">';
 			$this->render_search_controls();
 			echo '</div>';

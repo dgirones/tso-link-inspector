@@ -526,6 +526,8 @@ class TSOLIIN_Admin {
 			$list_type = '';
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$list_status_codes = isset( $_GET['status_code_filter'] ) ? TSOLIIN_DB::sanitize_status_code_filter( sanitize_text_field( wp_unslash( $_GET['status_code_filter'] ) ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$list_scope = $this->get_list_scope_from_request();
 
 		$user_id      = get_current_user_id();
@@ -535,28 +537,29 @@ class TSOLIIN_Admin {
 			'tsoliin-admin',
 			'tsoliinData',
 			array(
-				'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
-				'nonce'             => wp_create_nonce( 'tsoliin_action' ),
-				'timezone'          => TSOLIIN_Support::theme_timezone_string(),
-				'lat'               => $theme_coords['lat'],
-				'lng'               => $theme_coords['lng'],
-				'viewPostId'        => $view_post_id,
-				'listReturn'        => $view_post_id > 0 ? TSOLIIN_Support::get_request_return_context() : '',
-				'listView'          => $list_view,
-				'listFilter'        => $list_filter,
-				'listQualityFilter' => $list_quality,
-				'listTypeFilter'    => $list_type,
-				'listScope'         => $list_scope,
-				'listOrderby'       => isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'date_found', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			'listOrder'             => isset( $_GET['order'] ) ? strtoupper( sanitize_key( wp_unslash( $_GET['order'] ) ) ) : 'DESC', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			'settingsUrl'           => admin_url( 'tools.php?page=tso-link-inspector-settings' ),
-			'helpUrl'               => admin_url( 'tools.php?page=tso-link-inspector-settings&tab=help' ),
-			'historyUrl'            => admin_url( 'tools.php?page=tso-link-inspector-settings&tab=history' ),
-			'onboardingDismissed'   => (int) (bool) get_user_meta( $user_id, 'tsoliin_onboarding_closed', true ),
-			'relativeUrlTool'       => TSOLIIN_Support::is_relative_url_tool_enabled() ? 1 : 0,
-			'createRevision'        => TSOLIIN_Support::is_create_revision_enabled() ? 1 : 0,
-			'brokenFilterUrl'       => admin_url( 'tools.php?page=tso-link-inspector&filter=broken' ),
-			'filterTabs'            => array(
+				'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
+				'nonce'                => wp_create_nonce( 'tsoliin_action' ),
+				'timezone'             => TSOLIIN_Support::theme_timezone_string(),
+				'lat'                  => $theme_coords['lat'],
+				'lng'                  => $theme_coords['lng'],
+				'viewPostId'           => $view_post_id,
+				'listReturn'           => $view_post_id > 0 ? TSOLIIN_Support::get_request_return_context() : '',
+				'listView'             => $list_view,
+				'listFilter'           => $list_filter,
+				'listQualityFilter'    => $list_quality,
+				'listTypeFilter'       => $list_type,
+				'listStatusCodeFilter' => $list_status_codes,
+				'listScope'            => $list_scope,
+				'listOrderby'          => isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'date_found', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			'listOrder'                => isset( $_GET['order'] ) ? strtoupper( sanitize_key( wp_unslash( $_GET['order'] ) ) ) : 'DESC', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			'settingsUrl'              => admin_url( 'tools.php?page=tso-link-inspector-settings' ),
+			'helpUrl'                  => admin_url( 'tools.php?page=tso-link-inspector-settings&tab=help' ),
+			'historyUrl'               => admin_url( 'tools.php?page=tso-link-inspector-settings&tab=history' ),
+			'onboardingDismissed'      => (int) (bool) get_user_meta( $user_id, 'tsoliin_onboarding_closed', true ),
+			'relativeUrlTool'          => TSOLIIN_Support::is_relative_url_tool_enabled() ? 1 : 0,
+			'createRevision'           => TSOLIIN_Support::is_create_revision_enabled() ? 1 : 0,
+			'brokenFilterUrl'          => admin_url( 'tools.php?page=tso-link-inspector&filter=broken' ),
+			'filterTabs'               => array(
 				/* translators: %s: number of links */
 				'all'           => __( 'All (%s)', 'tso-link-inspector' ),
 				/* translators: %s: number of broken links */
@@ -572,7 +575,7 @@ class TSOLIIN_Admin {
 				/* translators: %s: number of manually locked links */
 				'manual_locked' => __( 'Manual locks (%s)', 'tso-link-inspector' ),
 			),
-			'qualityFilterTabs'     => array(
+			'qualityFilterTabs'        => array(
 				/* translators: %s: number of links with empty anchor text */
 				'empty_anchor'       => __( 'Empty anchor (%s)', 'tso-link-inspector' ),
 				/* translators: %s: number of links with generic anchor text */
@@ -580,36 +583,36 @@ class TSOLIIN_Admin {
 				/* translators: %s: number of links to unpublished posts */
 				'unpublished_target' => __( 'Unpublished target (%s)', 'tso-link-inspector' ),
 			),
-			'totalPosts'            => $this->scanner->get_total_posts(),
-			'batchSize'             => TSOLIIN_BATCH_SIZE,
-			'bgRunning'             => $bg['running'] ? 1 : 0,
-			'bgChecked'             => $bg['checked'],
-			'bgTotal'               => $bg['total'],
-			'bgPct'                 => $bg['pct'],
-			'bgPostId'              => isset( $bg['post_id'] ) ? absint( $bg['post_id'] ) : 0,
-			'bgPending'             => isset( $bg['pending'] ) ? absint( $bg['pending'] ) : 0,
-			'bgComplete'            => ! empty( $bg['complete'] ) ? 1 : 0,
-			'scanRunning'           => $bg_scan['running'] ? 1 : 0,
-			'scanScanned'           => $bg_scan['scanned'],
-			'scanTotal'             => $bg_scan['total'],
-			'scanPct'               => $bg_scan['pct'],
-			'scanResumable'         => ! empty( $bg_scan['resumable'] ) ? 1 : 0,
-			'scanError'             => isset( $bg_scan['error'] ) ? (string) $bg_scan['error'] : '',
+			'totalPosts'               => $this->scanner->get_total_posts(),
+			'batchSize'                => TSOLIIN_BATCH_SIZE,
+			'bgRunning'                => $bg['running'] ? 1 : 0,
+			'bgChecked'                => $bg['checked'],
+			'bgTotal'                  => $bg['total'],
+			'bgPct'                    => $bg['pct'],
+			'bgPostId'                 => isset( $bg['post_id'] ) ? absint( $bg['post_id'] ) : 0,
+			'bgPending'                => isset( $bg['pending'] ) ? absint( $bg['pending'] ) : 0,
+			'bgComplete'               => ! empty( $bg['complete'] ) ? 1 : 0,
+			'scanRunning'              => $bg_scan['running'] ? 1 : 0,
+			'scanScanned'              => $bg_scan['scanned'],
+			'scanTotal'                => $bg_scan['total'],
+			'scanPct'                  => $bg_scan['pct'],
+			'scanResumable'            => ! empty( $bg_scan['resumable'] ) ? 1 : 0,
+			'scanError'                => isset( $bg_scan['error'] ) ? (string) $bg_scan['error'] : '',
 			// Request-cached COUNT; same key as get_bg_progress() when not filtering by post.
-			'pendingCheck'          => (int) $this->db->get_pending_check_count( absint( $view_post_id ) ),
-			'checkPaused'           => (
+			'pendingCheck'             => (int) $this->db->get_pending_check_count( absint( $view_post_id ) ),
+			'checkPaused'              => (
 				$this->cron->is_bg_check_paused()
 				&& (int) $this->db->get_pending_check_count( absint( $view_post_id ) ) > 0
 			) ? 1 : 0,
-			'checkAutoResume'       => (
+			'checkAutoResume'          => (
 				! $this->cron->is_bg_scan_blocking_check()
 				&& ! get_option( 'tsoliin_bg_check_user_stopped' )
 				&& (int) $bg['pct'] > 0
 				&& (int) $bg['pct'] < 100
 				&& $this->db->get_pending_check_count( absint( isset( $bg['post_id'] ) ? $bg['post_id'] : 0 ) ) > 0
 			) ? 1 : 0,
-			'refreshInterval'       => 8000, // ms between stat card auto-refreshes.
-			'i18n'                  => array(
+			'refreshInterval'          => 8000, // ms between stat card auto-refreshes.
+			'i18n'                     => array(
 				'scanning'                 => __( 'Scanning...', 'tso-link-inspector' ),
 				'scanAlreadyRunning'       => __( 'A scan is already running. Showing its progress.', 'tso-link-inspector' ),
 				'scanDone'                 => __( 'Scan completed!', 'tso-link-inspector' ),
@@ -684,7 +687,13 @@ class TSOLIIN_Admin {
 				'confirmUnlinkBulk'        => __( 'Unlink the selected items? Anchor text stays; the link markup is removed from the source when possible.', 'tso-link-inspector' ),
 				'confirmDelete'            => __( 'Delete this record from the list. The post will not be changed. Continue?', 'tso-link-inspector' ),
 				'noItemsSelected'          => __( 'Select at least one link first.', 'tso-link-inspector' ),
+				'confirmDeletePlain'       => __( 'This URL is plain text, not a link, so it cannot be unlinked. Delete the URL text from the post instead?', 'tso-link-inspector' ),
+				'confirmUnlinkMeta'        => __( 'This URL is stored in a custom field, not in the post text. Unlinking will remove the URL from that field. Continue?', 'tso-link-inspector' ),
 				'bulkBusy'                 => __( 'A bulk action is already running. Wait for it to finish.', 'tso-link-inspector' ),
+				/* translators: 1: number of selected links, 2: how many of them are not in the list on screen */
+				'selectionHidden'          => __( 'Selection: %1$s (%2$s outside the current list)', 'tso-link-inspector' ),
+				/* translators: %s: number of selected links */
+				'confirmHiddenSelection'   => __( 'Some selected links are not in the current list (they were selected under another search). The action will apply to all %s selected links. Continue?', 'tso-link-inspector' ),
 				'error'                    => __( 'An error occurred.', 'tso-link-inspector' ),
 				'scanFailed'               => __( 'Scan failed.', 'tso-link-inspector' ),
 				'save'                     => __( 'Save URL', 'tso-link-inspector' ),
@@ -1002,6 +1011,11 @@ class TSOLIIN_Admin {
 		$export_type = isset( $_REQUEST['link_type_filter'] ) ? sanitize_key( wp_unslash( $_REQUEST['link_type_filter'] ) ) : '';
 		if ( in_array( $export_type, TSOLIIN_DB::allowed_link_types(), true ) ) {
 			$export_fields['link_type_filter'] = $export_type;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$export_status_codes = isset( $_REQUEST['status_code_filter'] ) ? TSOLIIN_DB::sanitize_status_code_filter( sanitize_text_field( wp_unslash( $_REQUEST['status_code_filter'] ) ) ) : '';
+		if ( '' !== $export_status_codes ) {
+			$export_fields['status_code_filter'] = $export_status_codes;
 		}
 		if ( $view_post_id ) {
 			$export_fields['post_id'] = $view_post_id;
@@ -1636,11 +1650,14 @@ class TSOLIIN_Admin {
 			'https'         => __( 'HTTPS', 'tso-link-inspector' ),
 			'bulk_relative' => __( 'Bulk relative', 'tso-link-inspector' ),
 			'bulk_https'    => __( 'Bulk HTTPS', 'tso-link-inspector' ),
+			'unlink'        => __( 'Unlink', 'tso-link-inspector' ),
+			'bulk_unlink'   => __( 'Bulk unlink', 'tso-link-inspector' ),
+			'delete_plain'  => __( 'Plain text removed', 'tso-link-inspector' ),
 		);
 	}
 
 	/**
-	 * History tab: recent URL changes from Edit / Suggest / relative / HTTPS.
+	 * History tab: recent URL changes from Edit / Suggest / relative / HTTPS and removed links (Unlink).
 	 */
 	private function render_settings_history_tab() {
 		$max_rows = (int) TSOLIIN_DB::HISTORY_MAX_ROWS;
@@ -1650,7 +1667,7 @@ class TSOLIIN_Admin {
 		$date_fmt = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
 
 		echo '<div class="tsoliin-history-panel">';
-		echo '<p>' . esc_html__( 'This list stores recent URL changes from Edit link, Suggest apply, Convert to /path, and Upgrade to HTTPS (including bulk actions).', 'tso-link-inspector' ) . '</p>';
+		echo '<p>' . esc_html__( 'This list stores recent URL changes from Edit link, Suggest apply, Convert to /path, and Upgrade to HTTPS, and links removed with Unlink (including bulk actions).', 'tso-link-inspector' ) . '</p>';
 		echo '<p>' . esc_html(
 			sprintf(
 				/* translators: %d: maximum number of history rows kept */
@@ -1728,7 +1745,11 @@ class TSOLIIN_Admin {
 			echo '<tr>';
 			echo '<td>' . esc_html( $date_label ) . '</td>';
 			echo '<td><code>' . esc_html( $old_url ) . '</code></td>';
-			echo '<td><code>' . esc_html( $new_url ) . '</code></td>';
+			if ( '' === $new_url ) {
+				echo '<td>&mdash;</td>';
+			} else {
+				echo '<td><code>' . esc_html( $new_url ) . '</code></td>';
+			}
 			echo '<td>' . esc_html( $type_label ) . '</td>';
 			echo '<td>' . esc_html( $user_label ) . '</td>';
 			echo '<td>' . $post_label . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
@@ -2403,12 +2424,12 @@ class TSOLIIN_Admin {
 		delete_option( 'tsoliin_bg_skipped' );
 		delete_option( 'tsoliin_bg_check_resynced' );
 		foreach ( array( 'comments', 'menus', 'terms', 'fse', 'widgets', 'acfopt' ) as $source_lock ) {
-			delete_transient( 'tsoliin_scan_lock_' . $source_lock );
+			$this->db->release_transient_lock( 'tsoliin_scan_lock_' . $source_lock );
 		}
-		delete_transient( 'tsoliin_bg_scan_step_lock' );
-		delete_transient( 'tsoliin_bg_check_step_lock' );
-		delete_transient( 'tsoliin_bg_lifecycle_start_lock' );
-		delete_transient( 'tsoliin_immediate_queue_lock' );
+		$this->db->release_transient_lock( 'tsoliin_bg_scan_step_lock' );
+		$this->db->release_transient_lock( 'tsoliin_bg_check_step_lock' );
+		$this->db->release_transient_lock( 'tsoliin_bg_lifecycle_start_lock' );
+		$this->db->release_transient_lock( 'tsoliin_immediate_queue_lock' );
 	}
 
 	/**
@@ -2690,6 +2711,11 @@ class TSOLIIN_Admin {
 		if ( '' !== $type_val ) {
 			echo '<input type="hidden" name="link_type_filter" value="' . esc_attr( $type_val ) . '" />';
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only hidden-field mirror of the active list filter.
+		$status_code_val = isset( $_REQUEST['status_code_filter'] ) ? TSOLIIN_DB::sanitize_status_code_filter( sanitize_text_field( wp_unslash( $_REQUEST['status_code_filter'] ) ) ) : '';
+		if ( '' !== $status_code_val ) {
+			echo '<input type="hidden" name="status_code_filter" value="' . esc_attr( $status_code_val ) . '" />';
+		}
 		if ( 'all' !== $scope_val ) {
 			echo '<input type="hidden" name="scope" value="' . esc_attr( $scope_val ) . '" />';
 		}
@@ -2723,6 +2749,8 @@ class TSOLIIN_Admin {
 			$link_type = '';
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$status_codes = isset( $_POST['status_code_filter'] ) ? TSOLIIN_DB::sanitize_status_code_filter( sanitize_text_field( wp_unslash( $_POST['status_code_filter'] ) ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$scope = isset( $_POST['scope'] ) ? $this->db->sanitize_scope_input( wp_unslash( $_POST['scope'] ) ) : 'all';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
@@ -2740,14 +2768,15 @@ class TSOLIIN_Admin {
 			$region = 'list';
 		}
 
-		$_REQUEST['s']                = $search;
-		$_REQUEST['filter']           = $filter;
-		$_REQUEST['quality_filter']   = $quality;
-		$_REQUEST['link_type_filter'] = $link_type;
-		$_REQUEST['scope']            = $scope;
-		$_REQUEST['paged']            = $paged;
-		$_REQUEST['orderby']          = $orderby;
-		$_REQUEST['order']            = $order;
+		$_REQUEST['s']                  = $search;
+		$_REQUEST['filter']             = $filter;
+		$_REQUEST['quality_filter']     = $quality;
+		$_REQUEST['link_type_filter']   = $link_type;
+		$_REQUEST['status_code_filter'] = $status_codes;
+		$_REQUEST['scope']              = $scope;
+		$_REQUEST['paged']              = $paged;
+		$_REQUEST['orderby']            = $orderby;
+		$_REQUEST['order']              = $order;
 		unset( $_REQUEST['post_id'], $_REQUEST['view'], $_REQUEST['ret'] );
 		if ( $post_id ) {
 			$_REQUEST['post_id'] = $post_id;
@@ -3384,6 +3413,11 @@ class TSOLIIN_Admin {
 		if ( $this->is_non_editable_source( $link ) ) {
 			return '';
 		}
+		// http://user@host is not a plain web address (usually a mistyped e-mail): never rewrite it.
+		$parts = wp_parse_url( (string) $link->link_url );
+		if ( ! empty( $parts['user'] ) || ! empty( $parts['pass'] ) ) {
+			return '';
+		}
 		return $this->http->get_verified_https_upgrade_url( (string) $link->link_url, (int) $link->post_id );
 	}
 
@@ -3586,6 +3620,11 @@ class TSOLIIN_Admin {
 			$this->require_link_mutation_cap( $link );
 		}
 
+		$delete_plain = ! empty( $_POST['delete_plain'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$plain_text   = ( 'plain' === $type && $this->scanner->is_plain_url_in_post_content( (int) $link->post_id, (string) $link->link_url ) );
+		$confirm_meta = ! empty( $_POST['confirm_meta'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$meta_key     = ( ! $plain_text ) ? $this->scanner->get_meta_only_field_key( $link ) : '';
+
 		if ( 'comment' === $type ) {
 			$done = $this->unlink_comment( $link );
 		} elseif ( 'widget' === $type ) {
@@ -3594,6 +3633,25 @@ class TSOLIIN_Admin {
 			$done = $this->scanner->unlink_in_menu_item( (string) $link->source_key, (string) $link->link_url );
 		} elseif ( 'term' === $type ) {
 			$done = $this->scanner->unlink_in_term( (string) $link->source_key, (string) $link->link_url );
+		} elseif ( $plain_text ) {
+			// Plain text has no link markup: unlinking is only possible as "delete the URL text", and only when the user agrees.
+			if ( ! $delete_plain ) {
+				wp_send_json_error(
+					array(
+						'message'    => __( 'This URL is plain text, not a link, so it cannot be unlinked. Delete the URL text from the post instead?', 'tso-link-inspector' ),
+						'plain_text' => true,
+					)
+				);
+			}
+			$done = $this->scanner->remove_plain_url_in_post( (int) $link->post_id, (string) $link->link_url );
+		} elseif ( '' !== $meta_key && ! $confirm_meta ) {
+			// The URL is only in a custom field: unlinking clears it from that field, so the user confirms first.
+			wp_send_json_error(
+				array(
+					'message'    => __( 'This URL is stored in a custom field, not in the post text. Unlinking will remove the URL from that field. Continue?', 'tso-link-inspector' ),
+					'meta_field' => $meta_key,
+				)
+			);
 		} else {
 			$done = $this->scanner->unlink_link_row_in_post( $link );
 		}
@@ -3616,8 +3674,15 @@ class TSOLIIN_Admin {
 				)
 			);
 		}
+		$this->db->log_url_change( $link_id, (int) $link->post_id, (string) $link->link_url, '', $plain_text ? 'delete_plain' : 'unlink' );
 		$this->db->delete_link( $link_id );
-		wp_send_json_success( array( 'message' => __( 'Link tag removed.', 'tso-link-inspector' ) ) );
+		wp_send_json_success(
+			array(
+				'message' => $plain_text
+					? __( 'URL text removed from the post.', 'tso-link-inspector' )
+					: __( 'Link tag removed.', 'tso-link-inspector' ),
+			)
+		);
 	}
 
 	/**
@@ -3886,6 +3951,11 @@ class TSOLIIN_Admin {
 	 */
 	public function ajax_bulk_action() {
 		$this->check_nonce_and_cap();
+		// One link per request, but each link can need several remote checks: give PHP room, while the per-step
+		// time budgets below keep the response well inside the browser/gateway limits.
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( 90 ); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Each bulk request may chain several remote checks.
+		}
 		$action   = isset( $_POST['bulk_action'] ) ? sanitize_key( wp_unslash( $_POST['bulk_action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$link_ids = array();
 		if ( isset( $_POST['link_ids'] ) && is_array( $_POST['link_ids'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -3940,7 +4010,14 @@ class TSOLIIN_Admin {
 			}
 			if ( $link ) {
 				// Keep user_verified: update_check_result() still runs HTTP and will override if the link is actually broken.
-				$r = $this->http->check( $link->link_url, (int) $link->post_id );
+				$this->http->begin_bulk_timeout( 8 );
+				$this->http->begin_deadline( 20 );
+				try {
+					$r = $this->http->check( $link->link_url, (int) $link->post_id );
+				} finally {
+					$this->http->end_deadline();
+					$this->http->end_bulk_timeout();
+				}
 				$this->db->update_check_result( $link_id, $r['status_code'], $r['redirect_url'], $r['is_broken'], isset( $r['redirect_chain'] ) ? $r['redirect_chain'] : '' );
 				$updated  = $this->db->get_link( $link_id );
 				$row_data = array_merge(
@@ -3981,6 +4058,7 @@ class TSOLIIN_Admin {
 			$type    = ( $link && isset( $link->link_type ) ) ? (string) $link->link_type : 'link';
 			$ok      = false;
 			$skipped = false;
+			$ghost   = false; // Stale list row only: nothing was removed from any content, so nothing to log.
 			if ( $link ) {
 				if ( ! TSOLIIN_Support::current_user_can_mutate_link( $link ) && ! $this->scanner->is_orphan_post_link_row( $link ) ) {
 					$ok      = false;
@@ -3988,11 +4066,20 @@ class TSOLIIN_Admin {
 				} elseif ( ! TSOLIIN_Support::can_unlink_link( $link ) ) {
 					if ( $this->scanner->is_orphan_post_link_row( $link ) ) {
 						$this->db->delete_link( $link_id );
-						$ok = true;
+						$ok    = true;
+						$ghost = true;
 					} else {
 						$ok      = false;
 						$skipped = true;
 					}
+				} elseif ( 'plain' === $type && $this->scanner->is_plain_url_in_post_content( (int) $link->post_id, (string) $link->link_url ) ) {
+					// Plain text has no link to remove; deleting URL text is only offered one by one, with a confirmation.
+					$ok      = false;
+					$skipped = true;
+				} elseif ( '' !== $this->scanner->get_meta_only_field_key( $link ) ) {
+					// URL only in a custom field: clearing it needs a confirmation, offered one by one.
+					$ok      = false;
+					$skipped = true;
 				} elseif ( 'comment' === $type ) {
 					$ok = $this->unlink_comment( $link );
 				} elseif ( 'widget' === $type ) {
@@ -4005,6 +4092,9 @@ class TSOLIIN_Admin {
 					$ok = $this->scanner->unlink_link_row_in_post( $link );
 				}
 				if ( $ok ) {
+					if ( ! $ghost ) {
+						$this->db->log_url_change( $link_id, (int) $link->post_id, (string) $link->link_url, '', 'bulk_unlink' );
+					}
 					$this->db->delete_link( $link_id );
 				}
 			} else {
@@ -4101,7 +4191,14 @@ class TSOLIIN_Admin {
 						$skipped = true;
 					} elseif ( $this->replace_link_url_in_source( $link, $relative ) ) {
 						$this->db->update_link_url( $link_id, $relative, 'bulk_relative' );
-						$r = $this->http->check( $relative, (int) $link->post_id );
+						$this->http->begin_bulk_timeout( 6 );
+						$this->http->begin_deadline( 10 );
+						try {
+							$r = $this->http->check( $relative, (int) $link->post_id );
+						} finally {
+							$this->http->end_deadline();
+							$this->http->end_bulk_timeout();
+						}
 						$this->db->update_check_result( $link_id, $r['status_code'], $r['redirect_url'], $r['is_broken'], isset( $r['redirect_chain'] ) ? $r['redirect_chain'] : '' );
 						$updated   = $this->db->get_link( $link_id );
 						$row_data  = array_merge(
@@ -4156,13 +4253,32 @@ class TSOLIIN_Admin {
 			if ( $link ) {
 				if ( ! TSOLIIN_Support::current_user_can_mutate_link( $link ) ) {
 					$skipped = true;
+				} elseif ( TSOLIIN_DB::https_skip_is_fresh( $link ) ) {
+					// Already found without a verified HTTPS version in the last days: do not wait for the host again.
+					$skipped = true;
 				} else {
-					$https_url = $this->get_verified_https_upgrade_for_link( $link );
+					// Cap the waits so one dead host cannot outlast the browser timeout and stall the whole batch.
+					$this->http->begin_bulk_timeout( 6 );
+					$this->http->begin_deadline( 15 );
+					try {
+						$https_url = $this->get_verified_https_upgrade_for_link( $link );
+					} finally {
+						$this->http->end_deadline();
+						$this->http->end_bulk_timeout();
+					}
 					if ( '' === $https_url ) {
 						$skipped = true;
+						$this->db->mark_https_skipped( $link_id );
 					} elseif ( $this->replace_link_url_in_source( $link, $https_url ) ) {
 						$this->db->update_link_url( $link_id, $https_url, 'bulk_https' );
-						$r = $this->http->check( $https_url, (int) $link->post_id );
+						$this->http->begin_bulk_timeout( 6 );
+						$this->http->begin_deadline( 8 );
+						try {
+							$r = $this->http->check( $https_url, (int) $link->post_id );
+						} finally {
+							$this->http->end_deadline();
+							$this->http->end_bulk_timeout();
+						}
 						$this->db->update_check_result( $link_id, $r['status_code'], $r['redirect_url'], $r['is_broken'], isset( $r['redirect_chain'] ) ? $r['redirect_chain'] : '' );
 						$updated   = $this->db->get_link( $link_id );
 						$row_data  = array_merge(
@@ -4951,14 +5067,16 @@ class TSOLIIN_Admin {
 		if ( ! in_array( $type, TSOLIIN_DB::allowed_link_types(), true ) ) {
 			$type = '';
 		}
+		$status_codes = isset( $_POST['status_code_filter'] ) ? TSOLIIN_DB::sanitize_status_code_filter( sanitize_text_field( wp_unslash( $_POST['status_code_filter'] ) ) ) : '';
 
 		$args = array(
-			'filter'           => $filter,
-			'quality_filter'   => $quality,
-			'link_type_filter' => $type,
-			'scope'            => $scope,
-			'search'           => $search,
-			'post_id'          => $post_id,
+			'filter'             => $filter,
+			'quality_filter'     => $quality,
+			'link_type_filter'   => $type,
+			'status_code_filter' => $status_codes,
+			'scope'              => $scope,
+			'search'             => $search,
+			'post_id'            => $post_id,
 		);
 		if ( 'pdf' === $format ) {
 			TSOLIIN_Reports::stream_pdf_html( $this->db, $args );

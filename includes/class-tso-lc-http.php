@@ -2567,6 +2567,7 @@ class TSOLIIN_HTTP {
 		self::enable_dns_pinning();
 		try {
 			// Follow redirect chain manually (up to 8 hops).
+			$base_headers   = $args['headers'];
 			$final_url      = $url;
 			$redirect_to    = '';
 			$first_code     = 0;   // status code of the first redirect hop.
@@ -2577,6 +2578,7 @@ class TSOLIIN_HTTP {
 
 			do {
 				$args['cookies']            = $cookies;
+				$args['headers']            = array_merge( $base_headers, self::internal_check_headers( $final_url ) );
 				$args['reject_unsafe_urls'] = ! self::url_uses_fallback_ips( $final_url );
 				$guard                      = $this->guard_remote_url_for_request( $final_url );
 				if ( 'ok' !== $guard ) {
@@ -2957,6 +2959,33 @@ class TSOLIIN_HTTP {
 		}
 		$server = strtolower( (string) wp_remote_retrieve_header( $response, 'server' ) );
 		return false !== strpos( $server, 'cloudflare' ) || '' !== (string) wp_remote_retrieve_header( $response, 'cf-ray' );
+	}
+
+	/**
+	 * Header that tells this site's own 404 monitors (TSO Swiss Knife) that a request is a link check, not a visit.
+	 *
+	 * Sent only when the URL belongs to this site's own host (with or without www), so the token never reaches a third-party server.
+	 * It is a time-limited HMAC keyed with the site salt (current hour; the receiver also accepts the previous one).
+	 *
+	 * @param string $url Absolute URL about to be requested.
+	 * @return array<string,string> Empty array for any other host.
+	 */
+	private static function internal_check_headers( $url ) {
+		// Stored URLs often omit or add "www." compared with the site address; both reach this same site.
+		$host = (string) preg_replace( '/^www\./', '', strtolower( (string) wp_parse_url( (string) $url, PHP_URL_HOST ) ) );
+		if ( '' === $host ) {
+			return array();
+		}
+		$own_hosts = array(
+			(string) preg_replace( '/^www\./', '', strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) ),
+			(string) preg_replace( '/^www\./', '', strtolower( (string) wp_parse_url( site_url(), PHP_URL_HOST ) ) ),
+		);
+		if ( ! in_array( $host, $own_hosts, true ) ) {
+			return array();
+		}
+		return array(
+			'X-TSO-Internal-Check' => hash_hmac( 'sha256', 'tso-internal-check|' . (int) floor( time() / HOUR_IN_SECONDS ), wp_salt( 'auth' ) ),
+		);
 	}
 
 	/**

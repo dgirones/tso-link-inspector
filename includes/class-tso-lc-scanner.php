@@ -50,6 +50,20 @@ class TSOLIIN_Scanner {
 	private $editable_source_cache = array();
 
 	/**
+	 * Memo for is_plain_url_in_post_content(), keyed by post, URL and content hash.
+	 *
+	 * @var array<string,bool>
+	 */
+	private $plain_in_content_memo = array();
+
+	/**
+	 * Memo for get_meta_only_field_key().
+	 *
+	 * @var array<string,string>
+	 */
+	private $meta_only_memo = array();
+
+	/**
 	 * Scan post cache.
 	 *
 	 * @var array<int,WP_Post|false> Request-scoped get_post() results for the
@@ -6703,6 +6717,22 @@ class TSOLIIN_Scanner {
 			return true;
 		}
 
+		// An image file that is only linked (<a href="photo.jpg">…</a>, no <img>) is listed as an
+		// image too. Tried last, after the image markup and the media blocks above, so those keep
+		// their own handling: remove the link and keep its text instead of failing.
+		if ( 'image' === $link_type ) {
+			$new_content = $this->unlink_link_in_html_content( $content, (string) $url, $post_id );
+			if ( null !== $new_content && $new_content !== $content ) {
+				$this->maybe_create_post_revision( $post_id );
+				$r = $this->update_post_content( $post_id, $new_content );
+				if ( ! $r ) {
+					return false;
+				}
+				$this->purge_cache( $post_id );
+				return true;
+			}
+		}
+
 		return false;
 	}
 
@@ -6738,6 +6768,176 @@ class TSOLIIN_Scanner {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Custom field key when the row's URL exists only in post meta (not in the post body).
+	 *
+	 * Unlink on such a row clears the URL from the custom field, so the UI asks first.
+	 *
+	 * @param object $link Link row.
+	 * @return string Meta key, or '' when the URL is in the post body or the row is not a post row.
+	 */
+	public function get_meta_only_field_key( $link ) {
+		if ( ! $link || empty( $link->post_id ) || empty( $link->link_url ) ) {
+			return '';
+		}
+		$sk = isset( $link->source_key ) ? (string) $link->source_key : '';
+		if ( $this->is_dedicated_source_key( $sk ) ) {
+			return '';
+		}
+		$type = isset( $link->link_type ) ? (string) $link->link_type : 'link';
+		if ( ! in_array( $type, array( 'link', 'image', 'iframe', 'plain' ), true ) ) {
+			return '';
+		}
+		$post_id  = (int) $link->post_id;
+		$url      = (string) $link->link_url;
+		$memo_key = $post_id . '|' . $type . '|' . $url;
+		if ( isset( $this->meta_only_memo[ $memo_key ] ) ) {
+			return $this->meta_only_memo[ $memo_key ];
+		}
+		$key = '';
+		if ( ! $this->post_has_unlinkable_markup( $post_id, $url, $type ) && ! $this->is_url_in_post_body( $post_id, $url, $type ) ) {
+			$located = $this->locate_url_in_post_meta( $post_id, $url );
+			if ( ! empty( $located['found'] ) ) {
+				$key = (string) $located['field_key'];
+			}
+		}
+		$this->meta_only_memo[ $memo_key ] = $key;
+		return $key;
+	}
+
+	/**
+	 * Whether the URL is visible plain text (not a hyperlink or media) in the post content.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $url     Stored URL.
+	 * @return bool
+	 */
+	public function is_plain_url_in_post_content( $post_id, $url ) {
+		$post = get_post( absint( $post_id ) );
+		if ( ! $post || ! is_string( $post->post_content ) || '' === (string) $url ) {
+			return false;
+		}
+		// Rows are checked several times while the list renders; the content hash keeps the memo valid after edits.
+		$memo_key = $post->ID . '|' . $url . '|' . md5( $post->post_content );
+		if ( ! isset( $this->plain_in_content_memo[ $memo_key ] ) ) {
+			// Only when the text can really be deleted: URLs of embed blocks and similar are plain text for the scan but must stay.
+			$this->plain_in_content_memo[ $memo_key ] = $this->url_is_plain_text_only_in_content( (string) $post->post_content, (string) $url, (int) $post->ID )
+				&& null !== $this->remove_plain_url_from_content( (string) $post->post_content, (string) $url, (int) $post->ID );
+		}
+		return $this->plain_in_content_memo[ $memo_key ];
+	}
+
+	/**
+	 * Delete a plain text URL from the post content (it has no link markup to unlink).
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $url     Stored URL.
+	 * @return bool True when the post was changed.
+	 */
+	public function remove_plain_url_in_post( $post_id, $url ) {
+		$post_id = absint( $post_id );
+		$post    = get_post( $post_id );
+		if ( ! $post || ! is_string( $post->post_content ) || '' === (string) $url ) {
+			return false;
+		}
+		$content     = (string) $post->post_content;
+		$new_content = $this->remove_plain_url_from_content( $content, (string) $url, $post_id );
+		if ( null === $new_content || $new_content === $content ) {
+			return false;
+		}
+		$this->maybe_create_post_revision( $post_id );
+		if ( ! $this->update_post_content( $post_id, $new_content ) ) {
+			return false;
+		}
+		$this->purge_cache( $post_id );
+		return true;
+	}
+
+	/**
+	 * Remove every visible plain text occurrence of a URL from post content.
+	 *
+	 * Only text nodes are touched: never tag attributes, block comments, hyperlink text, embed
+	 * blocks, script or style. A paragraph left empty by the removal is dropped as well.
+	 *
+	 * @param string $content Raw post_content.
+	 * @param string $url     Stored URL.
+	 * @param int    $post_id Post ID.
+	 * @return string|null New content, or null when the URL was not found as plain text.
+	 */
+	private function remove_plain_url_from_content( $content, $url, $post_id ) {
+		$candidates = array();
+		foreach ( $this->build_url_replace_candidates_for_content( $url, $post_id, $content ) as $spelling ) {
+			// Absolute spellings only: a relative variant could match unrelated text.
+			if ( preg_match( '#^https?://#i', (string) $spelling ) ) {
+				$candidates[] = (string) $spelling;
+			}
+		}
+		if ( empty( $candidates ) ) {
+			return null;
+		}
+		$parts = preg_split( '#(<!--.*?-->|<[^>]+>)#s', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
+		if ( ! is_array( $parts ) ) {
+			return null;
+		}
+		$marker   = "\x01tsoliin-removed\x01";
+		$skip     = 0;
+		$in_embed = false;
+		$found    = false;
+		foreach ( $parts as $i => $part ) {
+			if ( '' === $part ) {
+				continue;
+			}
+			if ( '<' === $part[0] ) {
+				if ( preg_match( '#^<!--\s*wp:(?:core-)?embed\b#i', $part ) ) {
+					$in_embed = true;
+				} elseif ( preg_match( '#^<!--\s*/wp:(?:core-)?embed\b#i', $part ) ) {
+					$in_embed = false;
+				} elseif ( preg_match( '#^<(?:a|script|style)\b#i', $part ) ) {
+					++$skip;
+				} elseif ( $skip > 0 && preg_match( '#^</(?:a|script|style)\s*>#i', $part ) ) {
+					--$skip;
+				}
+				continue;
+			}
+			if ( $skip > 0 || $in_embed ) {
+				continue;
+			}
+			foreach ( $candidates as $spelling ) {
+				$replaced = preg_replace(
+					'#(?<![\w/.@-])' . preg_quote( $spelling, '#' ) . '(?![\w~%/?\#&=+@-]|\.\w)#i',
+					$marker,
+					$part,
+					-1,
+					$count
+				);
+				if ( is_string( $replaced ) && $count > 0 ) {
+					$part  = $replaced;
+					$found = true;
+				}
+			}
+			$parts[ $i ] = $part;
+		}
+		if ( ! $found ) {
+			return null;
+		}
+		$out = implode( '', $parts );
+		$q   = preg_quote( $marker, '#' );
+		$out = preg_replace( '#' . $q . '(?:\s*' . $q . ')+#', $marker, $out );
+		$gap = '(?:\s|&nbsp;|<br\s*/?>)*';
+		// A paragraph that only held the URL: drop it (Gutenberg block first, then classic markup).
+		$out = preg_replace( '#<!--\s*wp:paragraph(?:\s+\{[^}]*\})?\s*-->\s*<p\b[^>]*>' . $gap . $q . $gap . '</p>\s*<!--\s*/wp:paragraph\s*-->\s*#i', '', (string) $out );
+		$out = preg_replace( '#<p\b[^>]*>' . $gap . $q . $gap . '</p>\s*#i', '', (string) $out );
+		// Inline removal: keep a single space when the URL had spaces on both sides.
+		$out = preg_replace_callback(
+			'#([ \t]?)' . $q . '([ \t]?)#',
+			static function ( $m ) {
+				return ( '' !== $m[1] && '' !== $m[2] ) ? ' ' : $m[1] . $m[2];
+			},
+			(string) $out
+		);
+		return str_replace( $marker, '', (string) $out );
 	}
 
 	/**
@@ -6911,7 +7111,7 @@ class TSOLIIN_Scanner {
 					continue;
 				}
 			}
-			return substr_replace( $content, '', $pos, strlen( $snippet ) );
+			return $this->remove_markup_and_emptied_anchor( $content, $pos, strlen( $snippet ) );
 		}
 
 		$attachment_id = TSOLIIN_Support::resolve_attachment_id_from_url( (string) $url );
@@ -6923,7 +7123,7 @@ class TSOLIIN_Scanner {
 		) ) {
 			$snippet = (string) $matches[0][0];
 			$pos     = (int) $matches[0][1];
-			return substr_replace( $content, '', $pos, strlen( $snippet ) );
+			return $this->remove_markup_and_emptied_anchor( $content, $pos, strlen( $snippet ) );
 		}
 
 		$gallery_content = $this->unlink_url_from_classic_gallery_shortcodes( $content, (string) $url, $post_id );
@@ -6932,6 +7132,32 @@ class TSOLIIN_Scanner {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Remove a piece of markup and, when it was the only thing inside a link, that link too.
+	 *
+	 * An image is usually wrapped in <a href="…full-size file…">. Removing only the <img> left an
+	 * empty, invisible link behind that was still scanned and listed, and could not be unlinked.
+	 *
+	 * @param string $content HTML.
+	 * @param int    $pos     Offset of the markup to remove.
+	 * @param int    $length  Length of the markup to remove.
+	 * @return string
+	 */
+	private function remove_markup_and_emptied_anchor( $content, $pos, $length ) {
+		$pos     = (int) $pos;
+		$content = substr_replace( (string) $content, '', $pos, (int) $length );
+		if ( preg_match_all( '#<a\b[^>]*>\s*</a>#is', $content, $empty_links, PREG_OFFSET_CAPTURE ) ) {
+			foreach ( $empty_links[0] as $hit ) {
+				$start = (int) $hit[1];
+				$end   = $start + strlen( (string) $hit[0] );
+				if ( $start < $pos && $pos < $end ) {
+					return substr_replace( $content, '', $start, $end - $start );
+				}
+			}
+		}
+		return $content;
 	}
 
 	/**

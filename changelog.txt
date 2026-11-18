@@ -4,6 +4,16 @@ Current releases are listed in readme.txt.
 
 == Changelog ==
 
+= 2.6.0 =
+* Improved: dashboard widget shows redirects.
+* Improved: Automatic language uses language packs added later.
+* Fix: the "Getting started" banner stays until you close it.
+
+= 2.5.9 =
+* Fix: renaming an image with only case changes no longer leaves a 404 row.
+* Fix: more accurate search across URLs and link text.
+* Fix: CSV and PDF exports respect search and filters.
+
 = 2.5.8 =
 * Fix: GitHub and Telegram stable download links no longer listed as redirects.
 * Fix: YouTube consent redirects shown as OK.

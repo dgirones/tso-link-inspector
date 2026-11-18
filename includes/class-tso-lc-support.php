@@ -505,9 +505,38 @@ class TSOLIIN_Support {
 		if ( self::can_inline_edit_link( $link ) ) {
 			return true;
 		}
-		// Ghost / stale post rows: allow Unlink to drop them from the list.
 		$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
+		// Plain text URL in the post body: Unlink offers to delete the URL text (the user confirms first).
+		if ( self::is_plain_text_url_row_in_content( $link ) ) {
+			return true;
+		}
+		// Ghost / stale post rows: allow Unlink to drop them from the list.
 		return (bool) ( $scanner && $scanner->is_orphan_post_link_row( $link ) );
+	}
+
+	/**
+	 * Custom field key when the row's URL exists only in post meta (Unlink would clear it from that field).
+	 *
+	 * @param object|null $link DB link row.
+	 * @return string Meta key, or '' otherwise.
+	 */
+	public static function get_meta_only_field_key( $link ) {
+		$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
+		return $scanner ? (string) $scanner->get_meta_only_field_key( $link ) : '';
+	}
+
+	/**
+	 * Whether a "plain" row is a URL that is really visible as plain text in the post body.
+	 *
+	 * @param object|null $link DB link row.
+	 * @return bool
+	 */
+	public static function is_plain_text_url_row_in_content( $link ) {
+		if ( ! $link || 'plain' !== (string) ( $link->link_type ?? '' ) || empty( $link->post_id ) || empty( $link->link_url ) ) {
+			return false;
+		}
+		$scanner = function_exists( 'tsoliin_link_inspector' ) ? tsoliin_link_inspector()->scanner : null;
+		return (bool) ( $scanner && $scanner->is_plain_url_in_post_content( (int) $link->post_id, (string) $link->link_url ) );
 	}
 
 	/**
@@ -1647,6 +1676,12 @@ class TSOLIIN_Support {
 				if ( '' !== $val ) {
 					$out[ $key ] = $val;
 				}
+			}
+		}
+		if ( isset( $parsed['status_code_filter'] ) && is_string( $parsed['status_code_filter'] ) ) {
+			$status_codes = TSOLIIN_DB::sanitize_status_code_filter( $parsed['status_code_filter'] );
+			if ( '' !== $status_codes ) {
+				$out['status_code_filter'] = $status_codes;
 			}
 		}
 		if ( isset( $parsed['order'] ) && is_string( $parsed['order'] ) ) {

@@ -2322,13 +2322,17 @@ msgstr "Relativo (masivo)"
 msgid "Bulk HTTPS"
 msgstr "HTTPS (masivo)"
 
+msgid "Bulk unlink"
+msgstr "Desenlazar (masivo)"
+
 msgid ""
 "This list stores recent URL changes from Edit link, Suggest apply, Convert "
-"to /path, and Upgrade to HTTPS (including bulk actions)."
+"to /path, and Upgrade to HTTPS, and links removed with Unlink (including "
+"bulk actions)."
 msgstr ""
 "Esta lista guarda cambios recientes de URL desde Editar enlace, Aplicar "
-"sugerencia, Convertir a /ruta y Actualizar a HTTPS (también acciones "
-"masivas)."
+"sugerencia, Convertir a /ruta y Actualizar a HTTPS, y los enlaces quitados "
+"con Desenlazar (también acciones masivas)."
 
 msgid ""
 "Up to %d records are kept. When the limit is reached, the oldest entries are"
@@ -2908,3 +2912,38 @@ msgstr "Comprobación automática"
 
 msgid "not scheduled"
 msgstr "no programado"
+
+msgid "Selection: %1$s (%2$s outside the current list)"
+msgstr "Selección: %1$s (%2$s fuera de la lista actual)"
+
+msgid ""
+"Some selected links are not in the current list (they were selected under "
+"another search). The action will apply to all %s selected links. Continue?"
+msgstr ""
+"Algunos enlaces seleccionados no están en la lista actual (los seleccionaste"
+" con otra búsqueda). La acción se aplicará a los %s enlaces seleccionados. "
+"¿Continuar?"
+
+msgid "This URL is plain text, not a link, so it cannot be unlinked. Delete the URL text from the post instead?"
+msgstr "Esta URL es texto plano, no un enlace, así que no se puede desenlazar. ¿Quieres eliminar en su lugar el texto de la URL de la entrada?"
+
+msgid "URL text removed from the post."
+msgstr "Texto de la URL eliminado de la entrada."
+
+msgid "Plain text URL: you will be asked whether to delete the URL text from the post."
+msgstr "URL en texto plano: se preguntará si quieres eliminar el texto de la URL de la entrada."
+
+msgid "Plain text removed"
+msgstr "Texto plano eliminado"
+
+msgid "This URL is stored in a custom field, not in the post text. Unlinking will remove the URL from that field. Continue?"
+msgstr "Esta URL está en un campo personalizado, no en el texto de la entrada. Al desenlazarla se quitará la URL de ese campo. ¿Continuar?"
+
+msgid "URL stored in a custom field: you will be asked before it is removed from that field."
+msgstr "URL en un campo personalizado: se te pedirá confirmación antes de quitarla de ese campo."
+
+msgid "All statuses"
+msgstr "Todos los estados"
+
+msgid "Filter by link status"
+msgstr "Filtrar por estado del enlace"

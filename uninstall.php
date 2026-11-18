@@ -101,6 +101,10 @@ $tsoliin_transients = array(
 );
 foreach ( $tsoliin_transients as $tsoliin_transient_name ) {
 	delete_transient( $tsoliin_transient_name );
+	// Lock rows are written straight to the options table; with a persistent object cache
+	// delete_transient() does not remove them.
+	delete_option( '_transient_' . $tsoliin_transient_name );
+	delete_option( '_transient_timeout_' . $tsoliin_transient_name );
 }
 
 // Per-host DNS second-opinion cache (tsoliin_dns4_<hash>), the versioned stats cache (tsoliin_stats_cache_<version>) and their timeouts.

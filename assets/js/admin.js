@@ -118,6 +118,10 @@
 		listReloadTimer : null,
 		_pendingAjax    : 0,
 		_bulkInProgress : false,
+		// Selected link IDs kept in memory (not storage) so a selection survives search, sort and paging
+		// re-renders of the list, but is dropped when scope/filter/view changes or the page reloads.
+		selectedIds      : {},
+		selectionContext : null,
 
 		/**
 		 * Escape text for safe HTML insertion.
@@ -417,6 +421,7 @@
 					filter           : url.searchParams.get( 'filter' ) || 'all',
 					quality_filter   : url.searchParams.get( 'quality_filter' ) || '',
 					link_type_filter : url.searchParams.get( 'link_type_filter' ) || '',
+					status_code_filter: url.searchParams.get( 'status_code_filter' ) || '',
 					scope            : url.searchParams.get( 'scope' ) || 'all',
 					paged          : Math.max( 1, parseInt( url.searchParams.get( 'paged' ), 10 ) || 1 ),
 					s              : url.searchParams.has( 's' ) ? ( url.searchParams.get( 's' ) || '' ) : '',
@@ -441,6 +446,7 @@
 			tsoliinData.listFilter = params.filter || 'all';
 			tsoliinData.listQualityFilter = params.quality_filter || '';
 			tsoliinData.listTypeFilter = params.link_type_filter || '';
+			tsoliinData.listStatusCodeFilter = params.status_code_filter || '';
 			tsoliinData.listScope = params.scope || 'all';
 			tsoliinData.viewPostId = parseInt( params.post_id, 10 ) || 0;
 			tsoliinData.listView = params.view || 'links';
@@ -469,6 +475,133 @@
 		},
 
 		/**
+		 * Key of the list context a selection belongs to. Search text, sort and page are NOT part of it
+		 * (the selection must survive them); scope, filters, view and post are.
+		 *
+		 * @param {Object} c Context values (filter, quality, type, scope, post_id, view).
+		 * @return {string}
+		 */
+		selectionKeyFrom: function ( c ) {
+			return [
+				c.filter || 'all',
+				c.quality_filter || '',
+				c.link_type_filter || '',
+				c.status_code_filter || '',
+				c.scope || 'all',
+				parseInt( c.post_id, 10 ) || 0,
+				c.view || 'links'
+			].join( '|' );
+		},
+
+		/**
+		 * Selection context of the list currently on screen.
+		 *
+		 * @return {string}
+		 */
+		currentSelectionKey: function () {
+			return this.selectionKeyFrom( {
+				filter          : tsoliinData.listFilter,
+				quality_filter  : tsoliinData.listQualityFilter,
+				link_type_filter: tsoliinData.listTypeFilter,
+				status_code_filter: tsoliinData.listStatusCodeFilter,
+				scope           : tsoliinData.listScope,
+				post_id         : tsoliinData.viewPostId,
+				view            : tsoliinData.listView
+			} );
+		},
+
+		/**
+		 * Record the checkboxes visible now: checked rows are added, unchecked visible rows are removed.
+		 * Rows that are not on screen (selected under another search) are left untouched.
+		 */
+		syncSelectionFromDom: function () {
+			var self = this;
+			if ( null === self.selectionContext ) {
+				self.selectionContext = self.currentSelectionKey();
+			}
+			$( '#tsoliin-list-form' ).find( 'input[name="link_ids[]"]' ).each( function () {
+				var id = parseInt( this.value, 10 );
+				if ( ! id ) {
+					return;
+				}
+				if ( this.checked ) {
+					self.selectedIds[ id ] = true;
+				} else {
+					delete self.selectedIds[ id ];
+				}
+			} );
+			self.updateSelectionUi();
+		},
+
+		/**
+		 * Re-check the rows of a freshly rendered list that are part of the stored selection.
+		 */
+		restoreSelectionToDom: function () {
+			var self  = this;
+			var $form = $( '#tsoliin-list-form' );
+			var rows  = 0;
+			var on    = 0;
+			$form.find( 'input[name="link_ids[]"]' ).each( function () {
+				var checked = !! self.selectedIds[ parseInt( this.value, 10 ) ];
+				this.checked = checked;
+				rows++;
+				if ( checked ) {
+					on++;
+				}
+			} );
+			$form.find( 'thead .check-column input[type="checkbox"], tfoot .check-column input[type="checkbox"]' ).prop( 'checked', rows > 0 && on === rows );
+			self.updateSelectionUi();
+		},
+
+		/**
+		 * Drop the whole selection (context change or after a bulk action) and uncheck the list.
+		 */
+		clearSelection: function () {
+			this.selectedIds = {};
+			$( '#tsoliin-list-form' ).find( 'input[name="link_ids[]"], .check-column input[type="checkbox"]' ).prop( 'checked', false );
+			this.updateSelectionUi();
+		},
+
+		/**
+		 * Number of selected IDs that are not in the list on screen.
+		 *
+		 * @return {{total:number, hidden:number}}
+		 */
+		selectionStats: function () {
+			var visible = {};
+			$( '#tsoliin-list-form' ).find( 'input[name="link_ids[]"]' ).each( function () {
+				visible[ parseInt( this.value, 10 ) ] = true;
+			} );
+			var total  = 0;
+			var hidden = 0;
+			$.each( this.selectedIds, function ( id ) {
+				total++;
+				if ( ! visible[ id ] ) {
+					hidden++;
+				}
+			} );
+			return { total: total, hidden: hidden };
+		},
+
+		/**
+		 * Show "N selected, M not in this list" next to the bulk actions when part of the selection is off screen.
+		 */
+		updateSelectionUi: function () {
+			var $bar = $( '#tsoliin-list-form .tsoliin-bulk-bar' ).first();
+			$( '.tsoliin-selection-note' ).remove();
+			if ( ! $bar.length ) {
+				return;
+			}
+			var st = this.selectionStats();
+			if ( st.hidden < 1 ) {
+				return;
+			}
+			var text = ( tsoliinData.i18n.selectionHidden || 'Selection: %1$s (%2$s outside the current list)' )
+				.replace( '%1$s', st.total ).replace( '%2$s', st.hidden );
+			$bar.append( $( '<span class="tsoliin-selection-note" role="status"></span>' ).text( text ) );
+		},
+
+		/**
 		 * Before an export is submitted, copy the live list state (search and
 		 * filters, updated by AJAX) into the form's hidden fields.
 		 */
@@ -483,6 +616,7 @@
 					filter           : tsoliinData.listFilter,
 					quality_filter   : tsoliinData.listQualityFilter,
 					link_type_filter : tsoliinData.listTypeFilter,
+					status_code_filter: tsoliinData.listStatusCodeFilter,
 					scope            : tsoliinData.listScope,
 					s                : $( '.tsoliin-search-input' ).first().val() || self.lastSearchVal || ''
 				};
@@ -631,6 +765,7 @@
 					filter           : params.filter || tsoliinData.listFilter || 'all',
 					quality_filter   : params.quality_filter !== undefined ? params.quality_filter : ( tsoliinData.listQualityFilter || '' ),
 					link_type_filter : params.link_type_filter !== undefined ? params.link_type_filter : ( tsoliinData.listTypeFilter || '' ),
+					status_code_filter: params.status_code_filter !== undefined ? params.status_code_filter : ( tsoliinData.listStatusCodeFilter || '' ),
 					scope            : params.scope || tsoliinData.listScope || 'all',
 					post_id        : params.post_id !== undefined ? params.post_id : ( parseInt( tsoliinData.viewPostId, 10 ) || 0 ),
 					view           : params.view || tsoliinData.listView || 'links',
@@ -645,6 +780,20 @@
 							if ( typeof opts.beforeReplace === 'function' ) {
 								opts.beforeReplace();
 							}
+							// A different scope/filter/view is a different list: never carry a selection into it.
+							var selKey = self.selectionKeyFrom( {
+								filter          : params.filter || tsoliinData.listFilter || 'all',
+								quality_filter  : params.quality_filter !== undefined ? params.quality_filter : tsoliinData.listQualityFilter,
+								link_type_filter: params.link_type_filter !== undefined ? params.link_type_filter : tsoliinData.listTypeFilter,
+								status_code_filter: params.status_code_filter !== undefined ? params.status_code_filter : tsoliinData.listStatusCodeFilter,
+								scope           : params.scope || tsoliinData.listScope,
+								post_id         : params.post_id !== undefined ? params.post_id : tsoliinData.viewPostId,
+								view            : params.view || tsoliinData.listView
+							} );
+							if ( null !== self.selectionContext && selKey !== self.selectionContext ) {
+								self.selectedIds = {};
+							}
+							self.selectionContext = selKey;
 							var responseRegion = r.data.region || ( useScope ? 'scope' : 'list' );
 							if ( 'scope' === responseRegion && $scope.length ) {
 								$scope.html( r.data.html );
@@ -656,6 +805,7 @@
 								$target.html( r.data.html );
 							}
 							self.refreshDomRefs();
+							self.restoreSelectionToDom();
 							if ( opts.updateUrl && params.href ) {
 								self.updateListNavState( params, params.href );
 							}
@@ -795,7 +945,7 @@
 
 			// Type filter dropdown: same AJAX list-nav path as the scope tabs above,
 			// just triggered by a <select> change instead of an <a> click.
-			$( document ).on( 'change', '.tsoliin-type-filter__select', function () {
+			$( document ).on( 'change', '.tsoliin-type-filter__select, .tsoliin-status-filter__select', function () {
 				var href = $( this ).val();
 				if ( ! href || ! $( '#tsoliin-scope-region' ).length ) {
 					return;
@@ -942,6 +1092,18 @@
 
 			$( document ).on( 'click', '.tsoliin-unlink', function ( e ) {
 				e.preventDefault();
+				if ( 1 === parseInt( $( this ).attr( 'data-plain' ), 10 ) ) {
+					// Plain text URL: there is no link to remove, so ask to delete the text instead.
+					if ( ! window.confirm( tsoliinData.i18n.confirmDeletePlain ) ) { return; }
+					self.unlinkItem( parseInt( $( this ).data( 'id' ), 10 ), $( this ), true );
+					return;
+				}
+				if ( 1 === parseInt( $( this ).attr( 'data-meta' ), 10 ) ) {
+					// URL only in a custom field: unlinking clears it from the field.
+					if ( ! window.confirm( tsoliinData.i18n.confirmUnlinkMeta ) ) { return; }
+					self.unlinkItem( parseInt( $( this ).data( 'id' ), 10 ), $( this ), false, true );
+					return;
+				}
 				if ( ! window.confirm( tsoliinData.i18n.confirmUnlink ) ) { return; }
 				self.unlinkItem( parseInt( $( this ).data( 'id' ), 10 ), $( this ) );
 			} );
@@ -1048,6 +1210,11 @@
 					self.$form = $form;
 					self.doBulkAction( action );
 				}
+			} );
+
+			// Keep the stored selection in step with the checkboxes (row, select-all header/footer, shift-click).
+			$( document ).on( 'change click', '#tsoliin-list-form .check-column input[type="checkbox"]', function () {
+				window.setTimeout( function () { self.syncSelectionFromDom(); }, 0 );
 			} );
 
 			// Meta scan row toggle.
@@ -2579,14 +2746,14 @@
 		// ---------------------------------------------------------------
 		// Unlink / Delete
 		// ---------------------------------------------------------------
-		unlinkItem: function ( linkId, $trigger ) {
+		unlinkItem: function ( linkId, $trigger, deletePlain, confirmMeta ) {
 			var self = this;
 			var $row = $trigger.closest( 'tr' );
 			$trigger.text( tsoliinData.i18n.saving );
 			self.trackedAjax( {
 				url   : tsoliinData.ajaxUrl,
 				method: 'POST',
-				data  : { action: 'tsoliin_unlink', nonce: tsoliinData.nonce, link_id: linkId },
+				data  : { action: 'tsoliin_unlink', nonce: tsoliinData.nonce, link_id: linkId, delete_plain: deletePlain ? 1 : 0, confirm_meta: confirmMeta ? 1 : 0 },
 				success: function ( r ) {
 					if ( r.success ) {
 						var d = r.data || {};
@@ -2600,6 +2767,18 @@
 							self.refreshStats();
 							self.maybeReloadEmptyList();
 						} );
+					} else if ( r.data && r.data.plain_text && ! deletePlain ) {
+						// The server says this is plain text: offer to delete the URL text instead.
+						$trigger.text( tsoliinData.i18n.unlink );
+						if ( window.confirm( tsoliinData.i18n.confirmDeletePlain ) ) {
+							self.unlinkItem( linkId, $trigger, true );
+						}
+					} else if ( r.data && r.data.meta_field && ! confirmMeta ) {
+						// The URL lives only in a custom field: confirm before clearing it.
+						$trigger.text( tsoliinData.i18n.unlink );
+						if ( window.confirm( tsoliinData.i18n.confirmUnlinkMeta ) ) {
+							self.unlinkItem( linkId, $trigger, false, true );
+						}
 					} else {
 						alert( r.data ? r.data.message : tsoliinData.i18n.error );
 						$trigger.text( tsoliinData.i18n.unlink );
@@ -2834,13 +3013,36 @@
 				self.showNotice( tsoliinData.i18n.bulkBusy || tsoliinData.i18n.error, 'warning' );
 				return;
 			}
+			self.syncSelectionFromDom();
+			// Visible checked rows first (list order), then rows selected under another search.
 			var linkIds = [];
+			var seen    = {};
 			this.$form.find( 'input[name="link_ids[]"]:checked' ).each( function () {
-				linkIds.push( parseInt( $( this ).val(), 10 ) );
+				var id = parseInt( $( this ).val(), 10 );
+				if ( id && ! seen[ id ] ) {
+					seen[ id ] = true;
+					linkIds.push( id );
+				}
+			} );
+			$.each( self.selectedIds, function ( id ) {
+				id = parseInt( id, 10 );
+				if ( ! seen[ id ] ) {
+					seen[ id ] = true;
+					linkIds.push( id );
+				}
 			} );
 			if ( ! linkIds.length ) {
 				self.showNotice( tsoliinData.i18n.noItemsSelected || tsoliinData.i18n.error, 'warning' );
 				return;
+			}
+			// Part of the selection is not on screen: make that explicit before acting on it.
+			var selStats = self.selectionStats();
+			if ( selStats.hidden > 0 ) {
+				var hiddenMsg = ( tsoliinData.i18n.confirmHiddenSelection || 'Some selected links are not in the current list. The action will apply to all %s selected links. Continue?' )
+					.replace( '%s', selStats.total );
+				if ( ! window.confirm( hiddenMsg ) ) {
+					return;
+				}
 			}
 
 			if ( 'unlink' === action ) {
@@ -2872,16 +3074,17 @@
 		/**
 		 * Process bulk recheck one link at a time with live row updates.
 		 */
-		bulkRecheckStep: function ( linkIds, index, action ) {
+		bulkRecheckStep: function ( linkIds, index, action, attempt ) {
 			var self  = this;
 			var total = linkIds.length;
 			var act   = action || 'recheck';
 
-			// Show progress notice on first call.
-			if ( 0 === index ) {
+			// Show progress notice on first call (not when retrying the first link).
+			if ( 0 === index && ! attempt ) {
 				self._bulkInProgress = true;
 				self._bulkStats = { unlinked: 0, skipped: 0, failed: 0, converted: 0, marked: 0, deleted: 0 };
 				self._bulkFilterRemoved = 0;
+				self._bulkErrors = [];
 				var initMsg = tsoliinData.i18n.checking;
 				if ( 'unlink' === act ) {
 					initMsg = tsoliinData.i18n.unlinking;
@@ -2900,6 +3103,8 @@
 
 			if ( index >= total ) {
 				self._bulkInProgress = false;
+				// The selection has been consumed by the action: start the next one from scratch.
+				self.clearSelection();
 				var doneMsg;
 				if ( 'unlink' === act ) {
 					var parts = [];
@@ -2963,6 +3168,10 @@
 					}
 					doneMsg = recheckParts.join( ' ' );
 				}
+				if ( self._bulkErrors && self._bulkErrors.length ) {
+					var uniqueErrors = self._bulkErrors.filter( function ( m, i, a ) { return a.indexOf( m ) === i; } );
+					doneMsg += ' — ' + uniqueErrors.slice( 0, 3 ).join( ' | ' );
+				}
 				$( '#tsoliin-bulk-msg' ).text( doneMsg );
 				$( '#tsoliin-bulk-bar' ).val( 100 );
 				var needsReload = (
@@ -2973,7 +3182,7 @@
 					|| self._bulkFilterRemoved > 0
 				);
 				if ( needsReload ) {
-					self.scheduleListReload( 1500 );
+					self.scheduleListReload( self._bulkStats.failed > 0 ? 6000 : 1500 );
 				} else {
 					self.refreshStats();
 					self.maybeReloadEmptyList();
@@ -3003,21 +3212,25 @@
 			$( '#tsoliin-bulk-msg' ).text( progressLabel + ' ' + ( index + 1 ) + '/' + total );
 			$( '#tsoliin-bulk-bar' ).val( pct );
 
+			// Send only the current ID (index 0): the server handles one link per request, and posting the
+			// whole selection every time bloats the request and can exceed max_input_vars on big batches.
+			// A failed request is retried once; errors never open a blocking alert() so the run is not paused.
+			attempt = attempt || 1;
 			$.ajax( {
 				url    : tsoliinData.ajaxUrl,
 				method : 'POST',
-				timeout: 30000,
+				timeout: 60000,
 				data   : $.extend( {
 					action     : 'tsoliin_bulk_action',
 					nonce      : tsoliinData.nonce,
 					bulk_action: act,
-					link_ids   : linkIds,
-					index      : index
+					link_ids   : [ linkIds[ index ] ],
+					index      : 0
 				}, self.listFilterParam() ),
 				success: function ( r ) {
-					if ( ! r.success ) {
+					if ( ! r || ! r.success ) {
 						self._bulkStats.failed++;
-						alert( r.data ? r.data.message : tsoliinData.i18n.error );
+						self._bulkErrors.push( ( r && r.data && r.data.message ) ? r.data.message : tsoliinData.i18n.error );
 						self.bulkRecheckStep( linkIds, index + 1, act );
 						return;
 					}
@@ -3126,9 +3339,17 @@
 						}
 					self.bulkRecheckStep( linkIds, index + 1, act );
 				},
-				error: function () {
+				error: function ( xhr, textStatus ) {
+					if ( attempt < 2 ) {
+						// Network hiccup, gateway timeout or PHP fatal: the server may still be finishing this link, so
+						// wait briefly and retry once (every bulk action is safe to repeat on an already-processed link).
+						window.setTimeout( function () {
+							self.bulkRecheckStep( linkIds, index, act, attempt + 1 );
+						}, 2500 );
+						return;
+					}
 					self._bulkStats.failed++;
-					alert( tsoliinData.i18n.error );
+					self._bulkErrors.push( tsoliinData.i18n.error + ' (' + ( xhr && xhr.status ? 'HTTP ' + xhr.status : textStatus ) + ')' );
 					self.bulkRecheckStep( linkIds, index + 1, act );
 				}
 			} );
@@ -3188,6 +3409,7 @@
 					filter         : tsoliinData.listFilter || 'all',
 					quality_filter : tsoliinData.listQualityFilter || '',
 					link_type_filter: tsoliinData.listTypeFilter || '',
+					status_code_filter: tsoliinData.listStatusCodeFilter || '',
 					scope          : tsoliinData.listScope || 'all',
 					post_id        : parseInt( tsoliinData.viewPostId, 10 ) || 0,
 					paged          : 1
