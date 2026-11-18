@@ -5,7 +5,7 @@ Tags: broken links, link checker, seo, maintenance, links
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.4
+Stable tag: 2.6.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,9 @@ Before requesting a hostname, the plugin may resolve A/AAAA records on the serve
 2. Filter tabs: All, Broken, Redirect, OK, HTTP insecure, Manual locks, Not checked.
 
 == Changelog ==
+
+= 2.6.5 =
+* Fix: Bulk Unlink now deletes plain-text URLs from post content (same as the row Unlink action). Previously they were skipped and mislabelled as menu/widget/term.
 
 = 2.6.4 =
 * New: Status dropdown in the link list to filter by Timed out, Parked domain, Not found, etc.
